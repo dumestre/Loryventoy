@@ -1,0 +1,1 @@
+T: rect=[[8.0 478.6] - [1358.0 735.0]] view_rect=[[8.0 478.6] - [8.0 478.6]] centro_tela=[117.2 303.2] half=[105.0 72.0] node_sob=Some(NodeIndex(0)) usando_widget=false click=false

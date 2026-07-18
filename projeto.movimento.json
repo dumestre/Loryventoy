@@ -1,0 +1,66 @@
+{
+  "versao": 1,
+  "script_text": "project \"Exemplo\" {\n  width 1920\n  height 1080\n  fps 30\n  duration 8\n  background #1e1e26\n}\n\nscene s1 { name \"Cena 1\" opacity 1.0 }\n\npen coracao_principal {\n  scene s1\n  pos 960 540\n  stroke 3.5\n  fill on\n  codigo {\n    color 1 0.18 0.38\n\n    let s = 13.5\n    let rotacao = cos(t * 0.95) * 18.85\n\n    repeat 120 {\n      let a = i * 0.05236\n      let x = 16 * sin(a) * sin(a) * sin(a)\n      let y = -(13 * cos(a) - 5 * cos(2*a) - 2 * cos(3*a) - cos(4*a))\n\n      let rx = x * cos(rotacao) - y * sin(rotacao)\n      let ry = x * sin(rotacao) + y * cos(rotacao)\n\n      line (rx * s) (ry * s)\n    }\n  }\n}\n\npen particulas {\n  scene s1\n  pos 960 540\n  codigo {\n    color 1 0.65 0.9\n    stroke 2\n\n    repeat 24 {\n      let ang = i * 0.2618 + t * 1.1\n      let dist = 210 + sin(t * 2.8 + i) * 25\n      let px = cos(ang) * dist\n      let py = sin(ang) * dist * 0.75\n      circle px py 3.5\n    }\n  }\n}\n\npen coracao_orbitando {\n  scene s1\n  stroke 2.8\n  fill on\n  codigo {\n    color 1 0.45 0.65\n\n    let ang_orbita = t * 1.4\n    let dist = 290\n    let offset_x = cos(ang_orbita) * dist\n    let offset_y = sin(ang_orbita) * (dist * 0.68)\n\n    let scale = 4.2\n\n    repeat 90 {\n      let a = i * 0.06981\n      let x = 16 * sin(a) * sin(a) * sin(a)\n      let y = -(13 * cos(a) - 5 * cos(2*a) - 2 * cos(3*a) - cos(4*a))\n\n      let rx = x * scale + offset_x\n      let ry = y * scale + offset_y\n\n      line rx ry\n    }\n  }\n}\n\nedge s1.out -> master.in\n",
+  "nos": [
+    {
+      "tipo": "Canvas",
+      "pos_x": -290.0,
+      "pos_y": 0.0,
+      "params": {
+        "kind": "canvas",
+        "largura": 1920,
+        "altura": 1080,
+        "fps": 30.0,
+        "duracao_seg": 5.0,
+        "fundo": [
+          255,
+          255,
+          255,
+          255
+        ]
+      }
+    },
+    {
+      "tipo": "Cena",
+      "pos_x": 0.0,
+      "pos_y": 0.0,
+      "params": {
+        "kind": "cena",
+        "nome_cena": "Cena 1",
+        "ativa": true,
+        "zoom": 1.0,
+        "angulo": 0.0,
+        "opacidade": 1.0
+      }
+    },
+    {
+      "tipo": "Master",
+      "pos_x": 290.0,
+      "pos_y": 0.0,
+      "params": {
+        "kind": "saida",
+        "brilho": 1.0,
+        "contraste": 1.0,
+        "saturacao": 1.0
+      }
+    }
+  ],
+  "arestas": [
+    {
+      "de": 0,
+      "para": 1,
+      "saida": 0,
+      "saida_comp": null,
+      "entrada": 0,
+      "entrada_comp": null
+    },
+    {
+      "de": 1,
+      "para": 2,
+      "saida": 0,
+      "saida_comp": null,
+      "entrada": 0,
+      "entrada_comp": null
+    }
+  ]
+}

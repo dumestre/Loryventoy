@@ -1,0 +1,34 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none"
+xmlns="http://www.w3.org/2000/svg">
+
+<!-- Fundo -->
+<rect width="512" height="512" rx="128" fill="#0B0F19"/>
+
+<!-- Aura -->
+<circle cx="256" cy="256" r="170"
+stroke="#09F664"
+stroke-width="8"
+opacity="0.15"/>
+
+<!-- Forma principal -->
+<path d="M120 330V190C120 160 155 145 180 165L256 240L332 165C357 145 392 160 392 190V330"
+stroke="#09F664"
+stroke-width="42"
+stroke-linecap="round"
+stroke-linejoin="round"/>
+
+<!-- Camada interna -->
+<path d="M180 330V250L256 320L332 250V330"
+stroke="#FFFFFF"
+stroke-width="18"
+stroke-linecap="round"
+stroke-linejoin="round"
+opacity="0.9"/>
+
+<!-- Ponto de movimento -->
+<circle cx="256" cy="240" r="28" fill="#09F664"/>
+
+<!-- Brilho -->
+<circle cx="256" cy="240" r="10" fill="#0B0F19"/>
+
+</svg>

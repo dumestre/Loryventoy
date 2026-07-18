@@ -1,0 +1,15 @@
+target/
+**/target/
+
+debug/
+release/
+
+*.pdb
+*.rlib
+*.rmeta
+
+.vscode/
+.idea/
+
+.DS_Store
+Thumbs.db
