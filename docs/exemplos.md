@@ -393,14 +393,18 @@ pen espiral {
 edge s1.out -> master.in
 ---
 
-# Título com Texto (nó Texto)
+# Título com Texto (nó Texto) e Animação
+
+# O nó `text` exibe texto estático. Para animar, use o comando `text`
+# dentro do `codigo { }` de um nó `pen`, onde `t` dá acesso ao tempo.
 
 project "Titulo" {
-  width 1280 height 720 fps 30 duration 6 background #141420
+  width 1280 height 720 fps 30 duration 8 background #141420
 }
 
 scene s1 { name "Cena 1" opacity 1.0 }
 
+# Texto via nó Texto (estático, sem animação por DSL)
 text titulo {
   scene s1
   content "MOVIMENTO"
@@ -410,13 +414,14 @@ text titulo {
   pos 640 300
 }
 
-text subtitulo {
+# Pen com texto animado: a posição varia com `t`
+pen subtitulo_anim {
   scene s1
-  content "animacao procedural"
-  size 40
-  italic on
-  color #cfcfe0
   pos 640 420
+  codigo {
+    color #cfcfe0
+    text "animacao procedural" (sin(t * 0.8) * 60) (cos(t * 1.2) * 15) 40 italic align center
+  }
 }
 
 edge s1.out -> master.in
@@ -435,12 +440,14 @@ scene s1 { name "Cena 1" opacity 1.0 }
 
 pen rotulo {
   scene s1
-  color #ffd166
-  text "OLA" -150 -120 120
-  color #ef476f
-  text "MUNDO" -160 -10 96 bold
-  color #06d6a0
-  text "procedural" -150 90 48 italic
+  codigo {
+    color #ffd166
+    text "OLA" (-150 + sin(t * 1.2) * 30) (-120 + cos(t * 0.8) * 15) 120 bold
+    color #ef476f
+    text "MUNDO" (-160 + sin(t * 0.9 + 2) * 40) (-10 + sin(t * 1.5) * 20) 96 bold
+    color #06d6a0
+    text "procedural" (-150 + sin(t * 1.1 + 4) * 35) (90 + cos(t * 0.7) * 15) 48 italic
+  }
 }
 
 edge s1.out -> master.in
@@ -530,11 +537,11 @@ pen aviso {
   pos 640 360
   codigo {
     color #ffd166
-    text "CENTRO" 0 -80 120 bold align center
+    text "CENTRO" (sin(t * 0.7) * 40) (-80 + cos(t * 1.1) * 20) 120 bold align center
     color #ef476f
-    text "inclinado" 0 40 64 italic rot 18 align center
+    text "inclinado" (sin(t * 0.9 + 1) * 50) (40 + sin(t * 1.3) * 15) 64 italic rot (18 + sin(t * 0.6) * 12) align center
     color #06d6a0
-    text "direita" 0 130 48 align right
+    text "direita" (sin(t * 0.8 + 3) * 45) (130 + cos(t * 0.5) * 15) 48 align right
   }
 }
 
