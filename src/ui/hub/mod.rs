@@ -311,10 +311,26 @@ impl HubPanel {
             let ativo = self.pagina == pag;
             let resp = ui.add(
                 egui::Button::new(egui::RichText::new(rotulo).size(14.0).color(if ativo { PINK } else { TEXT_MUTED }).strong())
-                    .fill(if ativo { egui::Color32::from_rgba_premultiplied(241, 60, 119, 18) } else { egui::Color32::TRANSPARENT })
+                    .fill(egui::Color32::TRANSPARENT)
                     .corner_radius(R6)
                     .min_size(egui::vec2(180.0, 36.0)),
             );
+            if ativo {
+                let r = resp.rect;
+                let bar = egui::Rect::from_min_max(egui::pos2(r.left(), r.top() + 4.0), egui::pos2(r.left() + 4.0, r.bottom() - 4.0));
+                let p = ui.painter();
+                for y in (bar.top() as usize)..(bar.bottom() as usize) {
+                    let t = (y as f32 - bar.top()) / bar.height();
+                    let cr = (255.0 * (1.0 - t) + 241.0 * t) as u8;
+                    let cg = (214.0 * (1.0 - t) + 60.0 * t) as u8;
+                    let cb = (107.0 * (1.0 - t) + 119.0 * t) as u8;
+                    p.rect_filled(
+                        egui::Rect::from_min_size(egui::pos2(bar.left(), y as f32), egui::vec2(bar.width(), 1.0)),
+                        CornerRadius::ZERO,
+                        egui::Color32::from_rgb(cr, cg, cb),
+                    );
+                }
+            }
             if resp.clicked() { self.pagina = pag; }
             ui.add_space(2.0);
         }
@@ -370,7 +386,7 @@ impl HubPanel {
             return;
         }
 
-        let cols = 5;
+        let cols = 4;
         let gap = 8.0;
         let cw = (ui.available_width() - (cols as f32 - 1.0) * gap) / cols as f32;
         let ch = 130.0;
@@ -442,7 +458,7 @@ impl HubPanel {
         ui.strong(egui::RichText::new("Instalações").size(20.0).color(TEXT));
         ui.add_space(8.0);
 
-        let cols = 5;
+        let cols = 4;
         let gap = 8.0;
         let cw = (ui.available_width() - (cols as f32 - 1.0) * gap) / cols as f32;
 
