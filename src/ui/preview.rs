@@ -503,9 +503,9 @@ impl PreviewPanel {
     }
 
     /// Converte a lista de [`PathCmd`] avaliada do DSL em formas do egui.
-    /// Cada sub-path (entre `Move`) vira um `PathShape` com traço e, se
-    /// solicitado, preenchimento. As coordenadas de projeto são levadas para
-    /// a tela via `para_tela` (posição) e `para_tela_v` (tamanho do traço).
+    /// Usa lyon para tesselação de traço e preenchimento com suporte a
+    /// join/cap arredondados, substituindo o flatten manual de bezier e o
+    /// `PathShape` do egui.
     ///
     /// Pública para ser reutilizada pela exportação off-screen (PNG), que
     /// passa `para_tela`/`para_tela_v` mapeando coords de projeto direto para
@@ -528,232 +528,216 @@ impl PreviewPanel {
         F: Fn(Pos2) -> Pos2,
         G: Fn(Vec2) -> Vec2,
     {
+        use lyon::tessellation::{
+            FillTessellator, FillOptions, StrokeTessellator, StrokeOptions,
+            VertexBuffers, BuffersBuilder, FillVertexConstructor, StrokeVertexConstructor,
+            FillVertex, StrokeVertex, LineJoin, LineCap,
+        };
+        use lyon::math::Point as LPoint;
         use crate::dsl::PathCmd;
 
-        // aplica a escala de eixo aos pontos (antes de somar o deslocamento)
         let sx = escala_x;
         let sy = escala_y;
+        let a = (opac.clamp(0.0, 1.0) * 255.0) as u8;
 
-        let mut out = Vec::new();
-        let mut cor = cor_padrao;
-        let mut cor_fill = cor_fill_padrao;
-        let mut esp = espessura_padrao;
-        let mut preenche = preenche_padrao;
-        let mut atual: Vec<Pos2> = Vec::new();
-        let mut fechado = false;
+        let mut out: Vec<Shape> = Vec::new();
+
+        struct St {
+            cor: Color32,
+            cor_fill: Color32,
+            esp: f32,
+            preenche: bool,
+        }
+
+        let mut st = St { cor: cor_padrao, cor_fill: cor_fill_padrao, esp: espessura_padrao, preenche: preenche_padrao };
+
+        let to_scr = |p: &GVec2| -> LPoint {
+            let sp = para_tela(Pos2::new(desloc.x + p.x * sx, desloc.y + p.y * sy));
+            LPoint::new(sp.x, sp.y)
+        };
+
+        struct SubPath {
+            start: LPoint,
+            ops: Vec<SubPathOp>,
+            close: bool,
+            cor: Color32,
+            cor_fill: Color32,
+            esp: f32,
+            preenche: bool,
+            single: bool,
+        }
+
+        enum SubPathOp {
+            Line(LPoint),
+            Cubic(LPoint, LPoint, LPoint),
+        }
+
+        let mut subs: Vec<SubPath> = Vec::new();
+        let mut cur: Option<SubPath> = None;
+
+        macro_rules! flush_sub {
+            () => {
+                if let Some(sp) = cur.take() {
+                    subs.push(sp);
+                }
+            };
+        }
 
         for c in cmds {
             match c {
                 PathCmd::Move(p) => {
-                    Self::pen_flush(
-                        &mut out,
-                        &atual,
-                        cor,
-                        cor_fill,
-                        esp,
-                        preenche,
-                        fechado,
-                        cantos,
-                        para_tela,
-                        para_tela_v,
-                        opac,
-                    );
-                    atual.clear();
-                    fechado = false;
-                    atual.push(Pos2::new(desloc.x + p.x * sx, desloc.y + p.y * sy));
+                    flush_sub!();
+                    cur = Some(SubPath {
+                        start: to_scr(p),
+                        ops: Vec::new(),
+                        close: false,
+                        cor: st.cor,
+                        cor_fill: st.cor_fill,
+                        esp: st.esp,
+                        preenche: st.preenche,
+                        single: true,
+                    });
                 }
                 PathCmd::Line(p) => {
-                    atual.push(Pos2::new(desloc.x + p.x * sx, desloc.y + p.y * sy));
+                    if let Some(ref mut sp) = cur {
+                        sp.ops.push(SubPathOp::Line(to_scr(p)));
+                        sp.single = false;
+                    } else {
+                        let pt = to_scr(p);
+                        cur = Some(SubPath {
+                            start: pt,
+                            ops: Vec::new(),
+                            close: false,
+                            cor: st.cor,
+                            cor_fill: st.cor_fill,
+                            esp: st.esp,
+                            preenche: st.preenche,
+                            single: false,
+                        });
+                    }
                 }
                 PathCmd::Bezier(c1, c2, p) => {
-                    // amostra a curva de Bézier cúbica em segmentos de linha.
-                    // O ponto inicial é o último acumulado (já com `desloc`); se
-                    // não houver `move` prévio, parte da própria origem do nó.
-                    let base = *atual.last().unwrap_or(&Pos2::ZERO);
-                    let sx0 = if atual.is_empty() { desloc.x } else { base.x };
-                    let sy0 = if atual.is_empty() { desloc.y } else { base.y };
-                    let start = Pos2::new(sx0, sy0);
-                    let steps = 24u32;
-                    for s in 1..=steps {
-                        let u = s as f32 / steps as f32;
-                        let iu = 1.0 - u;
-                        let bx = iu * iu * iu * start.x
-                            + 3.0 * iu * iu * u * (desloc.x + c1.x * sx)
-                            + 3.0 * iu * u * u * (desloc.x + c2.x * sx)
-                            + u * u * u * (desloc.x + p.x * sx);
-                        let by = iu * iu * iu * start.y
-                            + 3.0 * iu * iu * u * (desloc.y + c1.y * sy)
-                            + 3.0 * iu * u * u * (desloc.y + c2.y * sy)
-                            + u * u * u * (desloc.y + p.y * sy);
-                        atual.push(Pos2::new(bx, by));
+                    if let Some(ref mut sp) = cur {
+                        sp.ops.push(SubPathOp::Cubic(to_scr(c1), to_scr(c2), to_scr(p)));
+                        sp.single = false;
+                    } else {
+                        let pt = to_scr(p);
+                        cur = Some(SubPath {
+                            start: pt,
+                            ops: Vec::new(),
+                            close: false,
+                            cor: st.cor,
+                            cor_fill: st.cor_fill,
+                            esp: st.esp,
+                            preenche: st.preenche,
+                            single: false,
+                        });
                     }
                 }
                 PathCmd::Close => {
-                    // Apenas marca o sub-path como fechado: o tessellator liga
-                    // o último ponto ao primeiro. NÃO duplicamos o 1º ponto,
-                    // pois uma aresta de comprimento zero vira artefato
-                    // (aba/spike tremulante) no anti-alias.
-                    fechado = true;
-                    if let (Some(first), Some(last)) = (atual.first(), atual.last()) {
-                        if (first.x - last.x).abs() < 0.01 && (first.y - last.y).abs() < 0.01 {
-                            atual.pop();
-                        }
+                    if let Some(ref mut sp) = cur {
+                        sp.close = true;
                     }
                 }
-                PathCmd::Fill(b) => preenche = *b,
-                PathCmd::Stroke(w) => esp = *w,
-                PathCmd::Color(c) => {
-                    cor = *c;
-                    cor_fill = *c;
-                }
-                PathCmd::ColorStroke(c) => cor = *c,
-                PathCmd::ColorFill(c) => cor_fill = *c,
-                // Texto é desenhado à parte (ver loop do pen no `show`),
-                // fora da conversão para `Shape`s. Aqui apenas ignoramos.
+                PathCmd::Fill(b) => st.preenche = *b,
+                PathCmd::Stroke(w) => st.esp = *w,
+                PathCmd::Color(c) => { st.cor = *c; st.cor_fill = *c; }
+                PathCmd::ColorStroke(c) => st.cor = *c,
+                PathCmd::ColorFill(c) => st.cor_fill = *c,
                 PathCmd::Text { .. } => {}
             }
         }
-        Self::pen_flush(
-            &mut out,
-            &atual,
-            cor,
-            cor_fill,
-            esp,
-            preenche,
-            fechado,
-            cantos,
-            para_tela,
-            para_tela_v,
-            opac,
-        );
-        out
-    }
+        flush_sub!();
 
-    /// Empurra o sub-path acumulado (`pts`) como um `PathShape` no egui.
-    /// `preenche` controla o preenchimento; `fechado` controla se o contorno é
-    /// fechado (aresta de volta ao início). Assim um path aberto com
-    /// `fill on` é preenchido sem ganhar uma aresta fechada automática.
-    fn pen_flush<F, G>(
-        out: &mut Vec<Shape>,
-        pts: &[Pos2],
-        cor: Color32,
-        cor_fill: Color32,
-        esp: f32,
-        preenche: bool,
-        fechado: bool,
-        cantos: f32,
-        para_tela: &F,
-        para_tela_v: &G,
-        opac: f32,
-    ) where
-        F: Fn(Pos2) -> Pos2,
-        G: Fn(Vec2) -> Vec2,
-    {
-        if pts.is_empty() {
-            return;
-        }
-        let a = (opac.clamp(0.0, 1.0) * 255.0) as u8;
-        // Ponto isolado (1 vértice): desenha como um pequeno disco para não
-        // sumir silenciosamente.
-        if pts.len() == 1 {
-            let c = para_tela(pts[0]);
-            let r = (para_tela_v(Vec2::splat(esp)).x).max(1.0);
-            out.push(Shape::Ellipse(EllipseShape::filled(
-                c,
-                Vec2::splat(r),
-                Color32::from_rgba_unmultiplied(cor.r(), cor.g(), cor.b(), a),
-            )));
-            return;
-        }
-        // Remove vértices CONSECUTIVOS coincidentes: arestas de comprimento
-        // zero (ex.: um `line` que repete o ponto do `move`, ou um `close`
-        // sobre o 1º ponto) viram "abas"/spikes tremulantes no anti-alias do
-        // tessellator. Também descarta a duplicata do 1º ponto no fim quando o
-        // path é fechado.
-        let closed_pre = fechado || preenche;
-        let mut limpo: Vec<Pos2> = Vec::with_capacity(pts.len());
-        for p in pts {
-            if let Some(u) = limpo.last() {
-                if (u.x - p.x).abs() < 0.001 && (u.y - p.y).abs() < 0.001 {
-                    continue;
-                }
-            }
-            limpo.push(*p);
-        }
-        if closed_pre && limpo.len() > 1 {
-            if let (Some(f), Some(l)) = (limpo.first().copied(), limpo.last().copied()) {
-                if (f.x - l.x).abs() < 0.001 && (f.y - l.y).abs() < 0.001 {
-                    limpo.pop();
-                }
+        struct TessV { pos: [f32; 2] }
+        struct FillC;
+        impl FillVertexConstructor<TessV> for FillC {
+            fn new_vertex(&mut self, v: FillVertex) -> TessV {
+                let p = v.position();
+                TessV { pos: [p.x, p.y] }
             }
         }
-        if limpo.len() < 2 {
-            return;
+        struct StrokeC;
+        impl StrokeVertexConstructor<TessV> for StrokeC {
+            fn new_vertex(&mut self, v: StrokeVertex) -> TessV {
+                let p = v.position();
+                TessV { pos: [p.x, p.y] }
+            }
         }
 
-        let cor_op = Color32::from_rgba_unmultiplied(cor.r(), cor.g(), cor.b(), a);
-        let cor_fill_op =
-            Color32::from_rgba_unmultiplied(cor_fill.r(), cor_fill.g(), cor_fill.b(), a);
-        let stroke = Stroke::new((para_tela_v(Vec2::splat(esp)).x).max(0.5), cor_op);
-        let path_stroke: eframe::egui::epaint::PathStroke = stroke.into();
-        let fill = if preenche { cor_fill_op } else { Color32::TRANSPARENT };
-        // cantos>=0.5 => arredondado: a versão atual do egui (0.35) não expõe
-        // join/cap no `Stroke`, então arredondamos os vértices interiores
-        // geometricamente (insere pontos ao longo dos cantos).
-        let pontos = if cantos >= 0.5 {
-            Self::arredondar_cantos(&limpo, fechado, esp)
-        } else {
-            limpo
-        };
-        let points: Vec<Pos2> = pontos.iter().map(|p| para_tela(*p)).collect();
-        // O epaint/tessellator só aceita preenchimento em paths FECHADOS:
-        // um `PathShape` com `fill` opaco e `closed == false` gera panic
-        // ("You asked to fill a path that is not closed"). Portanto, se há
-        // preenchimento, o path é tratado como fechado.
-        let closed = fechado || preenche;
-        out.push(Shape::Path(PathShape {
-            points,
-            closed,
-            fill,
-            stroke: path_stroke,
-        }));
-    }
+        for sp in subs {
+            let co = Color32::from_rgba_unmultiplied(sp.cor.r(), sp.cor.g(), sp.cor.b(), a);
+            let cfo = Color32::from_rgba_unmultiplied(sp.cor_fill.r(), sp.cor_fill.g(), sp.cor_fill.b(), a);
 
-    /// Insere pontos ao longo dos cantos do path para suavizar as quinas
-    /// (quando `cantos>=0.5`). A egui 0.35 não expõe `StrokeJoin`, então o
-    /// arredondamento é feito amostrando cada vértice interior com dois pontos
-    /// deslocados ao longo das arestas adjacentes.
-    fn arredondar_cantos(pts: &[Pos2], fechado: bool, _esp: f32) -> Vec<Pos2> {
-        if pts.len() < 3 {
-            return pts.to_vec();
+            if sp.single {
+                let r = (para_tela_v(Vec2::splat(sp.esp)).x).max(1.0);
+                out.push(Shape::Ellipse(EllipseShape::filled(
+                    Pos2::new(sp.start.x, sp.start.y), Vec2::splat(r), co,
+                )));
+                continue;
+            }
+
+            let esp_tela = (para_tela_v(Vec2::splat(sp.esp)).x).max(0.5);
+
+            let mut builder = lyon::path::Path::builder();
+            builder.begin(sp.start);
+            for op in &sp.ops {
+                match op {
+                    SubPathOp::Line(p) => { builder.line_to(*p); }
+                    SubPathOp::Cubic(c1, c2, p) => { builder.cubic_bezier_to(*c1, *c2, *p); }
+                }
+            }
+            if sp.close || sp.preenche {
+                builder.close();
+            }
+            let path = builder.build();
+
+            if sp.preenche {
+                let mut fb: VertexBuffers<TessV, u32> = VertexBuffers::new();
+                if FillTessellator::new()
+                    .tessellate_path(&path, &FillOptions::default().with_tolerance(0.1),
+                        &mut BuffersBuilder::new(&mut fb, FillC))
+                    .is_ok()
+                    && !fb.vertices.is_empty()
+                {
+                    out.push(Shape::from(egui::epaint::Mesh {
+                        vertices: fb.vertices.iter().map(|v| Vertex {
+                            pos: Pos2::new(v.pos[0], v.pos[1]),
+                            uv: egui::epaint::WHITE_UV,
+                            color: cfo,
+                        }).collect(),
+                        indices: fb.indices,
+                        texture_id: Default::default(),
+                    }));
+                }
+            }
+
+            if esp_tela > 0.0 {
+                let mut sb: VertexBuffers<TessV, u32> = VertexBuffers::new();
+                let join = if cantos >= 0.5 { LineJoin::Round } else { LineJoin::Miter };
+                if StrokeTessellator::new()
+                    .tessellate_path(&path, &StrokeOptions::default()
+                        .with_tolerance(0.1)
+                        .with_line_join(join)
+                        .with_line_cap(LineCap::Round)
+                        .with_line_width(esp_tela),
+                        &mut BuffersBuilder::new(&mut sb, StrokeC))
+                    .is_ok()
+                    && !sb.vertices.is_empty()
+                {
+                    out.push(Shape::from(egui::epaint::Mesh {
+                        vertices: sb.vertices.iter().map(|v| Vertex {
+                            pos: Pos2::new(v.pos[0], v.pos[1]),
+                            uv: egui::epaint::WHITE_UV,
+                            color: co,
+                        }).collect(),
+                        indices: sb.indices,
+                        texture_id: Default::default(),
+                    }));
+                }
+            }
         }
-        let n = pts.len();
-        let mut out = Vec::with_capacity(n * 2);
-        let inicio = if fechado { 0 } else { 1 };
-        let fim = if fechado { n } else { n - 1 };
-        if !fechado {
-            out.push(pts[0]);
-        }
-        for i in inicio..fim {
-            let prev = pts[(i + n - 1) % n];
-            let cur = pts[i];
-            let next = pts[(i + 1) % n];
-            let t = 0.25;
-            let p1 = Pos2::new(
-                cur.x + (prev.x - cur.x) * t,
-                cur.y + (prev.y - cur.y) * t,
-            );
-            let p2 = Pos2::new(
-                cur.x + (next.x - cur.x) * t,
-                cur.y + (next.y - cur.y) * t,
-            );
-            out.push(p1);
-            out.push(cur);
-            out.push(p2);
-        }
-        if !fechado {
-            out.push(pts[n - 1]);
-        }
+
         out
     }
 

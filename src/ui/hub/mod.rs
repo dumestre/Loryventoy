@@ -471,7 +471,7 @@ impl HubPanel {
         });
     }
 
-    fn card_versao(&mut self, ui: &mut egui::Ui, v: &versoes::Versao, w: f32) {
+    fn card_versao(&mut self, ui: &mut egui::Ui, v: &versoes::Versao, _w: f32) {
         let instalado = self.installed.contains(&v.numero.to_string());
         let baixando = self.install.as_ref().map(|t| t.version == v.numero).unwrap_or(false);
 
