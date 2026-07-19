@@ -406,6 +406,7 @@ impl GraphPanel {
                         "Posição" => 0u8,
                         "Rotação" => 1,
                         "Escala" | "Largura" | "Altura" => 2,
+                        "Cor" => 4,
                         _ => alvo_no,
                     })
                 })
@@ -451,6 +452,7 @@ impl GraphPanel {
                         "Rotação" => 1,
                         "Escala" | "Largura" | "Altura" => 2,
                         "Opacidade" => 3,
+                        "Cor" => 4,
                         _ => alvo_no,
                     })
                 })
@@ -1814,8 +1816,9 @@ impl GraphPanel {
                 // Submenu: adicionar nó na posição do cursor (botão direito)
                 ui.separator();
                 ui.menu_button("Adicionar nó", |ui| {
-                    let tipos: [(TipoNo, &str, Color32); 9] = [
+                    let tipos: [(TipoNo, &str, Color32); 10] = [
                         (TipoNo::Saida, "Master", Color32::from_rgb(120, 220, 140)),
+                        (TipoNo::Transform, "Transform", Color32::from_rgb(235, 185, 95)),
                         (TipoNo::Canvas, "Canvas", Color32::from_rgb(170, 120, 235)),
                         (TipoNo::Cena, "Cena", Color32::from_rgb(90, 190, 190)),
                         (TipoNo::Shape, "Shape", Color32::from_rgb(235, 150, 120)),
@@ -1825,12 +1828,11 @@ impl GraphPanel {
                         (TipoNo::Anim, "Animação", Color32::from_rgb(230, 130, 170)),
                         (TipoNo::Layer, "Layers", Color32::from_rgb(120, 170, 235)),
                     ];
-                    for (t, nome, cor) in tipos {
+                    for (t, nome, cor) in &tipos {
                         if ui
-                            .button(egui::RichText::new(nome).color(cor))
+                            .button(egui::RichText::new(*nome).color(*cor))
                             .clicked()
                         {
-                            // adiciona na posição do clique (canvas) e seleciona
                             let p = self.menu_canvas;
                             let idx = self.adicionar_no_em(t.instancia(), p);
                             self.selecionar_no(idx, false);

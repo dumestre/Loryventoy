@@ -353,11 +353,11 @@ pen traco {
   stroke 4
   color #06d6a0
   codigo {
-    point 0 0
-    line_to 120 -40
-    curve_to 220 -160 320 60 400 0
-    line_to 200 120
-    line_to -40 80
+    point -200 0
+    line_to -80 -120
+    curve_to 40 -180 160 -60 200 0
+    line_to 60 120
+    line_to -140 40
     fill on
     close
   }
@@ -506,16 +506,16 @@ pen formas {
   pos 640 360
   codigo {
     color #ffd166
-    polygon 6 0 -180 80
+    polygon 6 -250 -150 80
     color #ef476f
-    star 5 0 0 110 50
+    star 5 0 -150 90 40
     color #06d6a0
-    round_rect -160 120 320 90 24
+    round_rect 180 -190 160 90 20
     color #118ab2
-    arc 0 360 150 0 -180
+    arc 0 360 70 -240 80
     stroke 2
     color #f78c6b
-    grid 8 1 -200 250 50 0 6
+    grid 5 3 -100 190 60 50 6
   }
 }
 

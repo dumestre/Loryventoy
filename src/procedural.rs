@@ -369,7 +369,7 @@ impl ShapeGenerator {
         let mut center = self.pos;
         let mut tam = self.tam;
         let mut rot = self.rot;
-        let cor = self.cor; // cor definida no nó, sem deslocamento
+        let mut cor = self.cor;
 
         // Animação EXTERNA (nó Animação conectado): SUBSTITUI o parâmetro alvo
         // com o valor da função no tempo `t`. Aplicada ANTES do ruído, para
@@ -380,6 +380,15 @@ impl ShapeGenerator {
                 0 => center = GVec2::new(v[0], v[1]),        // Posição
                 1 => rot = v[0],                             // Rotação (graus)
                 2 => tam = GVec2::new(v[0], v[1]),           // Escala (tamanho px)
+                4 => {                                       // Cor (brilho)
+                    let t = v[0].clamp(0.0, 1.0);
+                    cor = Color32::from_rgba_premultiplied(
+                        (cor.r() as f32 * t) as u8,
+                        (cor.g() as f32 * t) as u8,
+                        (cor.b() as f32 * t) as u8,
+                        cor.a(),
+                    );
+                }
                 _ => {}                                      // 3=Opacidade: ver opac_em
             }
         }
@@ -426,6 +435,16 @@ impl ShapeGenerator {
                     // Escala: dx normalizado (~[-amp,amp]) vira fator relativo.
                     let f = 1.0 + dx / r.amp.max(1.0);
                     tam *= f.max(0.05);
+                }
+                4 => {
+                    // Cor: ruído modula o brilho
+                    let f = (1.0 + dx / r.amp.max(1.0)).clamp(0.0, 2.0);
+                    cor = Color32::from_rgba_premultiplied(
+                        (cor.r() as f32 * f).clamp(0.0, 255.0) as u8,
+                        (cor.g() as f32 * f).clamp(0.0, 255.0) as u8,
+                        (cor.b() as f32 * f).clamp(0.0, 255.0) as u8,
+                        cor.a(),
+                    );
                 }
                 _ => {
                     center.x += dx;
