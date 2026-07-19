@@ -36,11 +36,12 @@ pub mod groups;
 struct MenuComponentes {
     src: NodeIndex,
     saida: usize,
-    drop_screen: Pos2, // posição de tela onde o popup é aberto
-    drop_canvas: Pos2, // posição em canvas do soltar (p/ recomputar alvo)
-    alvo: Option<(NodeIndex, usize)>, // entrada mais próxima no soltar
-    escolha: Option<usize>,           // componente escolhido (255 = cancelar)
-    rect: Option<Rect>,               // retângulo do popup (p/ detectar clique fora)
+    drop_screen: Pos2,
+    drop_canvas: Pos2,
+    alvo: Option<(NodeIndex, usize)>,
+    escolha: Option<usize>,
+    rect: Option<Rect>,
+    dest_nome: Option<String>,
 }
 
 pub struct GraphPanel {
@@ -1693,6 +1694,11 @@ impl GraphPanel {
                     .and_then(|t| porto_saida(t, src_out))
                     .map_or(false, |p| p.is_vetor());
                 if is_vetor {
+                    let dest_nome = alvo.and_then(|(d, inp)| {
+                        self.tipo_do_node(d)
+                            .and_then(|t| crate::nodes::porto_entrada(t, inp))
+                            .map(|p| p.nome.to_string())
+                    });
                     self.menu_componentes = Some(MenuComponentes {
                         src,
                         saida: src_out,
@@ -1701,6 +1707,7 @@ impl GraphPanel {
                         alvo,
                         escolha: None,
                         rect: None,
+                        dest_nome,
                     });
                 } else if let Some((dst, in_port)) = alvo {
                     if dst != src {
@@ -1881,15 +1888,30 @@ impl GraphPanel {
                 .node(menu.src)
                 .map(|n| n.label().to_string())
                 .unwrap_or_default();
+            let dest_label = menu.dest_nome.as_deref().unwrap_or("");
             let ar = Area::new(Id::new("menu_componentes"))
                 .order(Order::Foreground)
                 .fixed_pos(menu.drop_screen)
                 .movable(false)
                 .constrain(false)
                 .show(ui.ctx(), |ui| {
-                    ui.set_min_width(120.0);
+                    ui.set_min_width(140.0);
                     ui.vertical(|ui| {
                         ui.label(format!("{} ▸ {}", label_src, nome_porto));
+                        if !dest_label.is_empty() {
+                            ui.label(format!("→ {}", dest_label));
+                        }
+                        // Opção "Ambos" (vetor completo) — apenas se destino
+                        // for vetorial ou não houver destino definido
+                        if dest_label.is_empty() || menu.alvo.map_or(false, |(d, inp)| {
+                            self.tipo_do_node(d)
+                                .and_then(|t| crate::nodes::porto_entrada(t, inp))
+                                .map_or(false, |p| p.is_vetor())
+                        }) {
+                            if ui.button("X,Y").clicked() {
+                                menu.escolha = Some(254); // "Both"
+                            }
+                        }
                         for (k, nome) in comps.iter().enumerate() {
                             if ui.button(*nome).clicked() {
                                 menu.escolha = Some(k);
@@ -1904,11 +1926,25 @@ impl GraphPanel {
             menu.rect = Some(ar.response.rect);
             // processa a escolha
             match menu.escolha {
-                Some(255) => {
-                    // cancelou: descarta
+                Some(255) => {}
+                Some(254) => {
+                    // "Both": envia o vetor completo (saida_comp = None)
+                    let alvo = menu
+                        .alvo
+                        .or_else(|| self.porta_entrada_mais_proxima(menu.drop_canvas, 26.0));
+                    if let Some((dst, in_port)) = alvo {
+                        if dst != menu.src {
+                            let ok = match (self.tipo_do_node(menu.src), self.tipo_do_node(dst)) {
+                                (Some(o), Some(d)) => TipoNo::pode_conectar(o, d),
+                                _ => false,
+                            };
+                            if ok {
+                                self.conectar_parametro(menu.src, menu.saida, None, dst, in_port, None);
+                            }
+                        }
+                    }
                 }
                 Some(k) => {
-                    // reconstrói o alvo (pode ter sido None no soltar)
                     let alvo = menu
                         .alvo
                         .or_else(|| self.porta_entrada_mais_proxima(menu.drop_canvas, 26.0));
