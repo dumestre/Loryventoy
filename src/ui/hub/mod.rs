@@ -221,7 +221,7 @@ impl HubPanel {
                         });
                         ui.add_space(10.0);
                         ui.horizontal(|ui| {
-                            if ui.add(egui::Button::new("Criar").fill(PINK).corner_radius(R6).min_size(egui::vec2(100.0, 32.0))).clicked() {
+                            if ui.add(egui::Button::new(egui::RichText::new("Criar").color(egui::Color32::WHITE)).fill(egui::Color32::from_rgba_premultiplied(241, 60, 119, 200)).corner_radius(R6).min_size(egui::vec2(100.0, 32.0))).clicked() {
                                 let base = if self.nome_novo.trim().is_empty() { "projeto" } else { self.nome_novo.trim() };
                                 let nome = format!("{base}.movimento.json");
                                 if self.caminho(&nome).exists() {
@@ -267,7 +267,7 @@ impl HubPanel {
                             if ui.add(egui::Button::new("Cancelar").corner_radius(R6).min_size(egui::vec2(100.0, 30.0))).clicked() {
                                 self.delete_target = None;
                             }
-                            if ui.add(egui::Button::new(egui::RichText::new("Sim, excluir").color(DANGER)).fill(egui::Color32::from_rgba_premultiplied(255, 120, 130, 20)).corner_radius(R6).min_size(egui::vec2(100.0, 30.0))).clicked() {
+                            if ui.add(egui::Button::new(egui::RichText::new("Sim, excluir").color(DANGER)).fill(egui::Color32::from_rgba_premultiplied(255, 120, 130, 30)).corner_radius(R6).min_size(egui::vec2(100.0, 30.0))).clicked() {
                                 if let Err(e) = std::fs::remove_file(self.caminho(&t)) {
                                     self.aviso = Some(format!("falha ao excluir: {e}"));
                                 } else {
@@ -376,10 +376,10 @@ impl HubPanel {
                     ui.label(egui::RichText::new("\u{1F4C1}").size(32.0));
                     ui.add_space(6.0);
                     ui.label(egui::RichText::new(if self.query.is_empty() { "Nenhum projeto ainda" } else { "Nenhum resultado" }).size(14.0).color(TEXT));
-                    ui.add_space(4.0);
+                    ui.add_space(6.0);
                     ui.label(egui::RichText::new(if self.query.is_empty() { "Crie um novo projeto para comecar" } else { "Tente buscar com outro termo" }).color(TEXT_MUTED).size(12.0));
-                    ui.add_space(10.0);
-                    if ui.add(egui::Button::new(egui::RichText::new("+ Novo Projeto").color(PINK)).fill(egui::Color32::from_rgba_premultiplied(241, 60, 119, 12)).corner_radius(R8).min_size(egui::vec2(160.0, 32.0))).clicked() { self.show_new = true; }
+                    ui.add_space(12.0);
+                    if ui.add(egui::Button::new(egui::RichText::new("+ Novo Projeto").color(PINK).size(13.0)).fill(egui::Color32::from_rgba_premultiplied(241, 60, 119, 12)).corner_radius(R6).min_size(egui::vec2(180.0, 34.0))).clicked() { self.show_new = true; }
                 });
                 ui.add_space(32.0);
             });
@@ -403,7 +403,7 @@ impl HubPanel {
 
             ui.add_space(gap * 2.0);
             ui.vertical_centered(|ui| {
-                if ui.add(egui::Button::new(egui::RichText::new("+  Novo Projeto").color(PINK).size(13.0)).fill(egui::Color32::from_rgba_premultiplied(241, 60, 119, 10)).corner_radius(R8).min_size(egui::vec2(180.0, 34.0))).clicked() { self.show_new = true; }
+                if ui.add(egui::Button::new(egui::RichText::new("+  Novo Projeto").color(PINK).size(13.0)).fill(egui::Color32::from_rgba_premultiplied(241, 60, 119, 12)).corner_radius(R6).min_size(egui::vec2(180.0, 34.0))).clicked() { self.show_new = true; }
             });
             ui.add_space(12.0);
         });
@@ -417,11 +417,10 @@ impl HubPanel {
         let _ = ui.allocate_ui(egui::vec2(w, h), |ui| {
             egui::Frame::new().fill(bg).stroke(egui::Stroke::new(sw, border)).corner_radius(R8).show(ui, |ui| {
                 ui.vertical_centered(|ui| {
-                    ui.add_space(12.0);
+                    ui.add_space(10.0);
 
                     ui.strong(egui::RichText::new(nome.trim_end_matches(".movimento.json")).size(12.0).color(TEXT));
-
-                    ui.add_space(4.0);
+                    ui.add_space(2.0);
 
                     let meta = std::fs::metadata(self.caminho(nome)).ok();
                     let modified = meta.as_ref().and_then(|m| m.modified().ok()).map(Self::fmt_time);
@@ -431,20 +430,17 @@ impl HubPanel {
 
                     ui.add_space(8.0);
 
-                    if ui.add(egui::Button::new(egui::RichText::new("Abrir").size(11.0).color(egui::Color32::WHITE)).fill(egui::Color32::from_rgba_premultiplied(241, 60, 119, 200)).corner_radius(R6).min_size(egui::vec2(w - 20.0, 24.0))).clicked() {
+                    if ui.add(egui::Button::new(egui::RichText::new("Abrir").size(11.0).color(egui::Color32::WHITE)).fill(egui::Color32::from_rgba_premultiplied(241, 60, 119, 200)).corner_radius(R6).min_size(egui::vec2(80.0, 22.0))).clicked() {
                         match self.ler(nome) {
                             Ok(data) => { self.current_project = Some(nome.to_string()); aberto = Some(data); }
                             Err(e) => self.aviso = Some(e),
                         }
                     }
 
-                    ui.add_space(4.0);
-                    ui.horizontal(|ui| {
-                        let bw = w - 28.0;
-                        if ui.add(egui::Button::new(egui::RichText::new("Excluir").size(10.0).color(DANGER)).fill(egui::Color32::TRANSPARENT).corner_radius(R6).min_size(egui::vec2(bw, 20.0))).clicked() {
-                            self.delete_target = Some(nome.to_string());
-                        }
-                    });
+                    ui.add_space(2.0);
+                    if ui.add(egui::Button::new(egui::RichText::new("Excluir").size(10.0).color(DANGER)).fill(egui::Color32::TRANSPARENT).corner_radius(R6).min_size(egui::vec2(80.0, 20.0))).clicked() {
+                        self.delete_target = Some(nome.to_string());
+                    }
                 });
             });
         });
@@ -501,31 +497,25 @@ impl HubPanel {
                     }
                 });
                 ui.add_space(2.0);
-                ui.horizontal(|ui| {
-                    ui.add_space(4.0);
-                    ui.label(egui::RichText::new(v.titulo).color(TEXT_MUTED).size(12.0));
-                });
+                ui.horizontal(|ui| { ui.add_space(4.0); ui.label(egui::RichText::new(v.titulo).color(TEXT_MUTED).size(12.0)); });
                 ui.add_space(8.0);
                 for item in v.itens.iter().take(3) {
                     ui.horizontal(|ui| {
                         ui.add_space(8.0);
                         ui.label(egui::RichText::new("\u{2022}").color(PINK).size(8.0));
+                        ui.add_space(4.0);
                         ui.label(egui::RichText::new(*item).color(TEXT_MUTED).size(10.0));
                     });
                 }
                 if v.itens.len() > 3 {
-                    ui.horizontal(|ui| {
-                        ui.add_space(8.0);
-                        ui.label(egui::RichText::new(format!("+{} mais", v.itens.len() - 3)).color(TEXT_MUTED).size(10.0));
-                    });
+                    ui.horizontal(|ui| { ui.add_space(8.0); ui.label(egui::RichText::new(format!("+{} mais", v.itens.len() - 3)).color(TEXT_MUTED).size(10.0)); });
                 }
 
                 ui.add_space(12.0);
-                ui.horizontal(|ui| {
-                    ui.add_space(4.0);
+                ui.vertical_centered(|ui| {
                     if baixando {
                         let p = self.install.as_ref().unwrap().progress;
-                        let bar_w = w - 32.0;
+                        let bar_w = 120.0;
                         let bar_h = 6.0;
                         let bar_rect = egui::Rect::from_min_size(ui.cursor().min, egui::vec2(bar_w, bar_h));
                         ui.painter_at(bar_rect).rect_filled(bar_rect, R6, egui::Color32::from_rgba_premultiplied(255, 255, 255, 20));
@@ -534,22 +524,21 @@ impl HubPanel {
                             let fill_rect = egui::Rect::from_min_size(bar_rect.min, egui::vec2(fill_w, bar_h));
                             ui.painter_at(fill_rect).rect_filled(fill_rect, R6, PINK);
                         }
+                        ui.add_space(bar_h + 2.0);
                         let pct = (p * 100.0) as u32;
-                        ui.add_space(bar_w + 8.0);
-                        ui.label(egui::RichText::new(format!("{pct}%")).color(TEXT_MUTED).size(11.0));
+                        ui.label(egui::RichText::new(format!("{pct}%")).color(TEXT_MUTED).size(10.0));
                     } else if instalado {
-                        if ui.add(egui::Button::new(egui::RichText::new("Desinstalar").size(11.0).color(DANGER)).fill(egui::Color32::TRANSPARENT).corner_radius(R6).min_size(egui::vec2(w - 32.0, 26.0))).clicked() {
+                        if ui.add(egui::Button::new(egui::RichText::new("Desinstalar").size(11.0).color(DANGER)).fill(egui::Color32::TRANSPARENT).corner_radius(R6).min_size(egui::vec2(100.0, 24.0))).clicked() {
                             self.installed.retain(|x| x != v.numero);
                         }
                     } else {
-                        if ui.add(egui::Button::new(egui::RichText::new("Instalar").size(11.0).color(egui::Color32::WHITE)).fill(egui::Color32::from_rgba_premultiplied(241, 60, 119, 200)).corner_radius(R6).min_size(egui::vec2(w - 32.0, 26.0))).clicked() {
+                        if ui.add(egui::Button::new(egui::RichText::new("Instalar").size(11.0).color(egui::Color32::WHITE)).fill(egui::Color32::from_rgba_premultiplied(241, 60, 119, 200)).corner_radius(R6).min_size(egui::vec2(100.0, 24.0))).clicked() {
                             self.install = Some(InstallTask { version: v.numero.to_string(), progress: 0.0 });
                             ui.ctx().request_repaint();
                         }
                     }
                 });
             });
-            ui.add_space(12.0);
         });
     }
 
