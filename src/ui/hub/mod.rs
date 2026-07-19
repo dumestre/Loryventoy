@@ -509,7 +509,7 @@ impl HubPanel {
                     ui.label(egui::RichText::new(format!("+{} mais", v.itens.len() - 3)).color(TEXT_MUTED).size(10.0));
                 }
 
-                ui.add_space(6.0);
+                ui.add_space(2.0);
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     if baixando {
                         let p = self.install.as_ref().unwrap().progress;
