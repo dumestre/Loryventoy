@@ -475,17 +475,16 @@ impl HubPanel {
         let instalado = self.installed.contains(&v.numero.to_string());
         let baixando = self.install.as_ref().map(|t| t.version == v.numero).unwrap_or(false);
 
-        let (bg, border) = if instalado {
-            (egui::Color32::from_rgba_premultiplied(80, 200, 120, 12), egui::Stroke::new(1.5, GREEN))
+        let border = if instalado {
+            egui::Stroke::new(1.5, GREEN)
         } else {
-            (CARD, egui::Stroke::new(1.0, BORDER))
+            egui::Stroke::new(1.0, BORDER)
         };
 
-        egui::Frame::new().fill(bg).stroke(border).corner_radius(R8).show(ui, |ui| {
+        egui::Frame::new().fill(CARD).stroke(border).corner_radius(R8).show(ui, |ui| {
             ui.add_space(12.0);
             ui.vertical(|ui| {
                 ui.horizontal(|ui| {
-                    ui.add_space(4.0);
                     ui.strong(egui::RichText::new(format!("v{}", v.numero)).size(15.0).color(TEXT));
                     if instalado {
                         ui.add_space(6.0);
@@ -497,22 +496,21 @@ impl HubPanel {
                     }
                 });
                 ui.add_space(2.0);
-                ui.horizontal(|ui| { ui.add_space(4.0); ui.label(egui::RichText::new(v.titulo).color(TEXT_MUTED).size(12.0)); });
+                ui.label(egui::RichText::new(v.titulo).color(TEXT_MUTED).size(12.0));
                 ui.add_space(8.0);
                 for item in v.itens.iter().take(3) {
                     ui.horizontal(|ui| {
-                        ui.add_space(8.0);
                         ui.label(egui::RichText::new("\u{2022}").color(PINK).size(8.0));
                         ui.add_space(4.0);
                         ui.label(egui::RichText::new(*item).color(TEXT_MUTED).size(10.0));
                     });
                 }
                 if v.itens.len() > 3 {
-                    ui.horizontal(|ui| { ui.add_space(8.0); ui.label(egui::RichText::new(format!("+{} mais", v.itens.len() - 3)).color(TEXT_MUTED).size(10.0)); });
+                    ui.label(egui::RichText::new(format!("+{} mais", v.itens.len() - 3)).color(TEXT_MUTED).size(10.0));
                 }
 
                 ui.add_space(12.0);
-                ui.vertical_centered(|ui| {
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     if baixando {
                         let p = self.install.as_ref().unwrap().progress;
                         let bar_w = 120.0;
