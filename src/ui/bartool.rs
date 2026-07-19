@@ -28,7 +28,7 @@ impl BarTool {
 
         egui::Area::new(egui::Id::new("floating_bar_playback"))
             .fixed_pos(playback_pos)
-            .order(egui::Order::Foreground)
+            .order(egui::Order::Middle)
             .show(ui.ctx(), |ui| {
                 egui::Frame::new()
                     .fill(bar_fill)

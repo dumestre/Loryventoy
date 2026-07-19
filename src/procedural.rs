@@ -476,7 +476,7 @@ impl ShapeGenerator {
             }
             ShapeKind::Losango => {
                 let r = (tam.x * 0.5).max(1.0);
-                let pts = poligono_regular(c, r, 4, rot + 45.0);
+                let pts = poligono_regular(c, r, 4, rot);
                 Shape::Path(PathShape::convex_polygon(pts, cor, eframe::egui::Stroke::NONE))
             }
             ShapeKind::Poligono => {
