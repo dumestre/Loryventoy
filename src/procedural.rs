@@ -17,7 +17,8 @@ pub enum ShapeKind {
 
 /// Modulação por um nó Ruído conectado a um parâmetro deste item. Aplicada
 /// no instante `t` do render (para animar), somando um deslocamento FBM ao
-/// parâmetro `alvo` (0=Posição, 1=Rotação, 2=Escala).
+/// parâmetro `alvo` (0=Posição, 1=Rotação, 2=Escala, 4=Cor).
+/// `comp` indica qual componente do ruído usar: None=ambos, Some(0)=X, Some(1)=Y.
 #[derive(Debug, Clone, Copy)]
 pub struct RuidoDriver {
     pub seed: f32,
@@ -25,6 +26,7 @@ pub struct RuidoDriver {
     pub amp: f32,
     pub veloc: f32,
     pub alvo: u8,
+    pub comp: Option<usize>,
 }
 
 /// Curva de easing de um segmento de animação.
@@ -116,12 +118,14 @@ pub struct AnimSeg {
 
 /// Driver de animação conectado a um parâmetro de um item. Avaliado no
 /// instante `t` como uma função por partes que SUBSTITUI o valor do alvo.
-/// `alvo`: 0=Posição, 1=Rotação, 2=Escala, 3=Opacidade.
+/// `alvo`: 0=Posição, 1=Rotação, 2=Escala, 3=Opacidade, 4=Cor.
+/// `comp` indica qual componente usar: None=ambos, Some(0)=X, Some(1)=Y.
 #[derive(Debug, Clone)]
 pub struct AnimDriver {
     pub segmentos: Vec<AnimSeg>,
     pub loop_mode: LoopMode,
     pub alvo: u8,
+    pub comp: Option<usize>,
 }
 
 impl AnimDriver {
@@ -200,15 +204,15 @@ impl TextoItem {
         if let Some(a) = &self.anim {
             if a.alvo == 0 {
                 let v = a.valor(t);
-                x = v[0];
-                y = v[1];
+                x = a.comp.map_or(v[0], |c| if c == 0 { v[0] } else { x });
+                y = a.comp.map_or(v[1], |c| if c == 1 { v[1] } else { y });
             }
         }
         if let Some(r) = self.ruido {
             if r.alvo == 0 {
                 let (dx, dy) = ruido_offset(r.seed, r.freq, r.amp, r.veloc, t);
-                x += dx;
-                y += dy;
+                x += r.comp.map_or(dx, |c| if c == 0 { dx } else { 0.0 });
+                y += r.comp.map_or(dy, |c| if c == 1 { dy } else { 0.0 });
             }
         }
         (x, y)
@@ -221,8 +225,8 @@ impl TextoItem {
         if let Some(a) = &self.anim {
             if a.alvo == 2 {
                 let v = a.valor(t);
-                sx = v[0];
-                sy = v[1];
+                sx = a.comp.map_or(v[0], |c| if c == 0 { v[0] } else { sx });
+                sy = a.comp.map_or(v[1], |c| if c == 1 { v[1] } else { sy });
             }
         }
         (sx, sy)
@@ -260,6 +264,8 @@ pub struct PenPath {
     pub ruido: Option<RuidoDriver>,
     /// Animação conectada (substitui Posição / Opacidade), se houver.
     pub anim: Option<AnimDriver>,
+    /// Erro de eval em tempo real (preenchido pelo preview em cada frame).
+    pub erro_eval: Option<String>,
 }
 
 impl PenPath {
@@ -270,13 +276,15 @@ impl PenPath {
         if let Some(a) = &self.anim {
             if a.alvo == 0 {
                 let v = a.valor(t);
-                p = GVec2::new(v[0], v[1]);
+                p.x = a.comp.map_or(v[0], |c| if c == 0 { v[0] } else { p.x });
+                p.y = a.comp.map_or(v[1], |c| if c == 1 { v[1] } else { p.y });
             }
         }
         if let Some(r) = self.ruido {
             if r.alvo == 0 {
                 let (dx, dy) = ruido_offset(r.seed, r.freq, r.amp, r.veloc, t);
-                p += GVec2::new(dx, dy);
+                p.x += r.comp.map_or(dx, |c| if c == 0 { dx } else { 0.0 });
+                p.y += r.comp.map_or(dy, |c| if c == 1 { dy } else { 0.0 });
             }
         }
         p
@@ -376,20 +384,30 @@ impl ShapeGenerator {
         // que o ruído/FBM some por cima como perturbação.
         if let Some(a) = &self.anim {
             let v = a.valor(t);
+            let vx = v[0];
+            let vy = v[1];
             match a.alvo {
-                0 => center = GVec2::new(v[0], v[1]),        // Posição
-                1 => rot = v[0],                             // Rotação (graus)
-                2 => tam = GVec2::new(v[0], v[1]),           // Escala (tamanho px)
-                4 => {                                       // Cor (brilho)
-                    let t = v[0].clamp(0.0, 1.0);
+                0 => match a.comp {
+                    Some(0) => center.x = vx,
+                    Some(1) => center.y = vy,
+                    _ => center = GVec2::new(vx, vy),
+                }
+                1 => rot = vx,
+                2 => match a.comp {
+                    Some(0) => tam.x = vx,
+                    Some(1) => tam.y = vy,
+                    _ => tam = GVec2::new(vx, vy),
+                }
+                4 => {
+                    let f = vx.clamp(0.0, 1.0);
                     cor = Color32::from_rgba_premultiplied(
-                        (cor.r() as f32 * t) as u8,
-                        (cor.g() as f32 * t) as u8,
-                        (cor.b() as f32 * t) as u8,
+                        (cor.r() as f32 * f) as u8,
+                        (cor.g() as f32 * f) as u8,
+                        (cor.b() as f32 * f) as u8,
                         cor.a(),
                     );
                 }
-                _ => {}                                      // 3=Opacidade: ver opac_em
+                _ => {}
             }
         }
 
@@ -429,15 +447,15 @@ impl ShapeGenerator {
         // Ruído EXTERNO (nó Ruído conectado): modula o parâmetro escolhido.
         if let Some(r) = self.ruido {
             let (dx, dy) = ruido_offset(r.seed, r.freq, r.amp, r.veloc, t);
+            let dx = r.comp.map_or(dx, |c| if c == 0 { dx } else { 0.0 });
+            let dy = r.comp.map_or(dy, |c| if c == 1 { dy } else { 0.0 });
             match r.alvo {
-                1 => rot += dx, // Rotação (usa o 1º canal como ângulo em graus)
+                1 => rot += dx,
                 2 => {
-                    // Escala: dx normalizado (~[-amp,amp]) vira fator relativo.
                     let f = 1.0 + dx / r.amp.max(1.0);
                     tam *= f.max(0.05);
                 }
                 4 => {
-                    // Cor: ruído modula o brilho
                     let f = (1.0 + dx / r.amp.max(1.0)).clamp(0.0, 2.0);
                     cor = Color32::from_rgba_premultiplied(
                         (cor.r() as f32 * f).clamp(0.0, 255.0) as u8,
@@ -660,6 +678,7 @@ mod tests {
             segmentos: vec![seg(0.0, 2.0, [0.0, 0.0], [10.0, 20.0])],
             loop_mode: LoopMode::Nenhum,
             alvo: 0,
+            comp: None,
         };
         let v = d.valor(1.0);
         assert!((v[0] - 5.0).abs() < 1e-4);
@@ -672,6 +691,7 @@ mod tests {
             segmentos: vec![seg(1.0, 2.0, [3.0, 0.0], [7.0, 0.0])],
             loop_mode: LoopMode::Nenhum,
             alvo: 0,
+            comp: None,
         };
         assert!((d.valor(0.0)[0] - 3.0).abs() < 1e-4);
         assert!((d.valor(5.0)[0] - 7.0).abs() < 1e-4);
@@ -683,8 +703,8 @@ mod tests {
             segmentos: vec![seg(0.0, 2.0, [0.0, 0.0], [10.0, 0.0])],
             loop_mode: LoopMode::Repetir,
             alvo: 0,
+            comp: None,
         };
-        // t=3 → equivalente a t=1 (duração 2) → metade.
         assert!((d.valor(3.0)[0] - 5.0).abs() < 1e-4);
     }
 
@@ -694,8 +714,8 @@ mod tests {
             segmentos: vec![seg(0.0, 2.0, [0.0, 0.0], [10.0, 0.0])],
             loop_mode: LoopMode::PingPong,
             alvo: 0,
+            comp: None,
         };
-        // t=3 → volta: 2*2-3 = 1 → metade.
         assert!((d.valor(3.0)[0] - 5.0).abs() < 1e-4);
     }
 

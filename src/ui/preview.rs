@@ -43,6 +43,8 @@ pub struct PreviewPanel {
 
     // rasterizador de texto (cosmic-text)
     raster: TextRaster,
+    // erros de eval dos pens no frame atual (exibidos como overlay)
+    pen_erros: Vec<String>,
 }
 
 
@@ -58,6 +60,7 @@ impl PreviewPanel {
             data: PreviewData::default(),
             tempo: 0.0,
             raster: TextRaster::new(),
+            pen_erros: Vec::new(),
         }
     }
 
@@ -312,10 +315,14 @@ impl PreviewPanel {
             // Ordena as canetas por `ordem` (z-order) antes de desenhar.
             let mut pen_ord: Vec<&crate::procedural::PenPath> = cena.pen.iter().collect();
             pen_ord.sort_by(|a, b| a.ordem.partial_cmp(&b.ordem).unwrap_or(std::cmp::Ordering::Equal));
+            self.pen_erros.clear();
             for pen in pen_ord {
                 let cmds = match pen.program.eval(self.tempo, pen.seed) {
                     Ok(c) => c,
-                    Err(_) => continue,
+                    Err(e) => {
+                        self.pen_erros.push(e.to_string());
+                        continue;
+                    }
                 };
                 let shapes = Self::pen_cmds_para_shapes(
                     &cmds,
@@ -412,6 +419,22 @@ impl PreviewPanel {
                         painter.add(Shape::Mesh(meshy.into()));
                     }
                 }
+            }
+        }
+
+        // Overlay de erros de eval dos pens
+        if !self.pen_erros.is_empty() {
+            let mut y = rect.top() + 30.0;
+            let x = rect.left() + 10.0;
+            let painter = ui.painter();
+            for e in &self.pen_erros {
+                let galley = painter.layout_no_wrap(
+                    format!("Pen error: {e}"),
+                    egui::FontId::proportional(14.0),
+                    Color32::from_rgb(255, 80, 80),
+                );
+                painter.galley(egui::pos2(x, y), galley, Color32::from_rgb(255, 80, 80));
+                y += 18.0;
             }
         }
 

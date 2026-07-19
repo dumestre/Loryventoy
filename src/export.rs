@@ -452,6 +452,7 @@ mod tests {
             escala_y: 1.0,
             ruido: None,
             anim: None,
+            erro_eval: None,
         });
         data.cenas.push(cena);
 

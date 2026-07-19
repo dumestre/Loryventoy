@@ -412,12 +412,14 @@ impl GraphPanel {
                     })
                 })
                 .unwrap_or(alvo_no);
+            let comp = info.and_then(|inf| inf.saida_comp);
             return Some(crate::procedural::RuidoDriver {
                 seed,
                 freq,
                 amp,
                 veloc,
                 alvo: alvo_final,
+                comp,
             });
         }
         None
@@ -458,10 +460,12 @@ impl GraphPanel {
                     })
                 })
                 .unwrap_or(alvo_no);
+            let comp = info.and_then(|inf| inf.saida_comp);
             return Some(crate::procedural::AnimDriver {
                 segmentos,
                 loop_mode: crate::procedural::LoopMode::from_u8(loop_mode),
                 alvo: alvo_final,
+                comp,
             });
         }
         None
@@ -591,6 +595,7 @@ impl GraphPanel {
                             escala_y: *escala_y,
                             ruido: self.ruido_para(idx),
                             anim: self.anim_para(idx),
+                            erro_eval: None,
                         });
                     }
                 }
@@ -1221,6 +1226,7 @@ impl GraphPanel {
         entrada: usize,
         entrada_comp: Option<usize>,
     ) {
+        self.empurrar_historico();
         self.g.add_edge(
             src,
             dst,
@@ -1613,10 +1619,11 @@ impl GraphPanel {
                         p_screen.and_then(|ps| self.aresta_sob_cursor(ps, &frame, view_rect))
                     })
                 {
-                    // Cursor faca sobre o fio: corta JÁ no press (mesmo sem
-                    // soltar), para não ser "roubado" pelo arraste de nó/canvas
-                    // que o egui dispara em seguida.
-                    self.g.remove_edge(ei);
+                // Cursor faca sobre o fio: corta JÁ no press (mesmo sem
+                // soltar), para não ser "roubado" pelo arraste de nó/canvas
+                // que o egui dispara em seguida.
+                self.empurrar_historico();
+                self.g.remove_edge(ei);
                 } else if let Some(ni) = self.node_sob_cursor(pc) {
                     // Corpo do nó: inicia arraste do nó e o seleciona
                     // (shift = adicionar à seleção). Não usamos a guarda
