@@ -41,7 +41,7 @@ fn main() -> eframe::Result<()> {
     };
 
     eframe::run_native(
-        "Loryventoy",
+        "Lory Hub",
         options,
         Box::new(|cc| {
             Ok(Box::new(
