@@ -639,7 +639,12 @@ impl PreviewPanel {
                         sp.close = true;
                     }
                 }
-                PathCmd::Fill(b) => st.preenche = *b,
+                PathCmd::Fill(b) => {
+                    st.preenche = *b;
+                    if *b && cur.is_some() {
+                        cur.as_mut().unwrap().preenche = true;
+                    }
+                }
                 PathCmd::Stroke(w) => st.esp = *w,
                 PathCmd::Color(c) => { st.cor = *c; st.cor_fill = *c; }
                 PathCmd::ColorStroke(c) => st.cor = *c,

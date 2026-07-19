@@ -358,8 +358,8 @@ pen traco {
     curve_to 220 -160 320 60 400 0
     line_to 200 120
     line_to -40 80
-    close
     fill on
+    close
   }
 }
 
@@ -512,7 +512,7 @@ pen formas {
     color #06d6a0
     round_rect -160 120 320 90 24
     color #118ab2
-    arc 0 270 150 0 -180
+    arc 0 360 150 0 -180
     stroke 2
     color #f78c6b
     grid 8 1 -200 250 50 0 6
@@ -595,7 +595,7 @@ pen anel {
   codigo {
     repeat 12 {
       push
-      rotate (i * 30)
+      rotate (i * 30 + t * 30)
       translate 220 0
       circle 0 0 30
       pop
@@ -625,7 +625,7 @@ pen blocos {
     color 1 0.4 0.2
     rect -200 -40 120 80
     push
-    translate 260 0
+    translate (260 + sin(t * 1.5) * 60) 0
     color 0.2 0.9 0.5
     fill on
     rect -60 -40 120 80
@@ -658,9 +658,9 @@ pen trilha {
     let px = -300
     let py = 0
     point px py
-    repeat 10 {
-      px = px + 60
-      py = sin(px * 0.02) * 120
+    repeat 30 {
+      px = px + 20
+      py = sin(px * 0.02 + t * 2) * 120
       line_to px py
     }
   }
@@ -688,13 +688,14 @@ pen barra {
   codigo {
     repeat 20 {
       let u = i / 19
+      let anim = ease((progress + u * 0.2) % 1, "quad")
       # cor vai de azul (0,0.4,1) a rosa (1,0.2,0.6) pelo lerp
       let r = lerp(0, 1, u)
       let g = lerp(0.4, 0.2, u)
       let b = lerp(1, 0.6, u)
       color r g b
       let x = map(u, 0, 1, -300, 300)
-      let h = lerp(20, 220, u)
+      let h = lerp(20, 220, anim)
       rect x -h 20 h
     }
   }
@@ -776,6 +777,7 @@ pen barras {
   scene s1
   pos 640 360
   stroke 2
+  fill on
   codigo {
     repeat 5 {
       let u = i / 4
