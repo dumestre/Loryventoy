@@ -343,6 +343,7 @@ impl eframe::App for MovimentoApp {
 
         // ---- TELA INICIAL (HUB DE PROJETOS) ----
         if self.no_hub {
+            ui.ctx().send_viewport_cmd(egui::ViewportCommand::Title("Lory Hub".into()));
             let aberto = self.hub.show(ui, || {
                 // criador de projeto em branco
                 let (nos, arestas) = GraphPanel::new().snapshot();
@@ -354,6 +355,8 @@ impl eframe::App for MovimentoApp {
             }
             return;
         }
+
+        ui.ctx().send_viewport_cmd(egui::ViewportCommand::Title("Loryventoy".into()));
 
         egui::CentralPanel::default()
             .show(ui, |ui| {

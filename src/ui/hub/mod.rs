@@ -509,22 +509,25 @@ impl HubPanel {
                     ui.label(egui::RichText::new(format!("+{} mais", v.itens.len() - 3)).color(TEXT_MUTED).size(10.0));
                 }
 
-                ui.add_space(12.0);
+                ui.add_space(6.0);
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     if baixando {
                         let p = self.install.as_ref().unwrap().progress;
-                        let bar_w = 120.0;
-                        let bar_h = 6.0;
-                        let bar_rect = egui::Rect::from_min_size(ui.cursor().min, egui::vec2(bar_w, bar_h));
-                        ui.painter_at(bar_rect).rect_filled(bar_rect, R6, egui::Color32::from_rgba_premultiplied(255, 255, 255, 20));
-                        let fill_w = bar_w * p;
-                        if fill_w > 0.0 {
-                            let fill_rect = egui::Rect::from_min_size(bar_rect.min, egui::vec2(fill_w, bar_h));
-                            ui.painter_at(fill_rect).rect_filled(fill_rect, R6, PINK);
-                        }
-                        ui.add_space(bar_h + 2.0);
-                        let pct = (p * 100.0) as u32;
-                        ui.label(egui::RichText::new(format!("{pct}%")).color(TEXT_MUTED).size(10.0));
+                        egui::Frame::new().fill(egui::Color32::TRANSPARENT).show(ui, |ui| {
+                            ui.vertical(|ui| {
+                                let bar_w = 100.0;
+                                let bar_h = 6.0;
+                                let (bar_rect, _) = ui.allocate_exact_size(egui::vec2(bar_w, bar_h), egui::Sense::hover());
+                                ui.painter_at(bar_rect).rect_filled(bar_rect, R6, egui::Color32::from_rgba_premultiplied(255, 255, 255, 20));
+                                let fill_w = bar_w * p;
+                                if fill_w > 0.0 {
+                                    let fill_rect = egui::Rect::from_min_size(bar_rect.min, egui::vec2(fill_w, bar_h));
+                                    ui.painter_at(fill_rect).rect_filled(fill_rect, R6, PINK);
+                                }
+                                let pct = (p * 100.0) as u32;
+                                ui.label(egui::RichText::new(format!("{pct}%")).color(TEXT_MUTED).size(11.0).strong());
+                            });
+                        });
                     } else if instalado {
                         if ui.add(egui::Button::new(egui::RichText::new("Desinstalar").size(11.0).color(DANGER)).fill(egui::Color32::TRANSPARENT).corner_radius(R6).min_size(egui::vec2(100.0, 24.0))).clicked() {
                             self.installed.retain(|x| x != v.numero);
