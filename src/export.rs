@@ -236,6 +236,8 @@ fn pen_para_shapes(pen: &PenPath, t: f32, off: Vec2) -> Vec<Shape> {
     };
     let to_buf = |p: Pos2| Pos2::new(p.x + off.x, p.y + off.y);
     let id = |v: Vec2| v;
+    let progress = (t / pen.duracao.max(0.001)).clamp(0.0, 1.0);
+    let trim_fim_anim = pen.trim_inicio + (pen.trim_fim - pen.trim_inicio) * progress;
     // opacidade é aplicada depois, na rasterização, então passamos 1.0 aqui.
     PreviewPanel::pen_cmds_para_shapes(
         &cmds,
@@ -251,7 +253,7 @@ fn pen_para_shapes(pen: &PenPath, t: f32, off: Vec2) -> Vec<Shape> {
         &id,
         1.0,
         pen.trim_inicio,
-        pen.trim_fim,
+        trim_fim_anim,
     )
 }
 
@@ -457,6 +459,7 @@ mod tests {
             erro_eval: None,
             trim_inicio: 0.0,
             trim_fim: 1.0,
+            duracao: 6.0,
         });
         data.cenas.push(cena);
 

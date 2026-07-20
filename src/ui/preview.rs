@@ -324,6 +324,8 @@ impl PreviewPanel {
                         continue;
                     }
                 };
+                let progress = (self.tempo / pen.duracao.max(0.001)).clamp(0.0, 1.0);
+                let trim_fim_anim = pen.trim_inicio + (pen.trim_fim - pen.trim_inicio) * progress;
                 let shapes = Self::pen_cmds_para_shapes(
                     &cmds,
                     pen.pos_em(self.tempo),
@@ -338,7 +340,7 @@ impl PreviewPanel {
                     &para_tela_v,
                     opac * pen.opac_em(self.tempo),
                     pen.trim_inicio,
-                    pen.trim_fim,
+                    trim_fim_anim,
                 );
                 for s in shapes {
                     painter.add(s);

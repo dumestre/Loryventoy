@@ -480,10 +480,12 @@ impl GraphPanel {
             fundo: Color32::WHITE,
             cenas: Vec::new(),
         };
+        let mut duracao_seg = 6.0;
         if let Some(NodeParams::Canvas(c)) = self.canvas.and_then(|i| self.params.get(&i)) {
             data.largura = c.largura as f32;
             data.altura = c.altura as f32;
             data.fundo = c.fundo;
+            duracao_seg = c.duracao_seg;
         }
 
         // mapa nome-da-cena -> índice na lista (preserva ordem de aparecimento)
@@ -542,6 +544,7 @@ impl GraphPanel {
                         anim: self.anim_para(idx),
                         trim_inicio: *trim_inicio,
                         trim_fim: *trim_fim,
+                        duracao: duracao_seg,
                     });
                 }
                 Some(NodeParams::Texto {
@@ -609,6 +612,7 @@ impl GraphPanel {
                             erro_eval: None,
                             trim_inicio: *trim_inicio,
                             trim_fim: *trim_fim,
+                            duracao: duracao_seg,
                         });
                     }
                 }

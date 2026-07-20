@@ -270,6 +270,8 @@ pub struct PenPath {
     pub erro_eval: Option<String>,
     pub trim_inicio: f32,
     pub trim_fim: f32,
+    /// Duração total da animação em segundos (usada para animar o trim).
+    pub duracao: f32,
 }
 
 impl PenPath {
@@ -359,6 +361,8 @@ pub struct ShapeGenerator {
     /// Trim (0..1) do percurso da forma.
     pub trim_inicio: f32,
     pub trim_fim: f32,
+    /// Duração total da animação em segundos (usada para animar o trim).
+    pub duracao: f32,
 }
 
 impl ShapeGenerator {
@@ -545,7 +549,15 @@ impl ShapeGenerator {
 
         // Aplica trim se ativo: converte a forma preenchida num contorno
         // recortado (stroke) com a mesma cor.
-        if self.trim_inicio > 0.0 || self.trim_fim < 1.0 {
+        let use_trim = self.trim_inicio > 0.0 || self.trim_fim < 1.0;
+        let trim_inicio = self.trim_inicio;
+        let trim_fim = if use_trim {
+            let progress = (t / self.duracao.max(0.001)).clamp(0.0, 1.0);
+            self.trim_inicio + (self.trim_fim - self.trim_inicio) * progress
+        } else {
+            self.trim_fim
+        };
+        if trim_inicio > 0.0 || trim_fim < 1.0 {
             let pts = match &shape {
                 Shape::Rect(r) => {
                     let rect = r.rect;
@@ -571,7 +583,7 @@ impl ShapeGenerator {
             };
             if let Some(mut pts) = pts {
                 let closed = true;
-                pts = trim_path_pts(&pts, closed, self.trim_inicio, self.trim_fim);
+                pts = trim_path_pts(&pts, closed, trim_inicio, trim_fim);
                 let mut p = PathShape::line(pts, Stroke::new(3.0, cor));
                 p.fill = Color32::TRANSPARENT;
                 shape = Shape::Path(p);
