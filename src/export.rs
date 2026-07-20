@@ -250,6 +250,8 @@ fn pen_para_shapes(pen: &PenPath, t: f32, off: Vec2) -> Vec<Shape> {
         &to_buf,
         &id,
         1.0,
+        pen.trim_inicio,
+        pen.trim_fim,
     )
 }
 
@@ -453,6 +455,8 @@ mod tests {
             ruido: None,
             anim: None,
             erro_eval: None,
+            trim_inicio: 0.0,
+            trim_fim: 1.0,
         });
         data.cenas.push(cena);
 

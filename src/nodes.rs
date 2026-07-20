@@ -381,20 +381,23 @@ pub enum NodeParams {
         px: f32,
         py: f32,
         cor: Color32,
+        trim_inicio: f32,
+        trim_fim: f32,
     },
     /// Nó de forma geométrica de uma cena (100% procedural).
     Shape {
         cena: String,
-        tipo: u8, // 0=retângulo,1=elipse,2=triângulo,3=estrela,4=losango,5=polígono,6=seta
+        tipo: u8,
         px: f32, py: f32,
         largura: f32, altura: f32,
         rotacao: f32,
         cor: Color32,
-        // parâmetros procedurais (ruído + seed)
         seed: f32,
         noise_scale: f32,
         amp: f32,
         veloc: f32,
+        trim_inicio: f32,
+        trim_fim: f32,
     },
     /// Nó de desenho procedural via DSL (caneta). O usuário escreve um
     /// programa em mini-linguagem que gera formas vetoriais na cena.
@@ -413,6 +416,8 @@ pub enum NodeParams {
         ordem: f32,
         escala_x: f32,
         escala_y: f32,
+        trim_inicio: f32,
+        trim_fim: f32,
     },
     /// Nó de ruído: gera um deslocamento animado (FBM) para modular um
     /// parâmetro de outro nó conectado. `alvo` escolhe o parâmetro padrão
@@ -476,6 +481,8 @@ impl NodeParams {
                 noise_scale: 0.6,
                 amp: 0.0,
                 veloc: 0.0,
+                trim_inicio: 0.0,
+                trim_fim: 1.0,
             },
             TipoNo::Texto => NodeParams::Texto {
                 cena: String::new(),
@@ -486,6 +493,8 @@ impl NodeParams {
                 px: 960.0,
                 py: 540.0,
                 cor: Color32::from_rgb(20, 20, 26),
+                trim_inicio: 0.0,
+                trim_fim: 1.0,
             },
             TipoNo::Ruido => NodeParams::Ruido {
                 seed: 1.0,
@@ -520,6 +529,8 @@ impl NodeParams {
                 ordem: 0.0,
                 escala_x: 1.0,
                 escala_y: 1.0,
+                trim_inicio: 0.0,
+                trim_fim: 1.0,
             },
         }
     }

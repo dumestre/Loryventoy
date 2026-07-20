@@ -1,4 +1,4 @@
-# Nó Pen — DSL de desenho procedural
+﻿# Nó Pen — DSL de desenho procedural
 
 O nó **Pen** permite desenhar formas vetoriais arbitrárias escrevendo um
 pequeno programa em uma linguagem própria (DSL) no inspector do nó. Diferente
@@ -555,10 +555,9 @@ edge sh1.pos -> tx1.pos
 | scene | Nó de cena. Campos: 
 ame, zoom, ngle, opacity. |
 | layer | Nó de camada. Campos: scene, opacity. |
-| shape | Nó de forma. Campos: scene, 	ype, pos, size, otation, color, seed, 
-oise, mp, speed. |
-| 	ext | Nó de texto. Campos: scene, content, size, old, italic, pos, color. |
-| pen | Nó Pen. Campos: scene, pos, stroke, fill, color, stroke_color, fill_color, seed, e o bloco codigo { }. `color` define traço e preenchimento juntos; `stroke_color`/`fill_color` definem cada um separadamente. |
+| shape | Nó de forma. Campos: scene, type, pos, size, rot, color, seed, noise, amp, speed, trim_start, trim_end. |
+| text | Nó de texto. Campos: scene, content, size, bold, italic, pos, color, trim_start, trim_end. |
+| pen | Nó Pen. Campos: scene, pos, stroke, fill, color, stroke_color, fill_color, seed, trim_start, trim_end, e o bloco codigo { }. `color` define traço e preenchimento juntos; `stroke_color`/`fill_color` definem cada um separadamente. |
 | edge | Conexão: edge A.porto -> B.porto. |
 
 ## Portos nas conexões (edge)

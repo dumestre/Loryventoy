@@ -763,6 +763,102 @@ pen pulse {
 edge s1.out -> master.in
 ---
 
+# Trim Paths (recorte de percurso)
+
+# Trim recorta o path mostrando apenas o trecho entre trim_start e trim_end
+# (valores de 0.0 a 1.0). Funciona como "Trim Paths" do After Effects.
+# Suportado em nós Shape, Text e Pen.
+
+project "Trim Effect" {
+  width 1280
+  height 720
+  fps 30
+  duration 6
+  background #1e1e26
+}
+
+scene s1 { name "Cena 1" opacity 1.0 }
+
+# Estrela: mostra apenas a primeira metade (trim_end = 0.5)
+shape estrela {
+  scene s1
+  type star
+  pos 320 360
+  size 220 220
+  color #ffd166
+  trim_start 0.0
+  trim_end 0.5
+}
+
+# Triângulo: mostra o meio (trim_start 0.25, trim_end 0.75)
+shape triangulo {
+  scene s1
+  type triangle
+  pos 640 360
+  size 200 200
+  color #ef476f
+  trim_start 0.25
+  trim_end 0.75
+}
+
+# Retângulo: mostra apenas a metade final (trim_start = 0.5)
+shape retangulo {
+  scene s1
+  type rect
+  pos 960 360
+  size 200 200
+  color #06d6a0
+  trim_start 0.5
+  trim_end 1.0
+}
+
+# Pen com trim: círculo mostra só 30% inicial
+pen circulo_trim {
+  scene s1
+  pos 320 600
+  stroke 3
+  fill on
+  color #118ab2
+  trim_start 0.0
+  trim_end 0.3
+  codigo {
+    circle 0 0 60
+  }
+}
+
+# Pen com trim: espiral mostra só 40% final
+pen espiral_trim {
+  scene s1
+  pos 640 600
+  stroke 2
+  color #f78c6b
+  trim_start 0.6
+  trim_end 1.0
+  codigo {
+    repeat 100 {
+      let a = i * 0.15
+      let r = i * 2.2
+      line (cos(a)*r) (sin(a)*r)
+    }
+  }
+}
+
+# Texto com trim: mostra 60% inicial
+text texto_trim {
+  scene s1
+  content "TRIM"
+  size 72
+  bold on
+  color #7affa3
+  pos 960 600
+  trim_start 0.0
+  trim_end 0.6
+}
+
+edge s1.out -> master.in
+
+---
+
 # Easing em cadeia (entrada e saída)
 
 # "quadin" entra devagar; "elastic" dá molejo; "bounce" quica.

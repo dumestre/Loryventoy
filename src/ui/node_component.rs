@@ -231,6 +231,9 @@ pub fn show_content(
                 noise_scale,
                 amp,
                 veloc,
+                trim_inicio,
+                trim_fim,
+                ..
             } = params
             {
                 grid_combo_cena(ui, "Cena", cena, cenas);
@@ -256,6 +259,9 @@ pub fn show_content(
                 grid_2(ui, "Ruído", noise_scale, 0.01..=5.0, "");
                 grid_2(ui, "Amplitude", amp, 0.0..=500.0, "");
                 grid_2(ui, "Velocidade", veloc, 0.0..=10.0, "x");
+                // --- trim ---
+                grid_2(ui, "Trim início", trim_inicio, 0.0..=1.0, "");
+                grid_2(ui, "Trim fim", trim_fim, 0.0..=1.0, "");
             }
         }
         TipoNo::Texto => {
@@ -268,6 +274,9 @@ pub fn show_content(
                 px,
                 py,
                 cor,
+                trim_inicio,
+                trim_fim,
+                ..
             } = params
             {
                 grid_combo_cena(ui, "Cena", cena, cenas);
@@ -304,6 +313,8 @@ pub fn show_content(
                         ui.end_row();
                     });
                 registrar_linha("Cor", &rc.response);
+                grid_2(ui, "Trim início", trim_inicio, 0.0..=1.0, "");
+                grid_2(ui, "Trim fim", trim_fim, 0.0..=1.0, "");
             }
         }
         TipoNo::Pen => {
@@ -322,6 +333,9 @@ pub fn show_content(
                 ordem,
                 escala_x,
                 escala_y,
+                trim_inicio,
+                trim_fim,
+                ..
             } = params
             {
                 grid_combo_cena(ui, "Cena", cena, cenas);
@@ -427,6 +441,9 @@ pub fn show_content(
                         };
                         ui.colored_label(cor, &log_txt);
                     });
+                ui.add_space(6.0);
+                grid_2(ui, "Trim início", trim_inicio, 0.0..=1.0, "");
+                grid_2(ui, "Trim fim", trim_fim, 0.0..=1.0, "");
             }
         }
         TipoNo::Ruido => {

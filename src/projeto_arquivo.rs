@@ -44,6 +44,10 @@ pub enum NodeParamsJson {
         px: f32,
         py: f32,
         cor: [u8; 4],
+        #[serde(default)]
+        trim_inicio: f32,
+        #[serde(default)]
+        trim_fim: f32,
     },
     Shape {
         cena: String,
@@ -56,6 +60,10 @@ pub enum NodeParamsJson {
         noise_scale: f32,
         amp: f32,
         veloc: f32,
+        #[serde(default)]
+        trim_inicio: f32,
+        #[serde(default)]
+        trim_fim: f32,
     },
     Pen {
         cena: String,
@@ -72,6 +80,10 @@ pub enum NodeParamsJson {
         ordem: f32,
         escala_x: f32,
         escala_y: f32,
+        #[serde(default)]
+        trim_inicio: f32,
+        #[serde(default)]
+        trim_fim: f32,
     },
     Ruido {
         seed: f32,
@@ -111,24 +123,25 @@ impl From<NodeParams> for NodeParamsJson {
             NodeParams::Layer { cena, opacidade } => {
                 NodeParamsJson::Layer { cena, opacidade }
             }
-            NodeParams::Texto { cena, conteudo, tamanho, negrito, italico, px, py, cor } => {
+            NodeParams::Texto { cena, conteudo, tamanho, negrito, italico, px, py, cor, trim_inicio, trim_fim, .. } => {
                 NodeParamsJson::Texto {
                     cena, conteudo, tamanho, negrito, italico, px, py,
-                    cor: cor.to_array(),
+                    cor: cor.to_array(), trim_inicio, trim_fim,
                 }
             }
             NodeParams::Shape {
                 cena, tipo, px, py, largura, altura, rotacao, cor,
-                seed, noise_scale, amp, veloc,
+                seed, noise_scale, amp, veloc, trim_inicio, trim_fim, ..
             } => {
                 NodeParamsJson::Shape {
                     cena, tipo, px, py, largura, altura, rotacao,
                     cor: cor.to_array(), seed, noise_scale, amp, veloc,
+                    trim_inicio, trim_fim,
                 }
             }
             NodeParams::Pen {
                 cena, codigo, cor, cor_fill, pos_x, pos_y, espessura, preenchimento,
-                seed, cantos, ordem, escala_x, escala_y, ..
+                seed, cantos, ordem, escala_x, escala_y, trim_inicio, trim_fim, ..
             } => {
                 NodeParamsJson::Pen {
                     cena, codigo,
@@ -136,6 +149,7 @@ impl From<NodeParams> for NodeParamsJson {
                     cor_fill: Some(cor_fill.to_array()),
                     pos_x, pos_y, espessura, preenchimento,
                     seed, cantos, ordem, escala_x, escala_y,
+                    trim_inicio, trim_fim,
                 }
             }
             NodeParams::Ruido { seed, freq, amp, veloc, alvo } => {
@@ -187,25 +201,26 @@ impl TryFrom<NodeParamsJson> for NodeParams {
             NodeParamsJson::Layer { cena, opacidade } => {
                 NodeParams::Layer { cena, opacidade }
             }
-            NodeParamsJson::Texto { cena, conteudo, tamanho, negrito, italico, px, py, cor } => {
+            NodeParamsJson::Texto { cena, conteudo, tamanho, negrito, italico, px, py, cor, trim_inicio, trim_fim } => {
                 NodeParams::Texto {
                     cena, conteudo, tamanho, negrito, italico, px, py,
                     cor: Color32::from_rgba_unmultiplied(cor[0], cor[1], cor[2], cor[3]),
+                    trim_inicio, trim_fim,
                 }
             }
             NodeParamsJson::Shape {
                 cena, tipo, px, py, largura, altura, rotacao, cor,
-                seed, noise_scale, amp, veloc,
+                seed, noise_scale, amp, veloc, trim_inicio, trim_fim,
             } => {
                 NodeParams::Shape {
                     cena, tipo, px, py, largura, altura, rotacao,
                     cor: Color32::from_rgba_unmultiplied(cor[0], cor[1], cor[2], cor[3]),
-                    seed, noise_scale, amp, veloc,
+                    seed, noise_scale, amp, veloc, trim_inicio, trim_fim,
                 }
             }
             NodeParamsJson::Pen {
                 cena, codigo, cor, cor_fill, pos_x, pos_y, espessura, preenchimento,
-                seed, cantos, ordem, escala_x, escala_y,
+                seed, cantos, ordem, escala_x, escala_y, trim_inicio, trim_fim,
             } => {
                 let cor = Color32::from_rgba_unmultiplied(cor[0], cor[1], cor[2], cor[3]);
                 let cor_fill = cor_fill
@@ -217,6 +232,7 @@ impl TryFrom<NodeParamsJson> for NodeParams {
                     pos_x, pos_y, espessura, preenchimento,
                     seed, cantos, ordem, escala_x, escala_y,
                     erro: None,
+                    trim_inicio, trim_fim,
                 }
             }
             NodeParamsJson::Ruido { seed, freq, amp, veloc, alvo } => {

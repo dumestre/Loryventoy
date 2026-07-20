@@ -16,7 +16,7 @@ use eframe::egui::{
 };
 use eframe::egui::epaint::{EllipseShape, PathShape, RectShape, Vertex};
 
-use crate::procedural::{PreviewData, GVec2};
+use crate::procedural::{PreviewData, GVec2, trim_path_pts};
 use crate::ui::scroll_delta;
 use crate::ui::text_raster::TextRaster;
 
@@ -337,6 +337,8 @@ impl PreviewPanel {
                     &para_tela,
                     &para_tela_v,
                     opac * pen.opac_em(self.tempo),
+                    pen.trim_inicio,
+                    pen.trim_fim,
                 );
                 for s in shapes {
                     painter.add(s);
@@ -533,6 +535,14 @@ impl PreviewPanel {
     /// Pública para ser reutilizada pela exportação off-screen (PNG), que
     /// passa `para_tela`/`para_tela_v` mapeando coords de projeto direto para
     /// o buffer de imagem.
+    fn cubic_bezier_point(p0: Pos2, p1: Pos2, p2: Pos2, p3: Pos2, t: f32) -> Pos2 {
+        let mt = 1.0 - t;
+        Pos2::new(
+            mt * mt * mt * p0.x + 3.0 * mt * mt * t * p1.x + 3.0 * mt * t * t * p2.x + t * t * t * p3.x,
+            mt * mt * mt * p0.y + 3.0 * mt * mt * t * p1.y + 3.0 * mt * t * t * p2.y + t * t * t * p3.y,
+        )
+    }
+
     pub fn pen_cmds_para_shapes<F, G>(
         cmds: &[crate::dsl::PathCmd],
         desloc: GVec2,
@@ -546,6 +556,8 @@ impl PreviewPanel {
         para_tela: &F,
         para_tela_v: &G,
         opac: f32,
+        trim_inicio: f32,
+        trim_fim: f32,
     ) -> Vec<Shape>
     where
         F: Fn(Pos2) -> Pos2,
@@ -707,20 +719,49 @@ impl PreviewPanel {
 
             let esp_tela = (para_tela_v(Vec2::splat(sp.esp)).x).max(0.5);
 
-            let mut builder = lyon::path::Path::builder();
-            builder.begin(sp.start);
-            for op in &sp.ops {
-                match op {
-                    SubPathOp::Line(p) => { builder.line_to(*p); }
-                    SubPathOp::Cubic(c1, c2, p) => { builder.cubic_bezier_to(*c1, *c2, *p); }
+            let use_trim = trim_inicio > 0.0 || trim_fim < 1.0;
+            let (path, trimmed) = if use_trim {
+                let mut pts = vec![Pos2::new(sp.start.x, sp.start.y)];
+                for op in &sp.ops {
+                    match op {
+                        SubPathOp::Line(p) => { pts.push(Pos2::new(p.x, p.y)); }
+                        SubPathOp::Cubic(c1, c2, p) => {
+                            let p0 = *pts.last().unwrap();
+                            let n = 12;
+                            for i in 1..=n {
+                                let t = i as f32 / n as f32;
+                                pts.push(Self::cubic_bezier_point(p0, Pos2::new(c1.x, c1.y), Pos2::new(c2.x, c2.y), Pos2::new(p.x, p.y), t));
+                            }
+                        }
+                    }
                 }
-            }
-            if sp.close || sp.preenche {
-                builder.close();
-            }
-            let path = builder.build();
+                pts = trim_path_pts(&pts, sp.close, trim_inicio, trim_fim);
+                let mut b = lyon::path::Path::builder();
+                if pts.len() >= 2 {
+                    b.begin(lyon::math::Point::new(pts[0].x, pts[0].y));
+                    for p in &pts[1..] {
+                        b.line_to(lyon::math::Point::new(p.x, p.y));
+                    }
+                }
+                (b.build(), pts.len() >= 2)
+            } else {
+                let mut b = lyon::path::Path::builder();
+                b.begin(sp.start);
+                for op in &sp.ops {
+                    match op {
+                        SubPathOp::Line(p) => { b.line_to(*p); }
+                        SubPathOp::Cubic(c1, c2, p) => { b.cubic_bezier_to(*c1, *c2, *p); }
+                    }
+                }
+                if sp.close || sp.preenche {
+                    b.close();
+                }
+                (b.build(), true)
+            };
 
-            if sp.preenche {
+            if !trimmed { continue; }
+
+            if sp.preenche && !use_trim {
                 let mut fb: VertexBuffers<TessV, u32> = VertexBuffers::new();
                 if FillTessellator::new()
                     .tessellate_path(&path, &FillOptions::default().with_tolerance(0.1),
@@ -796,6 +837,7 @@ mod tests {
             &|p: Pos2| p,
             &|v: Vec2| v,
             1.0,
+            0.0, 1.0,
         );
         assert!(shapes.is_empty(), "esperado 0 shapes, veio {}", shapes.len());
         // e os textos devem ser extraíveis

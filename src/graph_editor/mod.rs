@@ -513,17 +513,19 @@ impl GraphPanel {
             match self.params.get(&idx) {
                 Some(NodeParams::Shape {
                     cena: _,
+                    tipo,
                     px,
                     py,
                     largura,
                     altura,
                     rotacao,
                     cor,
-                    tipo,
                     seed,
                     noise_scale,
                     amp,
                     veloc,
+                    trim_inicio,
+                    trim_fim,
                     ..
                 }) => {
                     cenas[i].formas.push(ShapeGenerator {
@@ -538,6 +540,8 @@ impl GraphPanel {
                         veloc: *veloc,
                         ruido: self.ruido_para(idx),
                         anim: self.anim_para(idx),
+                        trim_inicio: *trim_inicio,
+                        trim_fim: *trim_fim,
                     });
                 }
                 Some(NodeParams::Texto {
@@ -549,6 +553,9 @@ impl GraphPanel {
                     px,
                     py,
                     cor,
+                    trim_inicio,
+                    trim_fim,
+                    ..
                 }) => {
                     cenas[i].textos.push(TextoItem {
                         px: *px,
@@ -562,6 +569,8 @@ impl GraphPanel {
                         escala_y: 1.0,
                         ruido: self.ruido_para(idx),
                         anim: self.anim_para(idx),
+                        trim_inicio: *trim_inicio,
+                        trim_fim: *trim_fim,
                     });
                 }
                 Some(NodeParams::Pen {
@@ -578,6 +587,8 @@ impl GraphPanel {
                     ordem,
                     escala_x,
                     escala_y,
+                    trim_inicio,
+                    trim_fim,
                     ..
                 }) => {
                     if let Ok(program) = crate::dsl::Program::parse(codigo) {
@@ -596,6 +607,8 @@ impl GraphPanel {
                             ruido: self.ruido_para(idx),
                             anim: self.anim_para(idx),
                             erro_eval: None,
+                            trim_inicio: *trim_inicio,
+                            trim_fim: *trim_fim,
                         });
                     }
                 }
@@ -2318,6 +2331,8 @@ fn aplicar_campos(
             noise_scale,
             amp,
             veloc,
+            trim_inicio,
+            trim_fim,
             cena,
             ..
         } => {
@@ -2355,6 +2370,8 @@ fn aplicar_campos(
                     "noise" => *noise_scale = v.as_num(),
                     "amp" => *amp = v.as_num(),
                     "speed" => *veloc = v.as_num(),
+                    "trim_start" | "trim_inicio" => *trim_inicio = v.as_num(),
+                    "trim_end" | "trim_fim" => *trim_fim = v.as_num(),
                     _ => {}
                 }
             }
@@ -2370,6 +2387,8 @@ fn aplicar_campos(
             px,
             py,
             cor,
+            trim_inicio,
+            trim_fim,
             cena,
             ..
         } => {
@@ -2388,6 +2407,8 @@ fn aplicar_campos(
                         }
                     }
                     "color" | "colour" => *cor = v.as_hex(),
+                    "trim_start" | "trim_inicio" => *trim_inicio = v.as_num(),
+                    "trim_end" | "trim_fim" => *trim_fim = v.as_num(),
                     _ => {}
                 }
             }
@@ -2408,6 +2429,8 @@ fn aplicar_campos(
             ordem,
             escala_x,
             escala_y,
+            trim_inicio,
+            trim_fim,
             cena,
             ..
         } => {
@@ -2435,6 +2458,8 @@ fn aplicar_campos(
                     "order" => *ordem = v.as_num(),
                     "scalex" => *escala_x = v.as_num(),
                     "scaley" => *escala_y = v.as_num(),
+                    "trim_start" | "trim_inicio" => *trim_inicio = v.as_num(),
+                    "trim_end" | "trim_fim" => *trim_fim = v.as_num(),
                     _ => {}
                 }
             }

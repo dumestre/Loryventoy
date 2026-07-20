@@ -1,4 +1,4 @@
-use eframe::egui::{Color32, Pos2, Rect, Shape, Vec2};
+use eframe::egui::{Color32, Pos2, Rect, Shape, Stroke, Vec2};
 use eframe::egui::epaint::{EllipseShape, PathShape, RectShape};
 pub use glam::Vec2 as GVec2;
 use noise::{NoiseFn, Simplex};
@@ -194,6 +194,8 @@ pub struct TextoItem {
     pub ruido: Option<RuidoDriver>,
     /// Animação conectada (substitui Posição/Opacidade/Escala), se houver.
     pub anim: Option<AnimDriver>,
+    pub trim_inicio: f32,
+    pub trim_fim: f32,
 }
 
 impl TextoItem {
@@ -266,6 +268,8 @@ pub struct PenPath {
     pub anim: Option<AnimDriver>,
     /// Erro de eval em tempo real (preenchido pelo preview em cada frame).
     pub erro_eval: Option<String>,
+    pub trim_inicio: f32,
+    pub trim_fim: f32,
 }
 
 impl PenPath {
@@ -352,6 +356,9 @@ pub struct ShapeGenerator {
     pub ruido: Option<RuidoDriver>,
     /// Animação conectada (substitui Posição/Rotação/Escala/Opacidade).
     pub anim: Option<AnimDriver>,
+    /// Trim (0..1) do percurso da forma.
+    pub trim_inicio: f32,
+    pub trim_fim: f32,
 }
 
 impl ShapeGenerator {
@@ -472,7 +479,7 @@ impl ShapeGenerator {
         }
 
         let c = Pos2::new(center.x, center.y);
-        match self.kind {
+        let mut shape = match self.kind {
             ShapeKind::Retangulo => {
                 // Sem rotação: RectShape (permite corner radius arredondado).
                 // Com rotação: vira um path de 4 vértices girados, pois o
@@ -534,7 +541,45 @@ impl ShapeGenerator {
                 Shape::Path(p)
             }
             ShapeKind::Seta => seta(c, tam, rot, cor),
+        };
+
+        // Aplica trim se ativo: converte a forma preenchida num contorno
+        // recortado (stroke) com a mesma cor.
+        if self.trim_inicio > 0.0 || self.trim_fim < 1.0 {
+            let pts = match &shape {
+                Shape::Rect(r) => {
+                    let rect = r.rect;
+                    Some(vec![
+                        Pos2::new(rect.left(), rect.top()),
+                        Pos2::new(rect.right(), rect.top()),
+                        Pos2::new(rect.right(), rect.bottom()),
+                        Pos2::new(rect.left(), rect.bottom()),
+                    ])
+                }
+                Shape::Ellipse(e) => {
+                    let c = e.center;
+                    let rx = e.radius.x;
+                    let ry = e.radius.y;
+                    let n = 48;
+                    Some((0..n).map(|i| {
+                        let a = i as f32 * std::f32::consts::TAU / n as f32;
+                        Pos2::new(c.x + rx * a.cos(), c.y + ry * a.sin())
+                    }).collect())
+                }
+                Shape::Path(p) => Some(p.points.clone()),
+                _ => None,
+            };
+            if let Some(mut pts) = pts {
+                let closed = true;
+                pts = trim_path_pts(&pts, closed, self.trim_inicio, self.trim_fim);
+                shape = Shape::Path(PathShape::line(
+                    pts,
+                    Stroke::new(3.0, cor),
+                ));
+            }
         }
+
+        shape
     }
 }
 
@@ -658,6 +703,72 @@ fn seta(c: Pos2, tam: GVec2, rot: f32, cor: Color32) -> Shape {
     Shape::Path(p)
 }
 
+/// Recorta uma polyline aberta mantendo apenas o trecho entre `inicio` e
+/// `fim` (normalizados em [0, 1]). `closed` indica se o último ponto conecta
+/// de volta ao primeiro (incluindo o segmento de fecho).
+pub fn trim_path_pts(pts: &[Pos2], closed: bool, inicio: f32, fim: f32) -> Vec<Pos2> {
+    if pts.is_empty() || pts.len() < 2 {
+        return pts.to_vec();
+    }
+    if inicio <= 0.0 && fim >= 1.0 {
+        return pts.to_vec();
+    }
+    if fim <= inicio {
+        return vec![];
+    }
+
+    let n = pts.len();
+    let segs = if closed { n } else { n - 1 };
+    if segs == 0 {
+        return pts.to_vec();
+    }
+    let total = segs as f32;
+    let s = (inicio * total).clamp(0.0, total);
+    let e = (fim * total).clamp(0.0, total);
+    if e - s < 1e-6 {
+        return vec![];
+    }
+
+    let lerp = |a: Pos2, b: Pos2, t: f32| Pos2::new(
+        a.x + (b.x - a.x) * t,
+        a.y + (b.y - a.y) * t,
+    );
+    let nxt = |i: usize| {
+        if closed && i + 1 >= n { 0 } else { (i + 1).min(n - 1) }
+    };
+
+    let si = (s.floor() as usize).min(segs - 1);
+    let ei = (e.floor() as usize).min(segs - 1);
+    let sf = s - si as f32;
+    let ef = e - ei as f32;
+
+    let mut result = Vec::new();
+    result.push(if sf > 0.0 { lerp(pts[si], pts[nxt(si)], sf) } else { pts[si] });
+
+    if si < ei {
+        for i in (si + 1)..=ei {
+            result.push(pts[i]);
+        }
+    } else if si > ei && closed {
+        for i in (si + 1)..n {
+            result.push(pts[i]);
+        }
+        for i in 0..=ei {
+            result.push(pts[i]);
+        }
+    }
+
+    let end_p = if ef > 0.0 { lerp(pts[ei], pts[nxt(ei)], ef) } else { pts[ei] };
+    let last = *result.last().unwrap();
+    if end_p.distance(last) > 0.5 {
+        result.push(end_p);
+    } else {
+        *result.last_mut().unwrap() = end_p;
+    }
+
+    result
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -670,6 +781,36 @@ mod tests {
             v_fim: b,
             easing: Easing::Linear,
         }
+    }
+
+    #[test]
+    fn trim_sem_alteracao() {
+        let pts = vec![Pos2::new(0.0, 0.0), Pos2::new(10.0, 0.0), Pos2::new(10.0, 10.0)];
+        let r = trim_path_pts(&pts, false, 0.0, 1.0);
+        assert_eq!(r.len(), 3);
+    }
+
+    #[test]
+    fn trim_metade() {
+        let pts = vec![Pos2::new(0.0, 0.0), Pos2::new(10.0, 0.0)];
+        let r = trim_path_pts(&pts, false, 0.0, 0.5);
+        assert_eq!(r.len(), 2);
+        assert!((r[1].x - 5.0).abs() < 0.1);
+    }
+
+    #[test]
+    fn trim_closed_wrap() {
+        let pts = vec![
+            Pos2::new(0.0, 0.0),
+            Pos2::new(10.0, 0.0),
+            Pos2::new(10.0, 10.0),
+            Pos2::new(0.0, 10.0),
+        ];
+        // 0.75 → 1.0 wraps around: 3/4 of the way to 4/4
+        let r = trim_path_pts(&pts, true, 0.75, 1.0);
+        assert!(r.len() >= 2);
+        assert!((r[0].x - 0.0).abs() < 0.1);  // 75% = 3/4 of way from pt[2]→pt[3] = (0,10)
+        assert!((r[0].y - 10.0).abs() < 0.1);
     }
 
     #[test]
