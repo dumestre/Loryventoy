@@ -467,17 +467,20 @@ impl eframe::App for MovimentoApp {
                 let tempo = self.timeline.current_frame as f32 / cfg_preview.fps.max(0.01);
                 self.preview.set_tempo(tempo);
 
-                let _preview_response = ui.allocate_ui(
+                let preview_response = ui.allocate_ui(
                     Vec2::new(
                         available.x,
                         self.preview_height,
                     ),
                     |ui| {
 
-                        self.preview.show(ui, &mut self.bartool);
+                        self.preview.show(ui);
 
                     },
                 );
+
+                // BARTOOL (flutuante na base do preview)
+                self.bartool.show(ui, preview_response.response.rect);
 
                 // Processa pedidos da barra de transporte
                 if self.bartool.request_prev_frame {

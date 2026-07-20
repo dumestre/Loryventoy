@@ -19,7 +19,6 @@ use eframe::egui::epaint::{EllipseShape, PathShape, RectShape, Vertex};
 use crate::procedural::{PreviewData, GVec2, trim_path_pts};
 use crate::ui::scroll_delta;
 use crate::ui::text_raster::TextRaster;
-use crate::ui::bartool::BarTool;
 
 
 pub struct PreviewPanel {
@@ -122,13 +121,11 @@ impl PreviewPanel {
     pub fn show(
         &mut self,
         ui: &mut Ui,
-        transport: &mut BarTool,
     ) {
 
-        let bar_total_height = 30.0 + 24.0;
         let size = Vec2::new(
             ui.available_width(),
-            (ui.available_height() - bar_total_height).max(1.0),
+            ui.available_height(),
         );
 
 
@@ -444,16 +441,6 @@ impl PreviewPanel {
                 y += 18.0;
             }
         }
-
-        // Barra de transporte na base do preview
-        ui.allocate_ui(
-            Vec2::new(ui.available_width(), ui.available_height()),
-            |ui| {
-                ui.horizontal_centered(|ui| {
-                    transport.show_inline(ui);
-                });
-            },
-        );
 
     }
 
