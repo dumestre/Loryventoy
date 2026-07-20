@@ -206,15 +206,15 @@ pub fn show_content(
                         ui.checkbox(ativa, "");
                         ui.end_row();
                     });
-                grid_2(ui, "Zoom", zoom, 0.01..=10.0, "");
-                grid_2(ui, "Ângulo", angulo, -360.0..=360.0, "°");
-                grid_2(ui, "Opacidade", opacidade, 0.0..=1.0, "");
+                grid_2(ui, "Zoom", zoom, 0.01..=10.0, "", 2);
+                grid_2(ui, "Ângulo", angulo, -360.0..=360.0, "°", 1);
+                grid_2(ui, "Opacidade", opacidade, 0.0..=1.0, "", 2);
             }
         }
         TipoNo::Layer => {
             if let NodeParams::Layer { cena, opacidade } = params {
                 grid_combo_cena(ui, "Cena", cena, cenas);
-                grid_2(ui, "Opacidade", opacidade, 0.0..=1.0, "");
+                grid_2(ui, "Opacidade", opacidade, 0.0..=1.0, "", 2);
             }
         }
         TipoNo::Shape => {
@@ -239,9 +239,9 @@ pub fn show_content(
                 grid_combo_cena(ui, "Cena", cena, cenas);
                 grid_combo_tipo(ui, "Tipo", tipo);
                 grid_xyz(ui, "Posição", px, py, &mut 0.0);
-                grid_2(ui, "Largura", largura, 1.0..=8000.0, "");
-                grid_2(ui, "Altura", altura, 1.0..=8000.0, "");
-                grid_2(ui, "Rotação", rotacao, -360.0..=360.0, "°");
+                grid_2(ui, "Largura", largura, 1.0..=8000.0, "", 1);
+                grid_2(ui, "Altura", altura, 1.0..=8000.0, "", 1);
+                grid_2(ui, "Rotação", rotacao, -360.0..=360.0, "°", 1);
                 let rc = Grid::new("shape_cor")
                     .num_columns(2)
                     .spacing([8.0, 3.0])
@@ -255,13 +255,35 @@ pub fn show_content(
                     });
                 registrar_linha("Cor", &rc.response);
                 // --- parâmetros procedurais ---
-                grid_2(ui, "Seed", seed, 0.0..=9999.0, "");
-                grid_2(ui, "Ruído", noise_scale, 0.01..=5.0, "");
-                grid_2(ui, "Amplitude", amp, 0.0..=500.0, "");
-                grid_2(ui, "Velocidade", veloc, 0.0..=10.0, "x");
-                // --- trim ---
-                grid_2(ui, "Trim início", trim_inicio, 0.0..=1.0, "");
-                grid_2(ui, "Trim fim", trim_fim, 0.0..=1.0, "");
+                grid_2(ui, "Seed", seed, 0.0..=9999.0, "", 0);
+                grid_2(ui, "Ruído", noise_scale, 0.01..=5.0, "", 2);
+                grid_2(ui, "Amplitude", amp, 0.0..=500.0, "", 1);
+                grid_2(ui, "Velocidade", veloc, 0.0..=10.0, "x", 2);
+                // --- trim (mostrado como 0-100%) ---
+                {
+                    let r = Grid::new("trim_inicio")
+                        .num_columns(2).spacing([6.0, 2.0]).show(ui, |ui| {
+                            ui.label("Trim início");
+                            let mut v = *trim_inicio * 100.0;
+                            if draggable_value(ui, &mut v, 0.0..=100.0, 1.0, "%", 1).changed() {
+                                *trim_inicio = (v / 100.0).clamp(0.0, 1.0);
+                            }
+                            ui.end_row();
+                        });
+                    registrar_linha("Trim início", &r.response);
+                }
+                {
+                    let r = Grid::new("trim_fim")
+                        .num_columns(2).spacing([6.0, 2.0]).show(ui, |ui| {
+                            ui.label("Trim fim");
+                            let mut v = *trim_fim * 100.0;
+                            if draggable_value(ui, &mut v, 0.0..=100.0, 1.0, "%", 1).changed() {
+                                *trim_fim = (v / 100.0).clamp(0.0, 1.0);
+                            }
+                            ui.end_row();
+                        });
+                    registrar_linha("Trim fim", &r.response);
+                }
             }
         }
         TipoNo::Texto => {
@@ -288,7 +310,7 @@ pub fn show_content(
                         ui.text_edit_singleline(conteudo);
                         ui.end_row();
                     });
-                grid_2(ui, "Tamanho", tamanho, 1.0..=2000.0, "");
+                grid_2(ui, "Tamanho", tamanho, 1.0..=2000.0, "", 1);
                 Grid::new("texto_estilo")
                     .num_columns(2)
                     .spacing([8.0, 3.0])
@@ -312,9 +334,32 @@ pub fn show_content(
                         });
                         ui.end_row();
                     });
-                registrar_linha("Cor", &rc.response);
-                grid_2(ui, "Trim início", trim_inicio, 0.0..=1.0, "");
-                grid_2(ui, "Trim fim", trim_fim, 0.0..=1.0, "");
+                    registrar_linha("Cor", &rc.response);
+                // --- trim texto 0-100% ---
+                {
+                    let r = Grid::new("texto_trim_inicio")
+                        .num_columns(2).spacing([6.0, 2.0]).show(ui, |ui| {
+                            ui.label("Trim início");
+                            let mut v = *trim_inicio * 100.0;
+                            if draggable_value(ui, &mut v, 0.0..=100.0, 1.0, "%", 1).changed() {
+                                *trim_inicio = (v / 100.0).clamp(0.0, 1.0);
+                            }
+                            ui.end_row();
+                        });
+                    registrar_linha("Trim início", &r.response);
+                }
+                {
+                    let r = Grid::new("texto_trim_fim")
+                        .num_columns(2).spacing([6.0, 2.0]).show(ui, |ui| {
+                            ui.label("Trim fim");
+                            let mut v = *trim_fim * 100.0;
+                            if draggable_value(ui, &mut v, 0.0..=100.0, 1.0, "%", 1).changed() {
+                                *trim_fim = (v / 100.0).clamp(0.0, 1.0);
+                            }
+                            ui.end_row();
+                        });
+                    registrar_linha("Trim fim", &r.response);
+                }
             }
         }
         TipoNo::Pen => {
@@ -340,7 +385,7 @@ pub fn show_content(
             {
                 grid_combo_cena(ui, "Cena", cena, cenas);
                 grid_xyz(ui, "Posição", pos_x, pos_y, &mut 0.0);
-                grid_2(ui, "Espessura", espessura, 0.0..=100.0, "px");
+                grid_2(ui, "Espessura", espessura, 0.0..=100.0, "px", 1);
                 Grid::new("pen_preench")
                     .num_columns(2)
                     .spacing([8.0, 3.0])
@@ -349,10 +394,10 @@ pub fn show_content(
                         ui.checkbox(preenchimento, "");
                         ui.end_row();
                     });
-                grid_2(ui, "Cantos", cantos, 0.0..=1.0, "");
-                grid_2(ui, "Ordem", ordem, -100.0..=100.0, "");
+                grid_2(ui, "Cantos", cantos, 0.0..=1.0, "", 2);
+                grid_2(ui, "Ordem", ordem, -100.0..=100.0, "", 1);
                 grid_escala(ui, escala_x, escala_y);
-                grid_2(ui, "Seed", seed, 0.0..=9999.0, "");
+                grid_2(ui, "Seed", seed, 0.0..=9999.0, "", 0);
                 Grid::new("pen_cor")
                     .num_columns(2)
                     .spacing([8.0, 3.0])
@@ -442,8 +487,31 @@ pub fn show_content(
                         ui.colored_label(cor, &log_txt);
                     });
                 ui.add_space(6.0);
-                grid_2(ui, "Trim início", trim_inicio, 0.0..=1.0, "");
-                grid_2(ui, "Trim fim", trim_fim, 0.0..=1.0, "");
+                // --- trim pen 0-100% ---
+                {
+                    let r = Grid::new("pen_trim_inicio")
+                        .num_columns(2).spacing([6.0, 2.0]).show(ui, |ui| {
+                            ui.label("Trim início");
+                            let mut v = *trim_inicio * 100.0;
+                            if draggable_value(ui, &mut v, 0.0..=100.0, 1.0, "%", 1).changed() {
+                                *trim_inicio = (v / 100.0).clamp(0.0, 1.0);
+                            }
+                            ui.end_row();
+                        });
+                    registrar_linha("Trim início", &r.response);
+                }
+                {
+                    let r = Grid::new("pen_trim_fim")
+                        .num_columns(2).spacing([6.0, 2.0]).show(ui, |ui| {
+                            ui.label("Trim fim");
+                            let mut v = *trim_fim * 100.0;
+                            if draggable_value(ui, &mut v, 0.0..=100.0, 1.0, "%", 1).changed() {
+                                *trim_fim = (v / 100.0).clamp(0.0, 1.0);
+                            }
+                            ui.end_row();
+                        });
+                    registrar_linha("Trim fim", &r.response);
+                }
             }
         }
         TipoNo::Ruido => {
@@ -456,10 +524,10 @@ pub fn show_content(
             } = params
             {
                 grid_combo_alvo(ui, "Alvo", alvo);
-                grid_2(ui, "Seed", seed, 0.0..=9999.0, "");
-                grid_2(ui, "Frequência", freq, 0.01..=5.0, "");
-                grid_2(ui, "Amplitude", amp, 0.0..=1000.0, "");
-                grid_2(ui, "Velocidade", veloc, 0.0..=10.0, "x");
+                grid_2(ui, "Seed", seed, 0.0..=9999.0, "", 0);
+                grid_2(ui, "Frequência", freq, 0.01..=5.0, "", 2);
+                grid_2(ui, "Amplitude", amp, 0.0..=1000.0, "", 1);
+                grid_2(ui, "Velocidade", veloc, 0.0..=10.0, "x", 2);
             }
         }
         TipoNo::Anim => {
@@ -481,9 +549,9 @@ pub fn show_content(
                 saturacao,
             } = params
             {
-                grid_2(ui, "Brilho", brilho, 0.0..=2.0, "");
-                grid_2(ui, "Contraste", contraste, 0.0..=2.0, "");
-                grid_2(ui, "Saturação", saturacao, 0.0..=2.0, "");
+                grid_2(ui, "Brilho", brilho, 0.0..=2.0, "", 2);
+                grid_2(ui, "Contraste", contraste, 0.0..=2.0, "", 2);
+                grid_2(ui, "Saturação", saturacao, 0.0..=2.0, "", 2);
             }
         }
     });
@@ -651,21 +719,21 @@ fn editor_segmentos(ui: &mut Ui, segs: &mut Vec<crate::procedural::AnimSeg>) {
             .show(ui, |ui| {
                 ui.label("t");
                 ui.horizontal(|ui| {
-                    draggable_value(ui, &mut s.t_ini, 0.0..=3600.0, 0.05, "s");
+                    draggable_value(ui, &mut s.t_ini, 0.0..=3600.0, 0.05, "s", 2);
                     ui.label("→");
-                    draggable_value(ui, &mut s.t_fim, 0.0..=3600.0, 0.05, "s");
+                    draggable_value(ui, &mut s.t_fim, 0.0..=3600.0, 0.05, "s", 2);
                 });
                 ui.end_row();
                 ui.label("de");
                 ui.horizontal(|ui| {
-                    draggable_value(ui, &mut s.v_ini[0], -f32::INFINITY..=f32::INFINITY, 0.5, "");
-                    draggable_value(ui, &mut s.v_ini[1], -f32::INFINITY..=f32::INFINITY, 0.5, "");
+                    draggable_value(ui, &mut s.v_ini[0], -f32::INFINITY..=f32::INFINITY, 0.5, "", 2);
+                    draggable_value(ui, &mut s.v_ini[1], -f32::INFINITY..=f32::INFINITY, 0.5, "", 2);
                 });
                 ui.end_row();
                 ui.label("para");
                 ui.horizontal(|ui| {
-                    draggable_value(ui, &mut s.v_fim[0], -f32::INFINITY..=f32::INFINITY, 0.5, "");
-                    draggable_value(ui, &mut s.v_fim[1], -f32::INFINITY..=f32::INFINITY, 0.5, "");
+                    draggable_value(ui, &mut s.v_fim[0], -f32::INFINITY..=f32::INFINITY, 0.5, "", 2);
+                    draggable_value(ui, &mut s.v_fim[1], -f32::INFINITY..=f32::INFINITY, 0.5, "", 2);
                 });
                 ui.end_row();
                 ui.label("curva");
@@ -719,13 +787,15 @@ pub fn draggable_value(
     range: std::ops::RangeInclusive<f32>,
     speed: f32,
     suffix: &str,
+    precision: usize,
 ) -> Response {
     let (min, max) = (*range.start(), *range.end());
     let r = ui.add(
         DragValue::new(v)
             .range(range)
             .speed(speed)
-            .suffix(suffix),
+            .suffix(suffix)
+            .fixed_decimals(precision),
     );
     // scroll horizontal do trackpad (2 dedos na horizontal) → também altera o
     // valor, MAS somente quando o cursor está sobre ESTE campo (igual ao que o
@@ -747,9 +817,9 @@ fn grid_xyz(ui: &mut Ui, label: &str, x: &mut f32, y: &mut f32, z: &mut f32) {
         .spacing([4.0, 2.0])
         .show(ui, |ui| {
             ui.label(label);
-            draggable_value(ui, x, -f32::INFINITY..=f32::INFINITY, 0.5, "");
-            draggable_value(ui, y, -f32::INFINITY..=f32::INFINITY, 0.5, "");
-            draggable_value(ui, z, -f32::INFINITY..=f32::INFINITY, 0.5, "");
+            draggable_value(ui, x, -f32::INFINITY..=f32::INFINITY, 0.5, "", 1);
+            draggable_value(ui, y, -f32::INFINITY..=f32::INFINITY, 0.5, "", 1);
+            draggable_value(ui, z, -f32::INFINITY..=f32::INFINITY, 0.5, "", 1);
             ui.end_row();
         });
     registrar_linha(label, &r.response);
@@ -762,13 +832,14 @@ fn grid_2(
     v: &mut f32,
     range: std::ops::RangeInclusive<f32>,
     suffix: &str,
+    precision: usize,
 ) {
     let r = Grid::new(label)
         .num_columns(2)
         .spacing([6.0, 2.0])
         .show(ui, |ui| {
             ui.label(label);
-            draggable_value(ui, v, range, 0.01, suffix);
+            draggable_value(ui, v, range, 0.01, suffix, precision);
             ui.end_row();
         });
     registrar_linha(label, &r.response);
@@ -783,8 +854,8 @@ fn grid_escala(ui: &mut Ui, x: &mut f32, y: &mut f32) {
             let img = Image::new(eframe::egui::include_image!("icons/escalapproporcional.svg"))
                 .fit_to_exact_size(Vec2::splat(14.0));
             ui.add(img).on_hover_text("Escala X / Y");
-            draggable_value(ui, x, -3.0..=3.0, 0.01, "");
-            draggable_value(ui, y, -3.0..=3.0, 0.01, "");
+            draggable_value(ui, x, -10.0..=10.0, 0.01, "", 2);
+            draggable_value(ui, y, -10.0..=10.0, 0.01, "", 2);
             ui.end_row();
         });
 }
@@ -839,12 +910,11 @@ fn grid_canvas(ui: &mut Ui, cfg: &mut ProjetoConfig) {
             ui.end_row();
 
             ui.label("FPS");
-            draggable_value(ui, &mut cfg.fps, 1.0..=120.0, 0.1, "");
+            draggable_value(ui, &mut cfg.fps, 1.0..=120.0, 0.1, "", 1);
             ui.end_row();
 
             ui.label("Duração");
-            draggable_value(ui, &mut cfg.duracao_seg, 0.1..=3600.0, 0.1, " s");
-            ui.end_row();
+            draggable_value(ui, &mut cfg.duracao_seg, 0.1..=3600.0, 0.1, " s", 1);
 
             ui.label("Fundo");
             ui.horizontal(|ui| {
