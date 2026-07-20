@@ -215,7 +215,7 @@ fn renderizar_cena(img: &mut ColorImage, cena: &CenaPreview, t: f32, off: Vec2) 
                     penx + pt.x,
                     peny + pt.y,
                     &pt,
-                    op,
+                    op * pen.trim_em(t),
                 );
             }
         }
@@ -223,7 +223,7 @@ fn renderizar_cena(img: &mut ColorImage, cena: &CenaPreview, t: f32, off: Vec2) 
         // ---- Textos (rasterizados via cosmic-text) ----
         let mut raster = TextRaster::new();
         for txt in &layer.textos {
-            desenhar_texto(img, &mut raster, txt, opac * txt.opac_em(t), t);
+            desenhar_texto(img, &mut raster, txt, opac * txt.opac_em(t) * txt.trim_em(t), t);
         }
     }
 }

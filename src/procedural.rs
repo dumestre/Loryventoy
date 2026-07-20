@@ -242,6 +242,17 @@ impl TextoItem {
             _ => 1.0,
         }
     }
+
+    /// Fator de visibilidade (0..1) do texto no instante `t` baseado no trim.
+    /// Retorna 0 fora do intervalo [trim_inicio, trim_fim] e 1 dentro.
+    pub fn trim_em(&self, t: f32) -> f32 {
+        let progress = (t / 6.0).clamp(0.0, 1.0);
+        if progress < self.trim_inicio || progress > self.trim_fim {
+            0.0
+        } else {
+            1.0
+        }
+    }
 }
 
 /// Geometria procedural gerada por um nó Pen: o programa DSL já parseado
@@ -302,6 +313,19 @@ impl PenPath {
         match &self.anim {
             Some(a) if a.alvo == 3 => a.valor(t)[0].clamp(0.0, 1.0),
             _ => 1.0,
+        }
+    }
+
+    /// Fator de visibilidade (0..1) da caneta no instante `t` baseado no trim.
+    /// Retorna 0 fora do intervalo [trim_inicio, trim_fim_anim] e 1 dentro.
+    /// O trim_fim é animado: cresce de trim_inicio até trim_fim ao longo da duração.
+    pub fn trim_em(&self, t: f32) -> f32 {
+        let progress = (t / self.duracao.max(0.001)).clamp(0.0, 1.0);
+        let trim_fim_anim = self.trim_inicio + (self.trim_fim - self.trim_inicio) * progress;
+        if progress < self.trim_inicio || progress > trim_fim_anim {
+            0.0
+        } else {
+            1.0
         }
     }
 }

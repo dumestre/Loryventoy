@@ -307,7 +307,7 @@ impl PreviewPanel {
                         r.tam_logico[0] * escala.max(0.05) * esx,
                         r.tam_logico[1] * escala.max(0.05) * esy,
                     );
-                    let op = opac * txt.opac_em(self.tempo);
+                    let op = opac * txt.opac_em(self.tempo) * txt.trim_em(self.tempo);
                     let a = (op.clamp(0.0, 1.0) * 255.0) as u8;
                     painter.image(
                         handle.id(),
@@ -352,7 +352,7 @@ impl PreviewPanel {
                 // reusando exatamente o mesmo caminho de desenho dos nós Texto.
                 let penpos = pen.pos_em(self.tempo);
                 let pen_escala = (pen.escala_x, pen.escala_y);
-                let op_pen = opac * pen.opac_em(self.tempo);
+                let op_pen = opac * pen.opac_em(self.tempo) * pen.trim_em(self.tempo);
                 for pt in crate::dsl::extrair_textos(&cmds) {
                     let pos = (
                         penpos.x + pt.x * pen_escala.0,
