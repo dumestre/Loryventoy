@@ -572,10 +572,9 @@ impl ShapeGenerator {
             if let Some(mut pts) = pts {
                 let closed = true;
                 pts = trim_path_pts(&pts, closed, self.trim_inicio, self.trim_fim);
-                shape = Shape::Path(PathShape::line(
-                    pts,
-                    Stroke::new(3.0, cor),
-                ));
+                let mut p = PathShape::line(pts, Stroke::new(3.0, cor));
+                p.fill = Color32::TRANSPARENT;
+                shape = Shape::Path(p);
             }
         }
 

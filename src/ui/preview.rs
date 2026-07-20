@@ -455,7 +455,11 @@ impl PreviewPanel {
                 Shape::Ellipse(e)
             }
             Shape::Path(mut p) => {
-                p.fill = Color32::from_rgba_unmultiplied(p.fill.r(), p.fill.g(), p.fill.b(), a);
+                if !p.closed {
+                    p.fill = Color32::TRANSPARENT;
+                } else {
+                    p.fill = Color32::from_rgba_unmultiplied(p.fill.r(), p.fill.g(), p.fill.b(), a);
+                }
                 Shape::Path(p)
             }
             other => other,
@@ -736,14 +740,23 @@ impl PreviewPanel {
                     }
                 }
                 pts = trim_path_pts(&pts, sp.close, trim_inicio, trim_fim);
-                let mut b = lyon::path::Path::builder();
-                if pts.len() >= 2 {
+                let trimmed = pts.len() >= 2;
+                let path = if trimmed {
+                    let mut b = lyon::path::Path::builder();
                     b.begin(lyon::math::Point::new(pts[0].x, pts[0].y));
                     for p in &pts[1..] {
                         b.line_to(lyon::math::Point::new(p.x, p.y));
                     }
-                }
-                (b.build(), pts.len() >= 2)
+                    if sp.close || sp.preenche {
+                        b.close();
+                    } else {
+                        b.end(false);
+                    }
+                    b.build()
+                } else {
+                    lyon::path::Path::new()
+                };
+                (path, trimmed)
             } else {
                 let mut b = lyon::path::Path::builder();
                 b.begin(sp.start);
