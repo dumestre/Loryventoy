@@ -56,14 +56,14 @@ struct LoopDragState {
 
 
 #[derive(Clone, Copy, PartialEq, Eq)]
-enum MarkerType {
+pub enum MarkerType {
     Point,
     Range,
 }
 
 
 #[derive(Clone, Copy, PartialEq, Eq)]
-enum MarkerColor {
+pub enum MarkerColor {
     Red,
     Orange,
     Yellow,
@@ -132,13 +132,13 @@ impl MarkerColor {
 }
 
 
-struct Marker {
-    id: u32,
-    kind: MarkerType,
-    name: String,
-    color: MarkerColor,
-    start: f32,
-    end: f32,
+pub struct Marker {
+    pub id: u32,
+    pub kind: MarkerType,
+    pub name: String,
+    pub color: MarkerColor,
+    pub start: f32,
+    pub end: f32,
 }
 
 
@@ -199,10 +199,13 @@ pub struct TimelinePanel {
     created_by_click: Option<u32>,
 
     // marcadores (Point e Range)
-    markers: Vec<Marker>,
-    next_marker_id: u32,
+    pub markers: Vec<Marker>,
+    pub next_marker_id: u32,
     marker_drag: Option<MarkerDrag>,
     selected: Option<u32>,
+
+    // marcadores foram modificados desde a última sincronização
+    pub markers_modificados: bool,
 
     // duração total em frames (vem do nó Canvas)
     pub duracao_frames: u32,
@@ -242,6 +245,7 @@ impl TimelinePanel {
             next_marker_id: 2,
             marker_drag: None,
             selected: None,
+            markers_modificados: true,
         }
     }
 
@@ -898,6 +902,7 @@ impl TimelinePanel {
                         let mid = m.id;
                         self.next_marker_id += 1;
                         self.markers.push(m);
+                        self.markers_modificados = true;
                         self.selected = Some(mid);
                         self.created_by_click = Some(mid);
                     }
@@ -1177,6 +1182,7 @@ impl TimelinePanel {
                         let mid = m.id;
                         self.next_marker_id += 1;
                         self.markers.push(m);
+                        self.markers_modificados = true;
                         self.selected = Some(mid);
                         self.resolve_overlaps();
                     }
@@ -1198,6 +1204,7 @@ impl TimelinePanel {
         {
             if let Some(id) = self.selected {
                 self.markers.retain(|m| m.id != id);
+                self.markers_modificados = true;
                 self.selected = None;
                 self.editing_marker = None;
             }
@@ -1239,10 +1246,12 @@ impl TimelinePanel {
                         // rename
                         ui.horizontal(|ui| {
                             ui.label("Nome:");
-                            ui.add(
+                            if ui.add(
                                 TextEdit::singleline(&mut m.name)
                                     .desired_width(100.0)
-                            );
+                            ).changed() {
+                                self.markers_modificados = true;
+                            }
                         });
 
                         ui.separator();
@@ -1273,6 +1282,7 @@ impl TimelinePanel {
                                     .rect;
                                 if ui.interact(rect, ui.next_auto_id(), Sense::click()).clicked() {
                                     m.color = c;
+                                    self.markers_modificados = true;
                                 }
                             }
                         });

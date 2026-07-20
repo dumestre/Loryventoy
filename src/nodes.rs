@@ -96,8 +96,11 @@ impl TipoNo {
             // Canvas -> Cena (fluxo do projeto; Canvas -> Saída já vale por (_ , Saída))
             (TipoNo::Canvas, TipoNo::Cena) => true,
             (TipoNo::Cena, TipoNo::Cena) => true,
-            // Layers e Shape alimentam a Cena a que pertencem
+            // Layers alimentam a Cena a que pertencem
             (TipoNo::Layer, TipoNo::Cena) => true,
+            // Layer -> Shape/Texto/Pen (layer pai de formas)
+            (TipoNo::Layer, TipoNo::Shape | TipoNo::Texto | TipoNo::Pen) => true,
+            // Shape/Texto/Pen alimentam a Cena a que pertencem
             (TipoNo::Shape, TipoNo::Cena) => true,
             (TipoNo::Texto, TipoNo::Cena) => true,
             // Nó Pen também pertence a uma cena (geometria procedural).
@@ -368,6 +371,8 @@ pub enum NodeParams {
     /// Nó de camadas de uma cena.
     Layer {
         cena: String,
+        nome: String,
+        ordem: f32,
         opacidade: f32,
     },
     /// Texto procedural (rótulos/títulos), rasterizado com `cosmic-text`
@@ -466,6 +471,8 @@ impl NodeParams {
             },
             TipoNo::Layer => NodeParams::Layer {
                 cena: String::new(),
+                nome: "Layer 1".to_string(),
+                ordem: 0.0,
                 opacidade: 1.0,
             },
             TipoNo::Shape => NodeParams::Shape {

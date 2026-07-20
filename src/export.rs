@@ -176,53 +176,55 @@ fn renderizar_cena(img: &mut ColorImage, cena: &CenaPreview, t: f32, off: Vec2) 
     if cena.opacidade <= 0.001 {
         return;
     }
-    let opac = cena.opacidade;
+    let opac_cena = cena.opacidade;
 
-    // ---- Formas procedurais ----
-    // Cada forma pode ter opacidade animada própria (alvo=Opacidade), então
-    // rasterizamos uma a uma com a opacidade (cena × objeto).
-    for gen in &cena.formas {
-        let s = traduzir(gen.generate(t), off);
-        let op = opac * gen.opac_em(t);
-        for m in &tessalar(vec![s]) {
-            rasterizar_mesh(img, m, op);
+    for layer in &cena.layers {
+        if layer.opacidade <= 0.001 {
+            continue;
         }
-    }
+        let opac = opac_cena * layer.opacidade;
 
-    // ---- Pen (caminhos DSL avaliados no tempo `t`) ----
-    // Cada caneta pode ter opacidade animada própria, então rasterizamos
-    // uma a uma com a opacidade (cena × objeto).
-    let mut raster_pen = TextRaster::new();
-    for pen in &cena.pen {
-        let cmds = match pen.program.eval(t, pen.seed) {
-            Ok(c) => c,
-            Err(_) => continue,
-        };
-        let shapes_pen = pen_para_shapes(pen, t, off);
-        let op = opac * pen.opac_em(t);
-        for m in &tessalar(shapes_pen) {
-            rasterizar_mesh(img, m, op);
+        // ---- Formas procedurais ----
+        for gen in &layer.formas {
+            let s = traduzir(gen.generate(t), off);
+            let op = opac * gen.opac_em(t);
+            for m in &tessalar(vec![s]) {
+                rasterizar_mesh(img, m, op);
+            }
         }
-        // Textos da caneta (comando `text`), rasterizados via cosmic-text.
-        let penpos = pen.pos_em(t);
-        let penx = penpos.x;
-        let peny = penpos.y;
-        for pt in crate::dsl::extrair_textos(&cmds) {
-            desenhar_texto_pen(
-                img,
-                &mut raster_pen,
-                penx + pt.x,
-                peny + pt.y,
-                &pt,
-                op,
-            );
-        }
-    }
 
-    // ---- Textos (rasterizados via cosmic-text) ----
-    let mut raster = TextRaster::new();
-    for txt in &cena.textos {
-        desenhar_texto(img, &mut raster, txt, opac * txt.opac_em(t), t);
+        // ---- Pen (caminhos DSL avaliados no tempo `t`) ----
+        let mut raster_pen = TextRaster::new();
+        for pen in &layer.pen {
+            let cmds = match pen.program.eval(t, pen.seed) {
+                Ok(c) => c,
+                Err(_) => continue,
+            };
+            let shapes_pen = pen_para_shapes(pen, t, off);
+            let op = opac * pen.opac_em(t);
+            for m in &tessalar(shapes_pen) {
+                rasterizar_mesh(img, m, op);
+            }
+            let penpos = pen.pos_em(t);
+            let penx = penpos.x;
+            let peny = penpos.y;
+            for pt in crate::dsl::extrair_textos(&cmds) {
+                desenhar_texto_pen(
+                    img,
+                    &mut raster_pen,
+                    penx + pt.x,
+                    peny + pt.y,
+                    &pt,
+                    op,
+                );
+            }
+        }
+
+        // ---- Textos (rasterizados via cosmic-text) ----
+        let mut raster = TextRaster::new();
+        for txt in &layer.textos {
+            desenhar_texto(img, &mut raster, txt, opac * txt.opac_em(t), t);
+        }
     }
 }
 
@@ -442,7 +444,8 @@ mod tests {
         let mut cena = CenaPreview::default();
         cena.opacidade = 1.0;
         let program = Program::parse("color 1 1 0\ntext \"OI\" 100 200 64").unwrap();
-        cena.pen.push(PenPath {
+        let mut layer = LayerPreview::default();
+        layer.pen.push(PenPath {
             program,
             pos: GVec2::new(0.0, 0.0),
             cor: Color32::YELLOW,
@@ -461,6 +464,7 @@ mod tests {
             trim_fim: 1.0,
             duracao: 6.0,
         });
+        cena.layers.push(layer);
         data.cenas.push(cena);
 
         let tmp = std::env::temp_dir().join("teste_pen_text.png");

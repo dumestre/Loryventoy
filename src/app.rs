@@ -528,6 +528,11 @@ impl eframe::App for MovimentoApp {
                     },
                 );
 
+                if self.timeline.markers_modificados {
+                    self.graph.sincronizar_marcadores_com_cenas(&self.timeline.markers);
+                    self.timeline.markers_modificados = false;
+                }
+
 
 
                 // SPLITTER 2

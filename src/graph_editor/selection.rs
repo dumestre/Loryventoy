@@ -37,7 +37,13 @@ impl GraphPanel {
 
     /// Seleciona um nó. Se `adicionar` (shift), alterna a seleção desse nó;
     /// caso contrário, limpa as demais e seleciona só este.
+    /// Se o nó for do tipo Cena, também o define como cena ativa.
     pub fn selecionar_no(&mut self, idx: NodeIndex, adicionar: bool) {
+        if let Some(tipo) = self.tipo_do_node(idx) {
+            if tipo == TipoNo::Cena && !adicionar {
+                self.cena_ativa = Some(idx);
+            }
+        }
         if adicionar {
             if let Some(n) = self.g.node_mut(idx) {
                 let sel = !n.selected();

@@ -5,7 +5,19 @@ use std::string::String;
 use eframe::egui::{
     Color32, ComboBox, DragValue, Grid, Image, Response, TextStyle, Ui, Vec2,
 };
+use petgraph::stable_graph::NodeIndex;
 use crate::nodes::{NodeParams, ProjetoConfig, TipoNo};
+
+/// Ações que podem ser solicitadas pelo inspector de um nó.
+#[derive(Debug, Clone, Copy)]
+pub enum AcaoInspector {
+    Nenhuma,
+    FocarCena(NodeIndex),
+    CriarLayer,
+    RemoverLayer,
+    SubirLayer,
+    DescerLayer,
+}
 
 /// Margens internas do corpo do card e altura do cabeçalho, em unidades de
 /// CANVAS (zoom 1). O nó inteiro escala com o zoom (estilo Blender): tudo
@@ -153,16 +165,17 @@ pub fn content_size(tipo: TipoNo) -> Vec2 {
 /// Desenha os parâmetros editáveis do nó DENTRO do corpo do cartão
 /// (abaixo do cabeçalho, onde fica o nome), em layout de inspector:
 /// rótulos alinhados em coluna à esquerda e campos à direita.
-/// `cenas` é a lista de nomes de cena (para o combobox de Layers/Shape).
+/// `cenas` é a lista de (nome, NodeIndex) de cena (para o combobox de Layers/Shape e listagem no Cena).
+/// Retorna uma ação solicitada pelo inspector (ex.: focar em cena, criar layer).
 pub fn show_content(
     ui: &mut Ui,
     tipo: TipoNo,
     params: Option<&mut NodeParams>,
-    cenas: &[String],
+    cenas: &[(String, NodeIndex)],
     topo_tela: f32,
     zoom: f32,
-) {
-    let Some(params) = params else { return };
+) -> AcaoInspector {
+    let Some(params) = params else { return AcaoInspector::Nenhuma };
     // inicia a captura das posições Y das rows deste nó (para alinhar portos).
     CAPTURA.with(|c| {
         *c.borrow_mut() = Some(CapturaRows {
@@ -172,6 +185,7 @@ pub fn show_content(
             ys: HashMap::new(),
         });
     });
+    let mut acao = AcaoInspector::Nenhuma;
     ui.vertical(|ui| match tipo {
         TipoNo::Canvas => {
             if let NodeParams::Canvas(cfg) = params {
@@ -209,12 +223,45 @@ pub fn show_content(
                 grid_2(ui, "Zoom", zoom, 0.01..=10.0, "", 2);
                 grid_2(ui, "Ângulo", angulo, -360.0..=360.0, "°", 1);
                 grid_2(ui, "Opacidade", opacidade, 0.0..=1.0, "", 2);
+
+                ui.separator();
+                ui.label(egui::RichText::new("Cenas disponíveis").strong());
+                for (nome, idx) in cenas {
+                ui.horizontal(|ui| {
+                    ui.label(nome);
+                    if ui.small_button("Focar").clicked() {
+                        acao = AcaoInspector::FocarCena(*idx);
+                    }
+                });
+                }
+                if cenas.is_empty() {
+                    ui.label("(crie marcadores na timeline)");
+                }
             }
         }
         TipoNo::Layer => {
-            if let NodeParams::Layer { cena, opacidade } = params {
+            if let NodeParams::Layer { cena, nome, ordem, opacidade } = params {
                 grid_combo_cena(ui, "Cena", cena, cenas);
+                grid_texto(ui, "Nome", nome);
+                grid_2(ui, "Ordem", ordem, -1000.0..=1000.0, "", 1);
                 grid_2(ui, "Opacidade", opacidade, 0.0..=1.0, "", 2);
+
+                ui.horizontal(|ui| {
+                    if ui.small_button("+ Layer").clicked() {
+                        acao = AcaoInspector::CriarLayer;
+                    }
+                    if ui.small_button("Remover").clicked() {
+                        acao = AcaoInspector::RemoverLayer;
+                    }
+                });
+                ui.horizontal(|ui| {
+                    if ui.small_button("▲").clicked() {
+                        acao = AcaoInspector::SubirLayer;
+                    }
+                    if ui.small_button("▼").clicked() {
+                        acao = AcaoInspector::DescerLayer;
+                    }
+                });
             }
         }
         TipoNo::Shape => {
@@ -561,6 +608,7 @@ pub fn show_content(
             linhas_y().write().unwrap().insert(cap.tipo, cap.ys);
         }
     });
+    acao
 }
 
 /// Linha com rótulo + campo de texto (nome da cena).
@@ -577,21 +625,21 @@ fn grid_texto(ui: &mut Ui, label: &str, v: &mut String) {
 }
 
 /// Linha com rótulo + combobox de cena (vincula Layers/Shape a uma cena).
-fn grid_combo_cena(ui: &mut Ui, label: &str, cena: &mut String, cenas: &[String]) {
+fn grid_combo_cena(ui: &mut Ui, label: &str, cena: &mut String, cenas: &[(String, NodeIndex)]) {
     let r = Grid::new(("cena", label))
         .num_columns(2)
         .spacing([8.0, 3.0])
         .show(ui, |ui| {
             ui.label(label);
             let atual = if cena.is_empty() {
-                cenas.first().cloned().unwrap_or_default()
+                cenas.first().map(|(n, _)| n.clone()).unwrap_or_default()
             } else {
                 cena.clone()
             };
             ComboBox::from_id_salt(("cena_cb", label))
                 .selected_text(&atual)
                 .show_ui(ui, |ui| {
-                    for c in cenas {
+                    for (c, _) in cenas {
                         if ui.selectable_label(*c == atual, c.clone()).clicked() {
                             *cena = c.clone();
                         }

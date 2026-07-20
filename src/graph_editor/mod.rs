@@ -69,6 +69,7 @@ pub struct GraphPanel {
     canvas_loc: Pos2,                         // posição fixa inicial do Canvas
     cena: Option<NodeIndex>,                    // nó Cena
     cena_loc: Pos2,                           // posição fixa inicial da Cena
+    cena_ativa: Option<NodeIndex>,             // cena atualmente selecionada
     liberados: HashSet<NodeIndex>,              // nós já movidos (posição solta)
     params: HashMap<NodeIndex, NodeParams>,    // parâmetros editáveis de cada nó
     pan_meio: bool,                            // pan com botão do meio ativo
@@ -102,6 +103,7 @@ impl GraphPanel {
             canvas_loc: Pos2::ZERO,
             cena: None,
             cena_loc: Pos2::ZERO,
+            cena_ativa: None,
             liberados: HashSet::new(),
             params: HashMap::new(),
             pan_meio: false,
@@ -176,9 +178,22 @@ impl GraphPanel {
             n.set_color(tipo.cor());
         }
         self.params.insert(idx, NodeParams::padrao(tipo));
-        // Layers/Shape já nascem vinculados à primeira cena existente
+        // Layers/Shape/Texto/Pen já nascem vinculados à cena ativa ou primeira cena existente
         let cenas = self.cenas_disponiveis();
-        self.normalizar_cena(idx, &cenas);
+        let cena_preferida = self.cena_ativa.and_then(|ci| {
+            self.params.get(&ci).and_then(|p| {
+                if let NodeParams::Cena { nome_cena, .. } = p {
+                    if !nome_cena.is_empty() {
+                        Some(nome_cena.clone())
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            })
+        });
+        self.normalizar_cena(idx, &cenas, cena_preferida);
         idx
     }
 
@@ -363,16 +378,99 @@ impl GraphPanel {
         v
     }
 
+    /// Nomes de cena com seus NodeIndex, para o inspector do Cena permitir
+    /// focar em uma cena específica.
+    fn cenas_disponiveis_com_indice(&self) -> Vec<(String, NodeIndex)> {
+        let mut v: Vec<(String, NodeIndex)> = self
+            .g
+            .nodes_iter()
+            .filter_map(|(idx, _)| {
+                if let Some(NodeParams::Cena { nome_cena, .. }) = self.params.get(&idx) {
+                    if !nome_cena.is_empty() {
+                        Some((nome_cena.clone(), idx))
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            })
+            .collect();
+        v.sort_by(|a, b| a.0.cmp(&b.0));
+        v.dedup_by(|a, b| a.0 == b.0);
+        v
+    }
+
     /// Garante que um nó Layers/Shape aponte para uma cena existente (a
-    /// primeira da lista), caso sua cena esteja vazia ou tenha sido removida.
-    fn normalizar_cena(&mut self, idx: NodeIndex, cenas: &[String]) {
-        if let Some(NodeParams::Layer { cena, .. } | NodeParams::Shape { cena, .. }) =
+    /// primeira da lista ou a preferida), caso sua cena esteja vazia ou tenha sido removida.
+    fn normalizar_cena(&mut self, idx: NodeIndex, cenas: &[String], preferida: Option<String>) {
+        if let Some(NodeParams::Layer { cena, .. } | NodeParams::Shape { cena, .. } | NodeParams::Texto { cena, .. } | NodeParams::Pen { cena, .. }) =
             self.params.get_mut(&idx)
         {
             if cenas.iter().all(|c| c != cena) {
-                *cena = cenas.first().cloned().unwrap_or_default();
+                *cena = preferida.or_else(|| cenas.first().cloned()).unwrap_or_default();
             }
         }
+    }
+
+    /// Sincroniza os nós Cena do grafo com os marcadores da timeline:
+    /// cria nós Cena para marcadores Range e remove nós Cena sem marcador.
+    pub fn sincronizar_marcadores_com_cenas(&mut self, markers: &[crate::ui::timeline::Marker]) {
+        use crate::ui::timeline::MarkerType;
+        let cenas_nomes: Vec<String> = markers.iter()
+            .filter(|m| m.kind == MarkerType::Range)
+            .map(|m| m.name.clone())
+            .collect();
+
+        let mut cenas_por_nome: std::collections::HashMap<String, NodeIndex> = std::collections::HashMap::new();
+        let mut cenas_para_remover: Vec<NodeIndex> = Vec::new();
+
+        for (idx, _) in self.g.nodes_iter() {
+            if let Some(NodeParams::Cena { nome_cena, .. }) = self.params.get(&idx) {
+                if nome_cena.is_empty() {
+                    continue;
+                }
+                if cenas_nomes.contains(nome_cena) {
+                    cenas_por_nome.insert(nome_cena.clone(), idx);
+                } else {
+                    cenas_para_remover.push(idx);
+                }
+            }
+        }
+
+        if !cenas_para_remover.is_empty() {
+            self.empurrar_historico();
+        }
+
+        for idx in cenas_para_remover {
+            self.g.remove_node(idx);
+            self.params.remove(&idx);
+            self.liberados.remove(&idx);
+            if self.cena_ativa == Some(idx) {
+                self.cena_ativa = None;
+            }
+            if self.cena == Some(idx) {
+                self.cena = None;
+            }
+        }
+
+        for nome in &cenas_nomes {
+            if !cenas_por_nome.contains_key(nome) {
+                self.empurrar_historico();
+                let loc = Pos2::new(
+                    (self.contador as f32 % 3.0) * 260.0,
+                    (self.contador as f32 / 3.0) * 150.0,
+                );
+                let idx = self.adicionar_no_em(TipoNo::Cena, loc);
+                if let Some(NodeParams::Cena { nome_cena, .. }) = self.params.get_mut(&idx) {
+                    *nome_cena = nome.clone();
+                }
+                cenas_por_nome.insert(nome.clone(), idx);
+                self.contador += 1;
+            }
+        }
+
+        self.limpar_grupos();
     }
 
     /// Coleta todas as cenas (com suas formas e textos procedurais) para o
@@ -489,29 +587,92 @@ impl GraphPanel {
         }
 
         // mapa nome-da-cena -> índice na lista (preserva ordem de aparecimento)
-        let mut indice: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+        let mut indice_cena: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
         let mut cenas = data.cenas;
+
+        // Coleta os nós de layer e suas propriedades
+        let mut layers: std::collections::HashMap<NodeIndex, (String, f32)> = std::collections::HashMap::new();
         for (idx, _) in self.g.nodes_iter() {
-            let i = match self.params.get(&idx) {
+            if let Some(NodeParams::Layer { cena, nome: _, opacidade, .. }) = self.params.get(&idx) {
+                layers.insert(idx, (cena.clone(), *opacidade));
+            }
+        }
+
+        // Mapa node_index -> layer_index dentro da cena (para agrupamento)
+        let mut node_para_layer: std::collections::HashMap<NodeIndex, usize> = std::collections::HashMap::new();
+        for (idx, _) in self.g.nodes_iter() {
+            if let Some(NodeParams::Shape { .. } | NodeParams::Texto { .. } | NodeParams::Pen { .. }) = self.params.get(&idx) {
+                let layer_idx = self.g.edges_iter()
+                    .find_map(|(ei, _)| {
+                        let (src, dst) = self.g.edge_endpoints(ei)?;
+                        if dst == idx && layers.contains_key(&src) {
+                            Some(src)
+                        } else {
+                            None
+                        }
+                    });
+                if let Some(layer_idx) = layer_idx {
+                    node_para_layer.insert(idx, layer_idx.index());
+                }
+            }
+        }
+
+        for (idx, _) in self.g.nodes_iter() {
+            let (cena_nome, layer_nome, layer_opacidade) = match self.params.get(&idx) {
                 Some(NodeParams::Shape { cena, .. })
                 | Some(NodeParams::Texto { cena, .. })
                 | Some(NodeParams::Pen { cena, .. }) => {
-                    if let Some(&i) = indice.get(cena) {
-                        i
+                    let layer_idx = node_para_layer.get(&idx).copied();
+                    let (ln, lo) = if let Some(li) = layer_idx {
+                        layers.get(&petgraph::stable_graph::NodeIndex::new(li))
+                            .map(|(n, o)| (n.clone(), *o))
+                            .unwrap_or_else(|| ("".to_string(), 1.0))
                     } else {
-                        let i = cenas.len();
-                        cenas.push(crate::procedural::CenaPreview {
-                            opacidade: 1.0,
+                        ("".to_string(), 1.0)
+                    };
+                    (cena.clone(), ln, lo)
+                }
+                _ => continue,
+            };
+
+            let cena_i = if let Some(&i) = indice_cena.get(&cena_nome) {
+                i
+            } else {
+                let i = cenas.len();
+                cenas.push(crate::procedural::CenaPreview {
+                    opacidade: 1.0,
+                    layers: vec![crate::procedural::LayerPreview {
+                        nome: String::new(),
+                        opacidade: 1.0,
+                        formas: Vec::new(),
+                        textos: Vec::new(),
+                        pen: Vec::new(),
+                    }],
+                });
+                indice_cena.insert(cena_nome.clone(), i);
+                i
+            };
+
+            let layer_i = if layer_nome.is_empty() {
+                0
+            } else {
+                let pos = cenas[cena_i].layers.iter().position(|l| l.nome == layer_nome);
+                match pos {
+                    Some(i) => i,
+                    None => {
+                        let i = cenas[cena_i].layers.len();
+                        cenas[cena_i].layers.push(crate::procedural::LayerPreview {
+                            nome: layer_nome.clone(),
+                            opacidade: layer_opacidade,
                             formas: Vec::new(),
                             textos: Vec::new(),
                             pen: Vec::new(),
                         });
-                        indice.insert(cena.clone(), i);
                         i
                     }
                 }
-                _ => continue,
             };
+
             match self.params.get(&idx) {
                 Some(NodeParams::Shape {
                     cena: _,
@@ -530,7 +691,7 @@ impl GraphPanel {
                     trim_fim,
                     ..
                 }) => {
-                    cenas[i].formas.push(ShapeGenerator {
+                    cenas[cena_i].layers[layer_i].formas.push(ShapeGenerator {
                         kind: ShapeKind::from_u8(*tipo),
                         pos: glam::Vec2::new(*px, *py),
                         tam: glam::Vec2::new(*largura, *altura),
@@ -560,7 +721,7 @@ impl GraphPanel {
                     trim_fim,
                     ..
                 }) => {
-                    cenas[i].textos.push(TextoItem {
+                    cenas[cena_i].layers[layer_i].textos.push(TextoItem {
                         px: *px,
                         py: *py,
                         conteudo: conteudo.clone(),
@@ -595,7 +756,7 @@ impl GraphPanel {
                     ..
                 }) => {
                     if let Ok(program) = crate::dsl::Program::parse(codigo) {
-                        cenas[i].pen.push(crate::procedural::PenPath {
+                        cenas[cena_i].layers[layer_i].pen.push(crate::procedural::PenPath {
                             program,
                             pos: glam::Vec2::new(*pos_x, *pos_y),
                             cor: *cor,
@@ -620,14 +781,24 @@ impl GraphPanel {
             }
         }
 
-        // opacidade vinda dos nós Layer conectados a cada Cena
+        // opacidade vinda dos próprios nós Layer
         for (idx, _) in self.g.nodes_iter() {
-            if let Some(NodeParams::Layer { cena, opacidade }) = self.params.get(&idx) {
-                if let Some(&i) = indice.get(cena) {
-                    // primeiro Layer que aparece ganha; demais ignorados
-                    if (cenas[i].opacidade - 1.0).abs() < 1e-3 {
-                        cenas[i].opacidade = *opacidade;
+            if let Some(NodeParams::Layer { cena, nome, opacidade, .. }) = self.params.get(&idx) {
+                if let Some(&ci) = indice_cena.get(cena) {
+                    for layer in &mut cenas[ci].layers {
+                        if layer.nome == *nome && (layer.opacidade - 1.0).abs() < 1e-3 {
+                            layer.opacidade = *opacidade;
+                        }
                     }
+                }
+            }
+        }
+
+        // opacidade global da cena (primeiro layer sem nome ou valor padrão)
+        for cena in &mut cenas {
+            if let Some(first) = cena.layers.first_mut() {
+                if (first.opacidade - 1.0).abs() < 1e-3 {
+                    first.opacidade = cena.opacidade;
                 }
             }
         }
@@ -2221,8 +2392,9 @@ impl GraphPanel {
             // recorta o conteúdo ao próprio card (interseção com o painel),
             // para o conteúdo de um nó nunca vazar para cima de outro.
             let clip_no = node_rect.intersect(rect);
-            let cenas = self.cenas_disponiveis();
+            let cenas = self.cenas_disponiveis_com_indice();
             let params = self.params.get_mut(&idx);
+            let mut acao_inspector = node_component::AcaoInspector::Nenhuma;
             // conteúdo em tamanho natural (sem largura forçada): a `Area`
             // se ajusta ao conteúdo e nós medimos o resultado para tornar o
             // card responsivo no próximo frame.
@@ -2235,11 +2407,15 @@ impl GraphPanel {
                     ui.set_clip_rect(clip_no);
                     node_component::escalar_estilo(ui, frame.zoom);
                     ui.push_id(i, |ui| {
-                        node_component::show_content(
+                        acao_inspector = node_component::show_content(
                             ui, tipo, params, &cenas, body_min.y, frame.zoom,
                         );
                     });
                 });
+            if let node_component::AcaoInspector::FocarCena(ci) = acao_inspector {
+                self.focar_no(ui, rect, ci);
+                self.cena_ativa = Some(ci);
+            }
             node_component::registrar_medida(tipo, resp.response.rect.size(), frame.zoom);
         }
 
@@ -2314,11 +2490,13 @@ fn aplicar_campos(
                 }
             }
         }
-        NodeParams::Layer { cena, opacidade } => {
+        NodeParams::Layer { cena, nome, opacidade, ordem, .. } => {
             for (c, v) in &n.campos {
                 match c.as_str() {
                     "scene" => *cena = v.as_str(),
+                    "name" => *nome = v.as_str(),
                     "opacity" => *opacidade = v.as_num(),
+                    "order" => *ordem = v.as_num(),
                     _ => {}
                 }
             }

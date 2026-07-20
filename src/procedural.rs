@@ -306,18 +306,27 @@ impl PenPath {
     }
 }
 
-/// Conteúdo completo de uma cena para o preview: formas (procedurais) e textos,
-/// em coordenadas de projeto, na ordem de desenho.
+/// Conteúdo completo de uma camada dentro de uma cena: nome, opacidade,
+/// formas, textos e caneta, em ordem de desenho.
 #[derive(Debug, Clone, Default)]
-pub struct CenaPreview {
+pub struct LayerPreview {
+    pub nome: String,
     pub opacidade: f32,
     pub formas: Vec<ShapeGenerator>,
     pub textos: Vec<TextoItem>,
     pub pen: Vec<PenPath>,
 }
 
+/// Conteúdo completo de uma cena para o preview: camadas (cada uma com
+/// suas formas e textos), em coordenadas de projeto, na ordem de desenho.
+#[derive(Debug, Clone, Default)]
+pub struct CenaPreview {
+    pub opacidade: f32,
+    pub layers: Vec<LayerPreview>,
+}
+
 /// Tudo o que o preview precisa para desenhar um quadro: dimensões do projeto,
-/// fundo e a lista ordenada de cenas (cada uma com suas formas e textos).
+/// fundo e a lista ordenada de cenas (cada uma com suas camadas).
 #[derive(Debug, Clone, Default)]
 pub struct PreviewData {
     pub largura: f32,

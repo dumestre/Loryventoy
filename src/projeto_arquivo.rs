@@ -33,6 +33,8 @@ pub enum NodeParamsJson {
     },
     Layer {
         cena: String,
+        nome: String,
+        ordem: f32,
         opacidade: f32,
     },
     Texto {
@@ -120,8 +122,8 @@ impl From<NodeParams> for NodeParamsJson {
             NodeParams::Cena { nome_cena, ativa, zoom, angulo, opacidade } => {
                 NodeParamsJson::Cena { nome_cena, ativa, zoom, angulo, opacidade }
             }
-            NodeParams::Layer { cena, opacidade } => {
-                NodeParamsJson::Layer { cena, opacidade }
+            NodeParams::Layer { cena, nome, opacidade, ordem } => {
+                NodeParamsJson::Layer { cena, nome, opacidade, ordem }
             }
             NodeParams::Texto { cena, conteudo, tamanho, negrito, italico, px, py, cor, trim_inicio, trim_fim, .. } => {
                 NodeParamsJson::Texto {
@@ -198,8 +200,8 @@ impl TryFrom<NodeParamsJson> for NodeParams {
             NodeParamsJson::Cena { nome_cena, ativa, zoom, angulo, opacidade } => {
                 NodeParams::Cena { nome_cena, ativa, zoom, angulo, opacidade }
             }
-            NodeParamsJson::Layer { cena, opacidade } => {
-                NodeParams::Layer { cena, opacidade }
+            NodeParamsJson::Layer { cena, nome, opacidade, ordem } => {
+                NodeParams::Layer { cena, nome, opacidade, ordem }
             }
             NodeParamsJson::Texto { cena, conteudo, tamanho, negrito, italico, px, py, cor, trim_inicio, trim_fim } => {
                 NodeParams::Texto {

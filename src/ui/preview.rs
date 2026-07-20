@@ -270,60 +270,63 @@ impl PreviewPanel {
             if cena.opacidade <= 0.001 {
                 continue;
             }
-            let opac = cena.opacidade;
-            for gen in &cena.formas {
-                let shape = gen.generate(self.tempo);
-                // opacidade da cena × opacidade animada do objeto.
-                let op = opac * gen.opac_em(self.tempo);
-                let shape = Self::aplicar_opacidade(shape, op);
-                let tela = Self::translate_shape(shape, &para_tela, &para_tela_v);
-                painter.add(tela);
-            }
-            for txt in &cena.textos {
-                let (tx, ty) = txt.pos_em(self.tempo);
-                let (esx, esy) = txt.escala_em(self.tempo);
-                let r = match self.rasterizar_texto(
-                    &txt.conteudo,
-                    txt.tamanho,
-                    txt.negrito,
-                    txt.italico,
-                    txt.cor,
-                    escala,
-                ) {
-                    Some(r) => r,
-                    None => continue,
-                };
-                let name = format!("preview_text_{}", tex_idx);
-                tex_idx += 1;
-                let handle = ui
-                    .ctx()
-                    .load_texture(name, r.imagem, eframe::egui::TextureOptions::LINEAR);
-                let anchor = para_tela(Pos2::new(tx, ty));
-                let size = Vec2::new(
-                    r.tam_logico[0] * escala.max(0.05) * esx,
-                    r.tam_logico[1] * escala.max(0.05) * esy,
-                );
-                let op = opac * txt.opac_em(self.tempo);
-                let a = (op.clamp(0.0, 1.0) * 255.0) as u8;
-                painter.image(
-                    handle.id(),
-                    Rect::from_min_size(anchor, size),
-                    Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)),
-                    Color32::from_white_alpha(a),
-                );
-            }
-            // Ordena as canetas por `ordem` (z-order) antes de desenhar.
-            let mut pen_ord: Vec<&crate::procedural::PenPath> = cena.pen.iter().collect();
-            pen_ord.sort_by(|a, b| a.ordem.partial_cmp(&b.ordem).unwrap_or(std::cmp::Ordering::Equal));
-            self.pen_erros.clear();
-            for pen in pen_ord {
-                let cmds = match pen.program.eval(self.tempo, pen.seed) {
-                    Ok(c) => c,
-                    Err(e) => {
-                        self.pen_erros.push(e.to_string());
-                        continue;
-                    }
-                };
+            let opac_cena = cena.opacidade;
+            for layer in &cena.layers {
+                if layer.opacidade <= 0.001 {
+                    continue;
+                }
+                let opac = opac_cena * layer.opacidade;
+                for gen in &layer.formas {
+                    let shape = gen.generate(self.tempo);
+                    let op = opac * gen.opac_em(self.tempo);
+                    let shape = Self::aplicar_opacidade(shape, op);
+                    let tela = Self::translate_shape(shape, &para_tela, &para_tela_v);
+                    painter.add(tela);
+                }
+                for txt in &layer.textos {
+                    let (tx, ty) = txt.pos_em(self.tempo);
+                    let (esx, esy) = txt.escala_em(self.tempo);
+                    let r = match self.rasterizar_texto(
+                        &txt.conteudo,
+                        txt.tamanho,
+                        txt.negrito,
+                        txt.italico,
+                        txt.cor,
+                        escala,
+                    ) {
+                        Some(r) => r,
+                        None => continue,
+                    };
+                    let name = format!("preview_text_{}", tex_idx);
+                    tex_idx += 1;
+                    let handle = ui
+                        .ctx()
+                        .load_texture(name, r.imagem, eframe::egui::TextureOptions::LINEAR);
+                    let anchor = para_tela(Pos2::new(tx, ty));
+                    let size = Vec2::new(
+                        r.tam_logico[0] * escala.max(0.05) * esx,
+                        r.tam_logico[1] * escala.max(0.05) * esy,
+                    );
+                    let op = opac * txt.opac_em(self.tempo);
+                    let a = (op.clamp(0.0, 1.0) * 255.0) as u8;
+                    painter.image(
+                        handle.id(),
+                        Rect::from_min_size(anchor, size),
+                        Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)),
+                        Color32::from_white_alpha(a),
+                    );
+                }
+                let mut pen_ord: Vec<&crate::procedural::PenPath> = layer.pen.iter().collect();
+                pen_ord.sort_by(|a, b| a.ordem.partial_cmp(&b.ordem).unwrap_or(std::cmp::Ordering::Equal));
+                self.pen_erros.clear();
+                for pen in pen_ord {
+                    let cmds = match pen.program.eval(self.tempo, pen.seed) {
+                        Ok(c) => c,
+                        Err(e) => {
+                            self.pen_erros.push(e.to_string());
+                            continue;
+                        }
+                    };
                 let progress = (self.tempo / pen.duracao.max(0.001)).clamp(0.0, 1.0);
                 let trim_fim_anim = pen.trim_inicio + (pen.trim_fim - pen.trim_inicio) * progress;
                 let shapes = Self::pen_cmds_para_shapes(
@@ -425,8 +428,9 @@ impl PreviewPanel {
                 }
             }
         }
+    }
 
-        // Overlay de erros de eval dos pens
+    // Overlay de erros de eval dos pens
         if !self.pen_erros.is_empty() {
             let mut y = rect.top() + 30.0;
             let x = rect.left() + 10.0;
