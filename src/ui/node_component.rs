@@ -246,19 +246,21 @@ pub fn show_content(
                 grid_2(ui, "Ordem", ordem, -1000.0..=1000.0, "", 1);
                 grid_2(ui, "Opacidade", opacidade, 0.0..=1.0, "", 2);
 
+                ui.separator();
+                ui.label(egui::RichText::new("Gerenciar Layers").strong());
+                
+                let icon_size = Vec2::new(18.0, 18.0);
                 ui.horizontal(|ui| {
-                    if ui.small_button("+ Layer").clicked() {
+                    if ui.add(Image::new(eframe::egui::include_image!("icons/add.svg")).fit_to_exact_size(icon_size)).clicked() {
                         acao = AcaoInspector::CriarLayer;
                     }
-                    if ui.small_button("Remover").clicked() {
+                    if ui.add(Image::new(eframe::egui::include_image!("icons/delete.svg")).fit_to_exact_size(icon_size)).clicked() {
                         acao = AcaoInspector::RemoverLayer;
                     }
-                });
-                ui.horizontal(|ui| {
-                    if ui.small_button("▲").clicked() {
+                    if ui.add(Image::new(eframe::egui::include_image!("icons/arrow_up.svg")).fit_to_exact_size(icon_size)).clicked() {
                         acao = AcaoInspector::SubirLayer;
                     }
-                    if ui.small_button("▼").clicked() {
+                    if ui.add(Image::new(eframe::egui::include_image!("icons/arrow_down.svg")).fit_to_exact_size(icon_size)).clicked() {
                         acao = AcaoInspector::DescerLayer;
                     }
                 });

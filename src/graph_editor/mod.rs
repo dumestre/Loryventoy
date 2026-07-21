@@ -165,6 +165,30 @@ impl GraphPanel {
         self.cena = Some(cena);
         self.master = Some(master);
 
+        // Layer padrão conectado à cena
+        let layer_loc = Pos2::new(0.0, 180.0);
+        let layer = self.adicionar_no_em(TipoNo::Layer, layer_loc);
+        let nome_cena = self.params.get(&cena).and_then(|p| {
+            if let NodeParams::Cena { nome_cena, .. } = p {
+                Some(nome_cena.clone())
+            } else {
+                None
+            }
+        });
+        if let (Some(NodeParams::Layer { cena: lc, .. }), Some(nc)) = (self.params.get_mut(&layer), nome_cena) {
+            *lc = nc;
+        }
+        self.g.add_edge(
+            layer,
+            cena,
+            node_display::ArestaInfo {
+                saida: 0,
+                saida_comp: None,
+                entrada: 0,
+                entrada_comp: None,
+            },
+        );
+
         // ids DSL padrão para a linguagem de patch localizar os nós fixos.
         self.dsl_ids.clear();
         self.dsl_ids.insert("canvas".to_string(), canvas);
@@ -409,6 +433,83 @@ impl GraphPanel {
         {
             if cenas.iter().all(|c| c != cena) {
                 *cena = preferida.or_else(|| cenas.first().cloned()).unwrap_or_default();
+            }
+        }
+    }
+
+    /// Cria um novo nó Layer conectado à cena ativa (ou à primeira cena
+    /// existente). Posiciona abaixo dos outros layers.
+    pub fn criar_layer_para_cena_atual(&mut self) {
+        self.empurrar_historico();
+        let cenas = self.cenas_disponiveis();
+        let cena_nome = self.cena_ativa.and_then(|ci| {
+            self.params.get(&ci).and_then(|p| {
+                if let NodeParams::Cena { nome_cena, .. } = p {
+                    if !nome_cena.is_empty() {
+                        Some(nome_cena.clone())
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            })
+        }).or_else(|| cenas.first().cloned()).unwrap_or_default();
+
+        let loc = Pos2::new(
+            (self.contador as f32 % 3.0) * 260.0,
+            200.0 + (self.contador as f32 / 3.0) * 150.0,
+        );
+        let idx = self.adicionar_no_em(TipoNo::Layer, loc);
+        let cena_nome_conn = cena_nome.clone();
+        if let Some(NodeParams::Layer { cena, nome, .. }) = self.params.get_mut(&idx) {
+            *cena = cena_nome;
+            *nome = format!("Layer {}", self.contador);
+        }
+        // Conecta o layer à cena
+        if let Some(cena_idx) = self.cena_ativa.or_else(|| {
+            self.g.nodes_iter().find_map(|(idx, _)| {
+                if let Some(NodeParams::Cena { nome_cena, .. }) = self.params.get(&idx) {
+                    if *nome_cena == cena_nome_conn {
+                        Some(idx)
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            })
+        }) {
+            self.conectar_parametro(idx, 0, None, cena_idx, 0, None);
+        }
+        self.contador += 1;
+    }
+
+    /// Remove o nó Layer atual e suas conexões.
+    pub fn remover_layer_atual(&mut self, layer_idx: NodeIndex) {
+        if self.params.get(&layer_idx).map_or(false, |p| matches!(p, NodeParams::Layer { .. })) {
+            self.empurrar_historico();
+            self.g.remove_node(layer_idx);
+            self.params.remove(&layer_idx);
+            self.liberados.remove(&layer_idx);
+            self.limpar_grupos();
+        }
+    }
+
+    /// Move o layer para cima (delta=1) ou para baixo (delta=-1) na ordem
+    /// de desenho, ajustando o parâmetro `ordem`.
+    pub fn mover_layer_atual(&mut self, layer_idx: NodeIndex, delta: i32) {
+        let ordem_atual = self.params.get(&layer_idx).and_then(|p| {
+            if let NodeParams::Layer { ordem, .. } = p {
+                Some(*ordem)
+            } else {
+                None
+            }
+        });
+        if ordem_atual.is_some() {
+            self.empurrar_historico();
+            if let Some(NodeParams::Layer { ordem, .. }) = self.params.get_mut(&layer_idx) {
+                *ordem += delta as f32;
             }
         }
     }
@@ -2415,6 +2516,18 @@ impl GraphPanel {
             if let node_component::AcaoInspector::FocarCena(ci) = acao_inspector {
                 self.focar_no(ui, rect, ci);
                 self.cena_ativa = Some(ci);
+            }
+            if let node_component::AcaoInspector::CriarLayer = acao_inspector {
+                self.criar_layer_para_cena_atual();
+            }
+            if let node_component::AcaoInspector::RemoverLayer = acao_inspector {
+                self.remover_layer_atual(idx);
+            }
+            if let node_component::AcaoInspector::SubirLayer = acao_inspector {
+                self.mover_layer_atual(idx, 1);
+            }
+            if let node_component::AcaoInspector::DescerLayer = acao_inspector {
+                self.mover_layer_atual(idx, -1);
             }
             node_component::registrar_medida(tipo, resp.response.rect.size(), frame.zoom);
         }
