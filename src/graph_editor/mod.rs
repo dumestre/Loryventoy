@@ -2455,21 +2455,36 @@ impl GraphPanel {
         // e cobrem completamente os nós atrás (sem "misturar" os componentes
         // de um com o outro quando se sobrepõem).
         let arrastando_idx = self.arrastando.map(|(idx, _)| idx);
-        let mut infos: Vec<(usize, TipoNo, bool)> = self
+        let mut infos: Vec<(usize, TipoNo, bool, Pos2)> = self
             .g
             .nodes_iter()
             .filter_map(|(idx, n)| {
                 self.tipo_do_node(idx)
-                    .map(|t| (idx.index(), t, n.selected() || n.hovered()))
+                    .map(|t| (idx.index(), t, n.selected() || n.hovered(), n.location()))
             })
             .collect();
+        
+        // Ordena por: não ativos primeiro, ativos depois, arrastando por último.
+        // Garante que o nó sendo arrastado fique sempre no topo.
         infos.sort_by(|a, b| {
             let a_ativo = a.2 || Some(NodeIndex::new(a.0)) == arrastando_idx;
             let b_ativo = b.2 || Some(NodeIndex::new(b.0)) == arrastando_idx;
-            // false (ao fundo) antes de true (à frente)
-            a_ativo.cmp(&b_ativo)
+            
+            // Se ambos são ativos, o arrastando deve ficar depois
+            if a_ativo && b_ativo {
+                if Some(NodeIndex::new(a.0)) == arrastando_idx {
+                    std::cmp::Ordering::Greater
+                } else if Some(NodeIndex::new(b.0)) == arrastando_idx {
+                    std::cmp::Ordering::Less
+                } else {
+                    a_ativo.cmp(&b_ativo)
+                }
+            } else {
+                a_ativo.cmp(&b_ativo)
+            }
         });
-        for (i, tipo, _) in infos {
+        
+        for (i, tipo, _, _) in infos {
             let idx = NodeIndex::new(i);
             let loc = match self.g.node(idx) {
                 Some(n) => n.location(),
@@ -2500,7 +2515,7 @@ impl GraphPanel {
             // se ajusta ao conteúdo e nós medimos o resultado para tornar o
             // card responsivo no próximo frame.
             let resp = Area::new(Id::new(("no_conteudo", i)))
-                .order(Order::Middle)
+                .order(Order::Foreground)
                 .fixed_pos(body_min)
                 .movable(false)
                 .constrain(false)
