@@ -100,16 +100,18 @@ pub fn linha_y(tipo: TipoNo, nome: &str) -> Option<f32> {
 /// zoom) medido ao desenhar a `Area`. Convertemos de volta para unidades de
 /// canvas (dividindo pelo zoom) e somamos as margens/cabeçalho em canvas,
 /// para o card escalar junto com o resto.
+/// **Largura NÃO é atualizada** — fica fixa em `fallback_size` (estilo
+/// Blender: largura constante, altura varia com o conteúdo).
 pub fn registrar_medida(tipo: TipoNo, conteudo_tela: Vec2, zoom: f32) {
     let z = zoom.max(0.01);
-    let cw = conteudo_tela.x / z;
     let ch = conteudo_tela.y / z;
-    let half = Vec2::new(
-        (cw + MARGEM_X * 2.0) / 2.0,
-        (ch + CABECALHO_H + MARGEM_Y * 2.0) / 2.0,
-    );
-    if half.x.is_finite() && half.y.is_finite() && half.x > 1.0 && half.y > 1.0 {
-        medidas().write().unwrap().insert(tipo, half);
+    let h = (ch + CABECALHO_H + MARGEM_Y * 2.0) / 2.0;
+    if h.is_finite() && h > 1.0 {
+        let fb = fallback_size(tipo);
+        let mut m = medidas().write().unwrap();
+        // Preserva a largura existente (ou fallback), só atualiza a altura.
+        let existing_x = m.get(&tipo).map_or(fb.x, |v| v.x);
+        m.insert(tipo, Vec2::new(existing_x, h));
     }
 }
 
@@ -153,13 +155,16 @@ fn hex_de(c: Color32) -> String {
 /// Usado pelo `egui_graphs` (hit-test/tamanho) e para posicionar o corpo.
 /// O tamanho é responsivo: reflete a última medida do conteúdo do tipo.
 /// (ver `registrar_medida`), com fallback enquanto não há medida.
+/// Largura fixa (vem de `fallback_size`), altura medida do conteúdo.
 pub fn content_size(tipo: TipoNo) -> Vec2 {
-    medidas()
-        .read()
-        .unwrap()
-        .get(&tipo)
-        .copied()
-        .unwrap_or_else(|| fallback_size(tipo))
+    let fb = fallback_size(tipo);
+    let measured = medidas().read().unwrap().get(&tipo).copied();
+    // Largura sempre fixa (estável, não muda com zoom/conteúdo).
+    // Altura vem da medida real (ou fallback se ainda não mediu).
+    Vec2::new(
+        fb.x,
+        measured.map_or(fb.y, |m| m.y),
+    )
 }
 
 /// Desenha os parâmetros editáveis do nó DENTRO do corpo do cartão

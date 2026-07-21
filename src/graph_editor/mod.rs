@@ -2578,14 +2578,15 @@ impl GraphPanel {
                     Some(n) => n.location(),
                     None => continue,
                 };
-                let half = node_display::NoDisplay::tamanho(
+                let half_canvas = node_display::NoDisplay::tamanho(
                     &self.g.node(idx).map_or(String::new(), |n| n.label()),
                 );
+                let half_screen = half_canvas * frame.zoom;
                 // canvas_para_screen já inclui rect.left_top(), então usamos
                 // frame original (sem o offset extra) para calcular o rect do
                 // card — alinhando com onde desenhar_card() realmente pinta.
                 let center = self.canvas_para_screen(loc, &frame, rect);
-                let node_rect = Rect::from_center_size(center, half * 2.0);
+                let node_rect = Rect::from_center_size(center, half_screen * 2.0);
                 if !rect.intersects(node_rect) {
                     continue;
                 }
@@ -2597,7 +2598,7 @@ impl GraphPanel {
                     &clipped,
                     &port_frame,
                     loc,
-                    half,
+                    half_canvas,
                     tipo,
                 );
             }
