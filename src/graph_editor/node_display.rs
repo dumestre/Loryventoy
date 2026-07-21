@@ -3,7 +3,7 @@ use eframe::egui::{
     StrokeKind, Vec2,
 };
 use eframe::egui::epaint::{CircleShape, RectShape, TextShape};
-use egui_graphs::{DisplayEdge, DisplayNode, DrawContext, EdgeProps, Node, NodeProps};
+use egui_graphs::{DisplayEdge, DisplayNode, DrawContext, EdgeProps, MetadataFrame, Node, NodeProps};
 use petgraph::stable_graph::DefaultIx;
 use petgraph::Directed;
 
@@ -144,145 +144,23 @@ impl DisplayNode<(), ArestaInfo, Directed, DefaultIx> for NoDisplay {
     }
 
     fn shapes(&mut self, ctx: &DrawContext) -> Vec<Shape> {
-        let mut res = Vec::new();
-
+        // Apenas sombra: o card, header, label e portos são desenhados em
+        // camadas separadas (card na Area de conteúdo, portos em passada
+        // própria) para resolver sobreposição corretamente.
         let center = ctx.meta.canvas_to_screen_pos(self.pos);
         let sx = ctx.meta.canvas_to_screen_size(self.half.x);
         let sy = ctx.meta.canvas_to_screen_size(self.half.y);
         let rect = Rect::from_center_size(center, Vec2::new(sx * 2.0, sy * 2.0));
 
-        let accent = self.color.unwrap_or_else(|| Color32::from_gray(190));
-        let fill = Color32::from_rgb(30, 30, 40);
-        let stroke_w = if self.selected {
-            2.5
-        } else if self.hovered {
-            2.0
-        } else {
-            1.5
-        };
-        // Feedback de seleção: borda vermelha ao redor do nó.
-        let borda = if self.selected {
-            Color32::from_rgb(235, 70, 70)
-        } else {
-            accent
-        };
-
-        // Sombra
         let shadow = rect.translate(Vec2::new(3.0, 5.0));
-        res.push(
-            RectShape::new(
-                shadow,
-                CornerRadius::same(NODE_RADIUS),
-                Color32::from_rgba_unmultiplied(0, 0, 0, 70),
-                Stroke::NONE,
-                StrokeKind::Inside,
-            )
-            .into(),
-        );
-
-        // Corpo do card
-        res.push(
-            RectShape::new(
-                rect,
-                CornerRadius::same(NODE_RADIUS),
-                fill,
-                Stroke::new(stroke_w, borda),
-                StrokeKind::Inside,
-            )
-            .into(),
-        );
-
-        // Header colorido (apenas cantos superiores arredondados). Altura em
-        // canvas → escala com o zoom (o nó inteiro cresce/encolhe junto).
-        let header_h = ctx.meta.canvas_to_screen_size(node_component::CABECALHO_H);
-        let header_rect =
-            Rect::from_min_max(rect.min, Pos2::new(rect.max.x, rect.min.y + header_h));
-        let mut cr = CornerRadius::same(NODE_RADIUS);
-        cr.sw = 0;
-        cr.se = 0;
-        res.push(
-            RectShape::new(
-                header_rect,
-                cr,
-                accent,
-                Stroke::NONE,
-                StrokeKind::Inside,
-            )
-            .into(),
-        );
-
-        // Rótulo (nome do nó) no cabeçalho colorido; a fonte escala com o zoom
-        let fonte = ctx.meta.canvas_to_screen_size(node_component::FONTE_TITULO);
-        let galley = ctx.painter.layout_no_wrap(
-            self.label.clone(),
-            FontId::new(fonte, FontFamily::Proportional),
-            Color32::from_rgb(20, 20, 26),
-        );
-        let label_pos = Pos2::new(
-            header_rect.center().x - galley.size().x / 2.0,
-            header_rect.center().y - galley.size().y / 2.0,
-        );
-        res.push(
-            TextShape::new(label_pos, galley, Color32::from_rgb(20, 20, 26)).into(),
-        );
-
-        // Portos de conexão: uma "bolinha" por parâmetro, alinhada ao corpo
-        // do card. Entradas à esquerda (soquinhos ocos) e saídas à direita
-        // (triângulos apontando p/ fora), na cor do tipo, sem borda branca.
-        let zoom = ctx.meta.zoom;
-        let port_r = (4.5 * zoom).clamp(2.5, 7.0);
-        let (ins, outs) = port_offsets(self.tipo(), self.half);
-        for off in &ins {
-            let c = ctx.meta.canvas_to_screen_pos(self.pos + *off);
-            // soquinho: círculo preenchido + furo na cor do corpo (aspecto de "entrada")
-            res.push(
-                Shape::Circle(CircleShape {
-                    center: c,
-                    radius: port_r,
-                    fill: accent,
-                    stroke: Stroke::NONE,
-                })
-                .into(),
-            );
-            res.push(
-                Shape::Circle(CircleShape {
-                    center: c,
-                    radius: port_r * 0.45,
-                    fill,
-                    stroke: Stroke::NONE,
-                })
-                .into(),
-            );
-        }
-        for (i, off) in outs.iter().enumerate() {
-            let c = ctx.meta.canvas_to_screen_pos(self.pos + *off);
-            // plug: bolinha preenchida (sem borda branca)
-            res.push(
-                Shape::Circle(CircleShape {
-                    center: c,
-                    radius: port_r,
-                    fill: accent,
-                    stroke: Stroke::NONE,
-                })
-                .into(),
-            );
-            // porto vetorial (ex.: Posição X/Y/Z): anel interno na cor do
-            // corpo para indicar que, ao soltar o fio, abre o menu de
-            // componentes (X / Y / Z).
-            if portos(self.tipo()).saidas.get(i).map_or(false, |p| p.is_vetor()) {
-                res.push(
-                    Shape::Circle(CircleShape {
-                        center: c,
-                        radius: port_r * 0.45,
-                        fill,
-                        stroke: Stroke::NONE,
-                    })
-                    .into(),
-                );
-            }
-        }
-
-        res
+        vec![RectShape::new(
+            shadow,
+            CornerRadius::same(NODE_RADIUS),
+            Color32::from_rgba_unmultiplied(0, 0, 0, 70),
+            Stroke::NONE,
+            StrokeKind::Inside,
+        )
+        .into()]
     }
 
     fn update(&mut self, state: &NodeProps<()>) {
@@ -298,6 +176,122 @@ impl DisplayNode<(), ArestaInfo, Directed, DefaultIx> for NoDisplay {
     fn is_inside(&self, pos: Pos2) -> bool {
         (pos.x - self.pos.x).abs() <= self.half.x
             && (pos.y - self.pos.y).abs() <= self.half.y
+    }
+}
+
+/// Desenha o card visual (fundo, borda, header colorido e rótulo) dentro
+/// de uma `Area` de conteúdo. Chamado antes dos widgets do inspector para
+/// que o card fique NA MESMA CAMADA que o conteúdo — resolve sobreposição.
+pub fn desenhar_card(
+    painter: &egui::Painter,
+    node_rect: Rect,
+    tipo: TipoNo,
+    selected: bool,
+    hovered: bool,
+    label: &str,
+    zoom: f32,
+) {
+    let fill = Color32::from_rgb(30, 30, 40);
+    let accent = tipo.cor();
+    let stroke_w = if selected {
+        2.5
+    } else if hovered {
+        2.0
+    } else {
+        1.5
+    };
+    let borda = if selected {
+        Color32::from_rgb(235, 70, 70)
+    } else {
+        accent
+    };
+
+    // Corpo do card
+    painter.add(Shape::Rect(RectShape::new(
+        node_rect,
+        CornerRadius::same(NODE_RADIUS),
+        fill,
+        Stroke::new(stroke_w, borda),
+        StrokeKind::Inside,
+    )));
+
+    // Header colorido (cantos superiores arredondados)
+    let header_h = zoom * node_component::CABECALHO_H;
+    let header_rect =
+        Rect::from_min_max(node_rect.min, Pos2::new(node_rect.max.x, node_rect.min.y + header_h));
+    let mut cr = CornerRadius::same(NODE_RADIUS);
+    cr.sw = 0;
+    cr.se = 0;
+    painter.add(Shape::Rect(RectShape::new(
+        header_rect,
+        cr,
+        accent,
+        Stroke::NONE,
+        StrokeKind::Inside,
+    )));
+
+    // Rótulo (nome do nó) centrado no header
+    let fonte = zoom * node_component::FONTE_TITULO;
+    let galley = painter.layout_no_wrap(
+        label.to_string(),
+        FontId::new(fonte, FontFamily::Proportional),
+        Color32::from_rgb(20, 20, 26),
+    );
+    let label_pos = Pos2::new(
+        header_rect.center().x - galley.size().x / 2.0,
+        header_rect.center().y - galley.size().y / 2.0,
+    );
+    painter.add(TextShape::new(label_pos, galley, Color32::from_rgb(20, 20, 26)));
+}
+
+/// Desenha apenas os portos de conexão de um nó num `Painter` externo.
+/// Usado para pintar portos NA FRENTE do conteúdo do nó ( Areas com
+/// `Order::Foreground`), evitando que fiquem cobertos pelos widgets.
+pub fn desenhar_portos(
+    painter: &egui::Painter,
+    meta: &MetadataFrame,
+    pos_canvas: Pos2,
+    half: Vec2,
+    tipo: TipoNo,
+) {
+    let fill = Color32::from_rgb(30, 30, 40);
+    let accent = tipo.cor();
+    let zoom = meta.zoom;
+    let port_r = (4.5 * zoom).clamp(2.5, 7.0);
+    let (ins, outs) = port_offsets(tipo, half);
+
+    for off in &ins {
+        let c = meta.canvas_to_screen_pos(pos_canvas + *off);
+        painter.add(Shape::Circle(CircleShape {
+            center: c,
+            radius: port_r,
+            fill: accent,
+            stroke: Stroke::NONE,
+        }));
+        painter.add(Shape::Circle(CircleShape {
+            center: c,
+            radius: port_r * 0.45,
+            fill,
+            stroke: Stroke::NONE,
+        }));
+    }
+
+    for (i, off) in outs.iter().enumerate() {
+        let c = meta.canvas_to_screen_pos(pos_canvas + *off);
+        painter.add(Shape::Circle(CircleShape {
+            center: c,
+            radius: port_r,
+            fill: accent,
+            stroke: Stroke::NONE,
+        }));
+        if portos(tipo).saidas.get(i).map_or(false, |p| p.is_vetor()) {
+            painter.add(Shape::Circle(CircleShape {
+                center: c,
+                radius: port_r * 0.45,
+                fill,
+                stroke: Stroke::NONE,
+            }));
+        }
     }
 }
 

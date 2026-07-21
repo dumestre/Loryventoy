@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use eframe::egui::{
     Area, Button, Color32, CornerRadius, CursorIcon, FontFamily, FontId, Id,
-    Key, Order, Painter, PointerButton, Popup, Pos2, Rect, Sense, Shape, Stroke,
+    Key, LayerId, Order, Painter, PointerButton, Popup, Pos2, Rect, Sense, Shape, Stroke,
     StrokeKind, Ui, UiBuilder, Vec2,
 };
 use eframe::egui::epaint::{CircleShape, CubicBezierShape, RectShape, TextShape};
@@ -2484,7 +2484,7 @@ impl GraphPanel {
             }
         });
         
-        for (i, tipo, _, _) in infos {
+        for &(i, tipo, _, _) in &infos {
             let idx = NodeIndex::new(i);
             let loc = match self.g.node(idx) {
                 Some(n) => n.location(),
@@ -2498,6 +2498,8 @@ impl GraphPanel {
             if !rect.intersects(node_rect) {
                 continue;
             }
+            let selected = self.g.node(idx).map_or(false, |n| n.selected());
+            let hovered = self.g.node(idx).map_or(false, |n| n.hovered());
             // corpo abaixo do cabeçalho; margens/cabeçalho em canvas escalados
             // pelo zoom, para o card escalar junto (estilo Blender).
             let body_min = Pos2::new(
@@ -2521,6 +2523,14 @@ impl GraphPanel {
                 .constrain(false)
                 .show(ui.ctx(), |ui| {
                     ui.set_clip_rect(clip_no);
+                    // Card (fundo + header + label) desenhado DENTRO da
+                    // Area, na mesma camada do conteúdo — garante que o nó
+                    // de cima cobre completamente o de baixo ao se sobrepor.
+                    node_display::desenhar_card(
+                        ui.painter(), node_rect, tipo,
+                        selected, hovered, &self.g.node(idx).map_or(String::new(), |n| n.label()),
+                        frame.zoom,
+                    );
                     node_component::escalar_estilo(ui, frame.zoom);
                     ui.push_id(i, |ui| {
                         acao_inspector = node_component::show_content(
@@ -2545,6 +2555,44 @@ impl GraphPanel {
                 self.mover_layer_atual(idx, -1);
             }
             node_component::registrar_medida(tipo, resp.response.rect.size(), frame.zoom);
+        }
+
+        // ---- PASSADA DE PORTOS: desenha os portos de conexão NA FRENTE
+        // de todo o conteúdo. Painter dedicado em camada Foreground criada
+        // DEPOIS das Areas, garantindo z-order correto. ----
+        {
+            let port_layer = LayerId::new(
+                Order::Foreground,
+                Id::new("portos_acima_conteudo"),
+            );
+            let port_painter = ui.painter().clone().with_layer_id(port_layer);
+
+            for &i in infos.iter().map(|(i, _, _, _)| i) {
+                let idx = NodeIndex::new(i);
+                let loc = match self.g.node(idx) {
+                    Some(n) => n.location(),
+                    None => continue,
+                };
+                let half = node_display::NoDisplay::tamanho(
+                    &self.g.node(idx).map_or(String::new(), |n| n.label()),
+                );
+                if !rect.intersects(Rect::from_center_size(
+                    self.canvas_para_screen(loc, &frame, rect),
+                    half * 2.0,
+                )) {
+                    continue;
+                }
+                let Some(tipo) = self.tipo_do_node(idx) else {
+                    continue;
+                };
+                node_display::desenhar_portos(
+                    &port_painter,
+                    &frame,
+                    loc,
+                    half,
+                    tipo,
+                );
+            }
         }
 
         // cabeçalho interativo dos grupos (título + seletor de cor)
