@@ -2593,7 +2593,9 @@ impl GraphPanel {
                 let Some(tipo) = self.tipo_do_node(idx) else {
                     continue;
                 };
-                let clipped = port_painter.clone().with_clip_rect(node_rect);
+                let port_r = (4.5 * frame.zoom).clamp(2.5, 7.0);
+                let clip = node_rect.expand(port_r).intersect(rect);
+                let clipped = port_painter.clone().with_clip_rect(clip);
                 node_display::desenhar_portos(
                     &clipped,
                     &port_frame,
