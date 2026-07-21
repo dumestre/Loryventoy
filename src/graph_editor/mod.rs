@@ -2566,6 +2566,11 @@ impl GraphPanel {
                 Id::new("portos_acima_conteudo"),
             );
             let port_painter = ui.painter().clone().with_layer_id(port_layer);
+            // canvas_to_screen_pos do frame não inclui rect.left_top(),
+            // mas os cards usam canvas_para_screen que sim inclui.
+            // Criamos um frame ajustado para alinhar os portos ao card.
+            let mut port_frame = frame.clone();
+            port_frame.pan += rect.left_top().to_vec2();
 
             for &i in infos.iter().map(|(i, _, _, _)| i) {
                 let idx = NodeIndex::new(i);
@@ -2576,18 +2581,21 @@ impl GraphPanel {
                 let half = node_display::NoDisplay::tamanho(
                     &self.g.node(idx).map_or(String::new(), |n| n.label()),
                 );
-                if !rect.intersects(Rect::from_center_size(
-                    self.canvas_para_screen(loc, &frame, rect),
-                    half * 2.0,
-                )) {
+                // canvas_para_screen já inclui rect.left_top(), então usamos
+                // frame original (sem o offset extra) para calcular o rect do
+                // card — alinhando com onde desenhar_card() realmente pinta.
+                let center = self.canvas_para_screen(loc, &frame, rect);
+                let node_rect = Rect::from_center_size(center, half * 2.0);
+                if !rect.intersects(node_rect) {
                     continue;
                 }
                 let Some(tipo) = self.tipo_do_node(idx) else {
                     continue;
                 };
+                let clipped = port_painter.clone().with_clip_rect(node_rect);
                 node_display::desenhar_portos(
-                    &port_painter,
-                    &frame,
+                    &clipped,
+                    &port_frame,
                     loc,
                     half,
                     tipo,
