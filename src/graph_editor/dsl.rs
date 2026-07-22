@@ -460,9 +460,7 @@ impl GraphPanel {
                 }
                 PatchCmd::Remove { id } => {
                     if let Some(idx) = self.dsl_ids.remove(&id) {
-                        self.editor_state.graph.remove_node(idx);
-                        self.params.remove(&idx);
-                        self.liberados.remove(&idx);
+                        self.remover_no(idx);
                     }
                     self.limpar_grupos();
                 }

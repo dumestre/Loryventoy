@@ -136,9 +136,7 @@ impl GraphPanel {
             if self.is_fixo(idx) {
                 continue;
             }
-            self.editor_state.graph.remove_node(idx);
-            self.params.remove(&idx);
-            self.liberados.remove(&idx);
+            self.remover_no(idx);
         }
         self.limpar_grupos();
     }

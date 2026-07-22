@@ -112,15 +112,15 @@ pub fn desenhar_grade(painter: &egui::Painter, rect: Rect, pan: Vec2, zoom: f32)
         return;
     }
     let stroke = Stroke::new(0.5, Color32::from_rgba_unmultiplied(255, 255, 255, 15));
-    let origin_screen = rect.center() + pan * zoom;
+    let origin_screen = rect.min.to_vec2() + pan;
 
-    let mut x = origin_screen.x % step;
+    let mut x = ((origin_screen.x - rect.left()) % step + step) % step;
     while x < rect.width() {
         let sx = rect.left() + x;
         painter.line_segment([Pos2::new(sx, rect.top()), Pos2::new(sx, rect.bottom())], stroke);
         x += step;
     }
-    let mut y = origin_screen.y % step;
+    let mut y = ((origin_screen.y - rect.top()) % step + step) % step;
     while y < rect.height() {
         let sy = rect.top() + y;
         painter.line_segment([Pos2::new(rect.left(), sy), Pos2::new(rect.right(), sy)], stroke);

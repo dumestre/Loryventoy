@@ -51,12 +51,12 @@ impl GraphPanel {
         &self,
         i: usize,
         pan: eframe::egui::Vec2,
-        zoom: f32,
+        _zoom: f32,
         rect: Rect,
     ) -> Option<(Rect, f32)> {
         let bb = self.bounding_grupo_idx(i)?.expand(16.0);
-        let min_s = self.canvas_para_screen(bb.min, pan, zoom, rect);
-        let max_s = self.canvas_para_screen(bb.max, pan, zoom, rect);
+        let min_s = self.canvas_para_screen(bb.min, pan, rect);
+        let max_s = self.canvas_para_screen(bb.max, pan, rect);
         let header_h = 22.0;
         let surf = Rect::from_min_max(Pos2::new(min_s.x, min_s.y - header_h), max_s);
         Some((surf, header_h))

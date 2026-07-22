@@ -23,7 +23,9 @@ pub mod save;
 pub mod preview;
 pub mod dsl;
 
+#[allow(dead_code)]
 const ZOOM_MIN: f32 = 0.2;
+#[allow(dead_code)]
 const ZOOM_MAX: f32 = 1.2;
 
 #[allow(dead_code)]
@@ -248,6 +250,16 @@ impl GraphPanel {
         self.is_master(idx) || self.is_canvas(idx)
     }
 
+    fn remover_no(&mut self, idx: NodeId) {
+        self.editor_state.graph.remove_node(idx);
+        self.editor_state.node_order.retain(|n| *n != idx);
+        self.editor_state.node_positions.remove(idx);
+        self.editor_state.node_orientations.remove(idx);
+        self.editor_state.selected_nodes.retain(|n| *n != idx);
+        self.params.remove(&idx);
+        self.liberados.remove(&idx);
+    }
+
     fn obter_params(&self, idx: NodeId) -> Option<&NodeParams> {
         self.params.get(&idx)
     }
@@ -332,9 +344,7 @@ impl GraphPanel {
     pub fn remover_layer_atual(&mut self, layer_idx: NodeId) {
         if self.params.get(&layer_idx).map_or(false, |p| matches!(p, NodeParams::Layer { .. })) {
             self.empurrar_historico();
-            self.editor_state.graph.remove_node(layer_idx);
-            self.params.remove(&layer_idx);
-            self.liberados.remove(&layer_idx);
+            self.remover_no(layer_idx);
             self.limpar_grupos();
         }
     }
@@ -365,9 +375,7 @@ impl GraphPanel {
         }
         for idx in cenas_para_remover {
             if self.params.get(&idx).map_or(false, |p| matches!(p, NodeParams::Cena { .. })) {
-                self.editor_state.graph.remove_node(idx);
-                self.params.remove(&idx);
-                self.liberados.remove(&idx);
+                self.remover_no(idx);
             }
         }
         for nome in &nomes_marc {
@@ -421,19 +429,17 @@ impl GraphPanel {
     }
 
     #[allow(dead_code)]
-    pub fn screen_para_canvas(&self, screen: Pos2, pan: Vec2, zoom: f32, rect: Rect) -> Pos2 {
-        let center = rect.center().to_vec2();
-        ((screen.to_vec2() - center) / zoom - pan).to_pos2()
+    pub fn screen_para_canvas(&self, screen: Pos2, pan: Vec2, editor_rect: Rect) -> Pos2 {
+        (screen.to_vec2() - pan - editor_rect.min.to_vec2()).to_pos2()
     }
 
-    pub fn canvas_para_screen(&self, canvas: Pos2, pan: Vec2, zoom: f32, rect: Rect) -> Pos2 {
-        let center = rect.center().to_vec2();
-        ((canvas.to_vec2() + pan) * zoom + center).to_pos2()
+    pub fn canvas_para_screen(&self, canvas: Pos2, pan: Vec2, editor_rect: Rect) -> Pos2 {
+        (canvas.to_vec2() + pan + editor_rect.min.to_vec2()).to_pos2()
     }
 
     #[allow(dead_code)]
-    pub fn node_sob_cursor(&self, p: Pos2, pan: Vec2, zoom: f32, rect: Rect) -> Option<NodeId> {
-        let canvas_p = self.screen_para_canvas(p, pan, zoom, rect);
+    pub fn node_sob_cursor(&self, p: Pos2, pan: Vec2, _zoom: f32, editor_rect: Rect) -> Option<NodeId> {
+        let canvas_p = self.screen_para_canvas(p, pan, editor_rect);
         for nid in self.editor_state.graph.iter_nodes() {
             if let Some(pos) = self.editor_state.node_positions.get(nid) {
                 let label = self.obter_label(nid);
@@ -447,8 +453,8 @@ impl GraphPanel {
     }
 
     #[allow(dead_code)]
-    pub fn sobre_cabecalho_no(&self, p: Pos2, pan: Vec2, zoom: f32, rect: Rect) -> Option<NodeId> {
-        let canvas_p = self.screen_para_canvas(p, pan, zoom, rect);
+    pub fn sobre_cabecalho_no(&self, p: Pos2, pan: Vec2, _zoom: f32, editor_rect: Rect) -> Option<NodeId> {
+        let canvas_p = self.screen_para_canvas(p, pan, editor_rect);
         for nid in self.editor_state.graph.iter_nodes() {
             if let Some(pos) = self.editor_state.node_positions.get(nid) {
                 let label = self.obter_label(nid);
@@ -474,8 +480,8 @@ impl GraphPanel {
     }
 
     #[allow(dead_code)]
-    pub fn porta_saida_mais_proxima(&self, p: Pos2, pan: Vec2, zoom: f32, rect: Rect) -> Option<(NodeId, usize)> {
-        let canvas_p = self.screen_para_canvas(p, pan, zoom, rect);
+    pub fn porta_saida_mais_proxima(&self, p: Pos2, pan: Vec2, _zoom: f32, editor_rect: Rect) -> Option<(NodeId, usize)> {
+        let canvas_p = self.screen_para_canvas(p, pan, editor_rect);
         let mut melhor: Option<(NodeId, usize, f32)> = None;
         for nid in self.editor_state.graph.iter_nodes() {
             if let Some(pos) = self.editor_state.node_positions.get(nid) {
@@ -496,8 +502,8 @@ impl GraphPanel {
     }
 
     #[allow(dead_code)]
-    pub fn porta_entrada_mais_proxima(&self, p: Pos2, max: f32, pan: Vec2, zoom: f32, rect: Rect) -> Option<(NodeId, usize)> {
-        let canvas_p = self.screen_para_canvas(p, pan, zoom, rect);
+    pub fn porta_entrada_mais_proxima(&self, p: Pos2, max: f32, pan: Vec2, _zoom: f32, editor_rect: Rect) -> Option<(NodeId, usize)> {
+        let canvas_p = self.screen_para_canvas(p, pan, editor_rect);
         let mut melhor: Option<(NodeId, usize, f32)> = None;
         for nid in self.editor_state.graph.iter_nodes() {
             if let Some(pos) = self.editor_state.node_positions.get(nid) {
@@ -539,9 +545,7 @@ impl GraphPanel {
         } else if mestres.len() > 1 {
             let keep = mestres[0];
             for &extra in &mestres[1..] {
-                self.editor_state.graph.remove_node(extra);
-                self.params.remove(&extra);
-                self.liberados.remove(&extra);
+                self.remover_no(extra);
             }
             self.master = Some(keep);
         } else {
@@ -565,24 +569,22 @@ impl GraphPanel {
 
 
     pub fn show(&mut self, ui: &mut Ui) {
-        let rect = ui.available_rect_before_wrap();
-        let (rect, response) = ui.allocate_exact_size(
-            Vec2::new(rect.width(), rect.height() - 2.0),
-            Sense::hover(),
-        );
+        let editor_rect = ui.max_rect();
 
-        ui.painter().rect_filled(rect, 8.0, eframe::egui::Color32::from_rgb(22, 22, 30));
+        ui.painter().rect_filled(editor_rect, 8.0, eframe::egui::Color32::from_rgb(22, 22, 30));
 
         let pan = self.editor_state.pan_zoom.pan;
         let zoom = self.editor_state.pan_zoom.zoom;
 
-        rendering::desenhar_grade(&ui.painter().with_clip_rect(rect), rect, pan, zoom);
+        rendering::desenhar_grade(&ui.painter().with_clip_rect(editor_rect), editor_rect, pan, zoom);
+
+        let (_, response) = ui.allocate_exact_size(editor_rect.size(), Sense::hover());
 
         self.grupos = self.grupos.clone();
 
         self.reafirmar_posicoes();
 
-        self.toolbar.show(ui, rect, self.pode_undo(), self.pode_redo());
+        self.toolbar.show(ui, editor_rect, self.pode_undo(), self.pode_redo());
 
         if let Some(acao) = self.toolbar.acao.take() {
             match acao {
@@ -606,7 +608,7 @@ impl GraphPanel {
         }
 
         self.limpar_grupos();
-        self.desenhar_grupos_fundo(ui, rect, pan, zoom);
+        self.desenhar_grupos_fundo(ui, editor_rect, pan, zoom);
 
         let responses = self.editor_state.draw_graph_editor(
             ui,
@@ -661,7 +663,10 @@ impl GraphPanel {
         self.garantir_master();
         self.reafirmar_posicoes();
 
-        self.desenhar_grupos_header(ui, rect, pan, zoom);
+        self.desenhar_grupos_header(ui, editor_rect, pan, zoom);
+
+        let pan = self.editor_state.pan_zoom.pan;
+        let zoom = self.editor_state.pan_zoom.zoom;
 
         let p_screen = ui.ctx().pointer_interact_pos();
 
@@ -669,9 +674,7 @@ impl GraphPanel {
             let sel: Vec<NodeId> = self.editor_state.selected_nodes.iter().cloned().collect();
             if let Some(idx) = sel.first() {
                 if let Some(pos) = self.editor_state.node_positions.get(*idx) {
-                    let center = rect.center().to_vec2();
-                    self.editor_state.pan_zoom.pan = center - pos.to_vec2() * zoom;
-                    self.editor_state.pan_zoom.zoom = zoom.max(1.0).clamp(ZOOM_MIN, ZOOM_MAX);
+                    self.editor_state.pan_zoom.pan = editor_rect.center().to_vec2() - pos.to_vec2() - editor_rect.min.to_vec2();
                 }
             }
         }
@@ -686,9 +689,7 @@ impl GraphPanel {
                 self.empurrar_historico();
                 for idx in &sel {
                     if !self.is_fixo(*idx) {
-                        self.editor_state.graph.remove_node(*idx);
-                        self.params.remove(idx);
-                        self.liberados.remove(idx);
+                        self.remover_no(*idx);
                     }
                 }
                 self.editor_state.selected_nodes.clear();
@@ -707,12 +708,11 @@ impl GraphPanel {
         let sel_count = self.selecionados().len();
         let tem_clip = !self.clipboard.is_empty();
         let abrir_menu = ui.ctx().input(|i| i.pointer.secondary_clicked())
-            && p_screen.map_or(false, |p| rect.contains(p));
+            && p_screen.map_or(false, |p| editor_rect.contains(p));
 
         if abrir_menu {
             self.menu_canvas = p_screen.map(|p| {
-                let center = rect.center().to_vec2();
-                ((p.to_vec2() - center) / zoom - pan).to_pos2()
+                self.screen_para_canvas(p, pan, editor_rect)
             }).unwrap_or_default();
         }
 
@@ -808,16 +808,16 @@ impl GraphPanel {
 
         for &(idx, tipo, _selected, loc) in &infos {
             let half = node_component::content_size(tipo);
-            let center = ((loc.to_vec2() + pan) * zoom + rect.center().to_vec2()).to_pos2();
-            let node_rect = Rect::from_center_size(center, half * 2.0 * zoom);
-            if !rect.intersects(node_rect) {
+            let node_screen_min = (loc.to_vec2() + pan + editor_rect.min.to_vec2()).to_pos2();
+            let node_rect = Rect::from_min_size(node_screen_min, half * 2.0);
+            if !editor_rect.intersects(node_rect) {
                 continue;
             }
             let body_min = Pos2::new(
-                node_rect.min.x + node_component::MARGEM_X * zoom,
-                node_rect.min.y + (node_component::CABECALHO_H + node_component::MARGEM_Y) * zoom,
+                node_rect.min.x + node_component::MARGEM_X,
+                node_rect.min.y + node_component::CABECALHO_H + node_component::MARGEM_Y,
             );
-            let clip_no = node_rect.intersect(rect);
+            let clip_no = node_rect.intersect(editor_rect);
             let cenas = self.cenas_disponiveis_com_indice();
             let params = self.params.get_mut(&idx);
             let mut acao_inspector = node_component::AcaoInspector::Nenhuma;
@@ -839,8 +839,7 @@ impl GraphPanel {
             match acao_inspector {
                 node_component::AcaoInspector::FocarCena(ci) => {
                     if let Some(pos) = self.editor_state.node_positions.get(ci) {
-                        let center2 = rect.center().to_vec2();
-                        self.editor_state.pan_zoom.pan = center2 - pos.to_vec2() * zoom;
+                        self.editor_state.pan_zoom.pan = editor_rect.center().to_vec2() - pos.to_vec2() - editor_rect.min.to_vec2();
                     }
                     self.cena_ativa = Some(ci);
                 }
@@ -862,11 +861,10 @@ impl GraphPanel {
         }
 
         let p_canvas = p_screen.map(|p| {
-            let center = rect.center().to_vec2();
-            ((p.to_vec2() - center) / zoom - pan).to_pos2()
+            self.screen_para_canvas(p, pan, editor_rect)
         });
 
-        if let Some(gi) = self.grupo_header_sob(p_screen.unwrap_or_default(), pan, zoom, rect) {
+        if let Some(gi) = self.grupo_header_sob(p_screen.unwrap_or_default(), pan, zoom, editor_rect) {
             ui.ctx().set_cursor_icon(eframe::egui::CursorIcon::Move);
             if ui.ctx().input(|i| i.pointer.button_pressed(eframe::egui::PointerButton::Primary)) {
                 self.empurrar_historico();
@@ -892,13 +890,13 @@ impl GraphPanel {
         }
 
         {
-            let painter = ui.painter().with_clip_rect(rect);
-            let inner = rect.shrink(12.0);
+            let painter = ui.painter().with_clip_rect(editor_rect);
+            let inner = editor_rect.shrink(12.0);
             let raio_dot = 6.0;
             let mut dots: Vec<(NodeId, Pos2, eframe::egui::Color32)> = Vec::new();
             for idx in self.editor_state.graph.iter_nodes() {
                 if let Some(pos) = self.editor_state.node_positions.get(idx) {
-                    let screen = ((pos.to_vec2() + pan) * zoom + rect.center().to_vec2()).to_pos2();
+                    let screen = (pos.to_vec2() + pan + editor_rect.min.to_vec2()).to_pos2();
                     if !inner.contains(screen) {
                         let cx = screen.x.clamp(inner.min.x, inner.max.x);
                         let cy = screen.y.clamp(inner.min.y, inner.max.y);
@@ -943,16 +941,14 @@ impl GraphPanel {
                     eframe::egui::Color32::from_rgb(220, 220, 230),
                 );
                 let pos = Pos2::new(
-                    rect.center().x - galley.size().x / 2.0,
-                    rect.max.y - galley.size().y - 6.0,
+                    editor_rect.center().x - galley.size().x / 2.0,
+                    editor_rect.max.y - galley.size().y - 6.0,
                 );
                 painter.add(TextShape::new(pos, galley, eframe::egui::Color32::from_rgb(220, 220, 230)));
             }
             if let Some(idx) = click_target {
                 if let Some(pos) = self.editor_state.node_positions.get(idx) {
-                    let center = rect.center().to_vec2();
-                    self.editor_state.pan_zoom.pan = center - pos.to_vec2() * zoom;
-                    self.editor_state.pan_zoom.zoom = zoom.max(1.0).clamp(ZOOM_MIN, ZOOM_MAX);
+                    self.editor_state.pan_zoom.pan = editor_rect.center().to_vec2() - pos.to_vec2() - editor_rect.min.to_vec2();
                 }
             }
         }
