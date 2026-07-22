@@ -822,7 +822,7 @@ impl GraphPanel {
             let params = self.params.get_mut(&idx);
             let mut acao_inspector = node_component::AcaoInspector::Nenhuma;
             let i_raw = Id::new(idx);
-            Area::new(Id::new(("no_conteudo", i_raw)))
+            let area_resp = Area::new(Id::new(("no_conteudo", i_raw)))
                 .order(Order::Foreground)
                 .fixed_pos(body_min)
                 .movable(false)
@@ -857,7 +857,7 @@ impl GraphPanel {
                 }
                 node_component::AcaoInspector::Nenhuma => {}
             }
-            node_component::registrar_medida(tipo, node_rect.size(), zoom);
+            node_component::registrar_medida(tipo, area_resp.response.rect.size(), zoom);
         }
 
         let p_canvas = p_screen.map(|p| {
