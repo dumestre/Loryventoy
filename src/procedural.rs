@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use eframe::egui::{Color32, Pos2, Rect, Shape, Stroke, Vec2};
 use eframe::egui::epaint::{EllipseShape, PathShape, RectShape};
 pub use glam::Vec2 as GVec2;

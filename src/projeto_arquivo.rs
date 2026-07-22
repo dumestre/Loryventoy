@@ -2,7 +2,7 @@ use eframe::egui::Color32;
 use serde::{Deserialize, Serialize};
 
 use crate::nodes::{NodeParams, ProjetoConfig, TipoNo};
-use crate::graph_editor::node_display::ArestaInfo;
+use crate::graph_editor::ArestaInfo;
 
 /// Espelho serializável de um segmento de animação (`AnimSeg`).
 #[derive(Clone, Debug, Serialize, Deserialize)]

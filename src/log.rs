@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 /// Registro simples de avisos/erros em arquivo, para que mensagens que
 /// aparecem na UI (em vermelho) possam ser inspecionadas e copiadas fora
 /// do app (já que a UI do egui não permite seleção de texto nesses rótulos).

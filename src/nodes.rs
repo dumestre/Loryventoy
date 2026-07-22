@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use eframe::egui::Color32;
 
 /// Tipos de nó disponíveis no editor, com nome e cor em português.

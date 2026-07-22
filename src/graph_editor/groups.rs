@@ -5,13 +5,11 @@ use eframe::egui::{
 use eframe::egui::color_picker::Alpha;
 use eframe::egui::epaint::RectShape;
 use eframe::egui::Popup;
-use egui_graphs::MetadataFrame;
-use petgraph::stable_graph::NodeIndex;
 
 use super::GraphPanel;
-use super::node_display::NoDisplay;
+use super::types::NodeId;
+use super::ports::tamanho;
 
-/// Paleta de cores para os grupos (atribuída em sequência rotativa).
 pub const CORES_GRUPO: [Color32; 8] = [
     Color32::from_rgb(90, 140, 220),
     Color32::from_rgb(220, 130, 90),
@@ -23,14 +21,11 @@ pub const CORES_GRUPO: [Color32; 8] = [
     Color32::from_rgb(225, 150, 175),
 ];
 
-/// Grupo de nós: um "surface" visual que contém os nós selecionados.
 #[derive(Clone)]
 pub struct Grupo {
-    pub nos: Vec<NodeIndex>,
+    pub nos: Vec<NodeId>,
     pub titulo: String,
     pub cor: Color32,
-    /// Região (tela) do nome + ícone no cabeçalho: NÃO inicia arraste ali
-    /// (para permitir renomear/abrir o seletor de cor).
     pub handle: Rect,
 }
 
@@ -39,9 +34,10 @@ impl GraphPanel {
         let grp = self.grupos.get(i)?;
         let mut r: Option<Rect> = None;
         for idx in &grp.nos {
-            if let Some(n) = self.g.node(*idx) {
-                let half = NoDisplay::tamanho(&n.label());
-                let nr = Rect::from_center_size(n.location(), half * 2.0);
+            if let Some(pos) = self.editor_state.node_positions.get(*idx) {
+                let label = self.obter_label(*idx);
+                let half = tamanho(&label);
+                let nr = Rect::from_center_size(*pos, half * 2.0);
                 r = Some(match r {
                     Some(c) => c.union(nr),
                     None => nr,
@@ -51,33 +47,30 @@ impl GraphPanel {
         r
     }
 
-    /// Retângulo do surface do grupo `i` em tela (inclui a faixa do
-    /// cabeçalho no topo) e a altura do cabeçalho.
     pub(super) fn rect_grupo(
         &self,
         i: usize,
-        frame: &MetadataFrame,
+        pan: eframe::egui::Vec2,
+        zoom: f32,
         rect: Rect,
     ) -> Option<(Rect, f32)> {
         let bb = self.bounding_grupo_idx(i)?.expand(16.0);
-        let min_s = self.canvas_para_screen(bb.min, frame, rect);
-        let max_s = self.canvas_para_screen(bb.max, frame, rect);
+        let min_s = self.canvas_para_screen(bb.min, pan, zoom, rect);
+        let max_s = self.canvas_para_screen(bb.max, pan, zoom, rect);
         let header_h = 22.0;
         let surf = Rect::from_min_max(Pos2::new(min_s.x, min_s.y - header_h), max_s);
         Some((surf, header_h))
     }
 
-    /// Grupo cujo CABEÇALHO está sob o ponto de tela `p` (fora da região do
-    /// nome/ícone). É por aqui que se arrasta o grupo. Percorre de cima para
-    /// baixo (último desenhado primeiro).
     pub(super) fn grupo_header_sob(
         &self,
         p: Pos2,
-        frame: &MetadataFrame,
+        pan: eframe::egui::Vec2,
+        zoom: f32,
         rect: Rect,
     ) -> Option<usize> {
         for i in (0..self.grupos.len()).rev() {
-            if let Some((surf, header_h)) = self.rect_grupo(i, frame, rect) {
+            if let Some((surf, header_h)) = self.rect_grupo(i, pan, zoom, rect) {
                 let header =
                     Rect::from_min_max(surf.min, Pos2::new(surf.max.x, surf.min.y + header_h));
                 if header.contains(p) && !self.grupos[i].handle.contains(p) {
@@ -88,16 +81,16 @@ impl GraphPanel {
         None
     }
 
-    /// Desenha os surfaces dos grupos ATRÁS dos nós (corpo + faixa do topo).
     pub(super) fn desenhar_grupos_fundo(
         &self,
         ui: &Ui,
         rect: Rect,
-        frame: &MetadataFrame,
+        pan: eframe::egui::Vec2,
+        zoom: f32,
     ) {
         let painter = ui.painter().with_clip_rect(rect);
         for i in 0..self.grupos.len() {
-            let (surf, header_h) = match self.rect_grupo(i, frame, rect) {
+            let (surf, header_h) = match self.rect_grupo(i, pan, zoom, rect) {
                 Some(v) => v,
                 None => continue,
             };
@@ -123,15 +116,15 @@ impl GraphPanel {
         }
     }
 
-    /// Cabeçalho interativo de cada grupo: título editável + seletor de cor.
     pub(super) fn desenhar_grupos_header(
         &mut self,
         ui: &mut Ui,
         rect: Rect,
-        frame: &MetadataFrame,
+        pan: eframe::egui::Vec2,
+        zoom: f32,
     ) {
         for i in 0..self.grupos.len() {
-            let (surf, _header_h) = match self.rect_grupo(i, frame, rect) {
+            let (surf, _header_h) = match self.rect_grupo(i, pan, zoom, rect) {
                 Some(v) => v,
                 None => continue,
             };
@@ -139,7 +132,6 @@ impl GraphPanel {
                 continue;
             }
             let grp = &mut self.grupos[i];
-            // nome do grupo sempre em cor escura
             let txt = Color32::from_rgb(20, 20, 26);
             let header_h = _header_h;
             Area::new(Id::new(("grupo_header", i)))
@@ -149,14 +141,12 @@ impl GraphPanel {
                 .constrain(false)
                 .show(ui.ctx(), |ui| {
                     ui.set_clip_rect(rect);
-                    // linha centralizada verticalmente na faixa do cabeçalho
                     let mut usado = Rect::ZERO;
                     ui.allocate_ui_with_layout(
                         Vec2::new(surf.width(), header_h),
                         Layout::left_to_right(Align::Center),
                         |ui| {
                             ui.add_space(8.0);
-                            // largura do título = largura do texto (ícone fica ao lado)
                             let fonte = eframe::egui::TextStyle::Body.resolve(ui.style());
                             let larg_txt = ui
                                 .painter()
@@ -165,18 +155,15 @@ impl GraphPanel {
                                 .x
                                 .max(24.0)
                                 + 6.0;
-                            // título à esquerda
                             ui.add(
                                 TextEdit::singleline(&mut grp.titulo)
                                     .frame(eframe::egui::Frame::NONE)
                                     .desired_width(larg_txt)
                                     .text_color(txt),
                             );
-                            // seletor de cor logo à direita do nome (ícone cor.svg)
                             ui.add_space(2.0);
                             let (rect_btn, btn) =
                                 ui.allocate_exact_size(Vec2::splat(20.0), Sense::click());
-                            // fundo de hover (arredondado)
                             if btn.hovered() {
                                 ui.ctx().set_cursor_icon(CursorIcon::PointingHand);
                                 ui.painter().rect_filled(

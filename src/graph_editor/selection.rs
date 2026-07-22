@@ -1,13 +1,13 @@
-use petgraph::stable_graph::NodeIndex;
 use std::collections::HashSet;
 
+use eframe::egui::Pos2;
+
 use crate::nodes::{NodeParams, TipoNo};
-use crate::graph_editor::groups::{CORES_GRUPO, Grupo};
 
 use super::GraphPanel;
+use super::types::NodeId;
+use super::groups::{CORES_GRUPO, Grupo};
 
-/// Nó copiado para a área de transferência (tipo + parâmetros + posição
-/// relativa ao centro do conjunto copiado).
 #[derive(Clone)]
 pub struct NoCopia {
     pub tipo: TipoNo,
@@ -15,7 +15,6 @@ pub struct NoCopia {
     pub offset: eframe::egui::Vec2,
 }
 
-/// Ação escolhida no menu de contexto (botão direito).
 #[derive(Clone, Copy)]
 pub enum AcaoMenu {
     Copiar,
@@ -26,47 +25,37 @@ pub enum AcaoMenu {
 }
 
 impl GraphPanel {
-    /// Índices dos nós atualmente selecionados.
-    pub fn selecionados(&self) -> Vec<NodeIndex> {
-        self.g
-            .nodes_iter()
-            .filter(|(_, n)| n.selected())
-            .map(|(i, _)| i)
-            .collect()
+    pub fn selecionados(&self) -> Vec<NodeId> {
+        self.editor_state
+            .selected_nodes
+            .clone()
     }
 
-    /// Seleciona um nó. Se `adicionar` (shift), alterna a seleção desse nó;
-    /// caso contrário, limpa as demais e seleciona só este.
-    /// Se o nó for do tipo Cena, também o define como cena ativa.
-    pub fn selecionar_no(&mut self, idx: NodeIndex, adicionar: bool) {
+    pub fn selecionar_no(&mut self, idx: NodeId, adicionar: bool) {
         if let Some(tipo) = self.tipo_do_node(idx) {
             if tipo == TipoNo::Cena && !adicionar {
                 self.cena_ativa = Some(idx);
             }
         }
         if adicionar {
-            if let Some(n) = self.g.node_mut(idx) {
-                let sel = !n.selected();
-                n.set_selected(sel);
+            if let Some(pos) = self.editor_state.selected_nodes.iter().position(|&n| n == idx) {
+                self.editor_state.selected_nodes.remove(pos);
+            } else {
+                self.editor_state.selected_nodes.push(idx);
             }
             return;
         }
-        let todos: Vec<NodeIndex> = self.g.nodes_iter().map(|(i, _)| i).collect();
-        for i in todos {
-            if let Some(n) = self.g.node_mut(i) {
-                n.set_selected(i == idx);
-            }
-        }
+        self.editor_state.selected_nodes.clear();
+        self.editor_state.selected_nodes.push(idx);
     }
 
-    /// Centro (canvas) dos nós selecionados.
-    pub fn centro_selecionados(&self) -> Option<eframe::egui::Pos2> {
+    pub fn centro_selecionados(&self) -> Option<Pos2> {
         let sel = self.selecionados();
         let mut soma = eframe::egui::Vec2::ZERO;
         let mut n = 0.0;
         for idx in &sel {
-            if let Some(node) = self.g.node(*idx) {
-                soma += node.location().to_vec2();
+            if let Some(pos) = self.editor_state.node_positions.get(*idx) {
+                soma += pos.to_vec2();
                 n += 1.0;
             }
         }
@@ -77,7 +66,6 @@ impl GraphPanel {
         }
     }
 
-    /// Agrupa os nós selecionados (>= 1) num novo grupo com cor automática.
     pub fn agrupar_selecionados(&mut self) {
         let sel = self.selecionados();
         if sel.is_empty() {
@@ -93,8 +81,6 @@ impl GraphPanel {
         });
     }
 
-    /// Copia os nós selecionados (exceto fixos/únicos) para a área de
-    /// transferência, guardando a posição relativa ao centro do conjunto.
     pub fn copiar_selecionados(&mut self) {
         let centro = match self.centro_selecionados() {
             Some(c) => c,
@@ -106,16 +92,13 @@ impl GraphPanel {
                 Some(t) => t,
                 None => continue,
             };
-            // Saída (master) e Canvas são únicos/fixos: não copiáveis
             if tipo == TipoNo::Saida || tipo == TipoNo::Canvas {
                 continue;
             }
-            let params = self
-                .params
-                .get(&idx)
+            let params = self.obter_params(idx)
                 .cloned()
                 .unwrap_or_else(|| NodeParams::padrao(tipo));
-            let loc = self.g.node(idx).unwrap().location();
+            let loc = self.editor_state.node_positions.get(idx).copied().unwrap_or(Pos2::ZERO);
             itens.push(NoCopia {
                 tipo,
                 params,
@@ -127,30 +110,20 @@ impl GraphPanel {
         }
     }
 
-    /// Cola os nós da área de transferência com o centro em `pos` (canvas),
-    /// deixando os novos nós selecionados.
-    pub fn colar_em(&mut self, pos: eframe::egui::Pos2) {
+    pub fn colar_em(&mut self, pos: Pos2) {
         if self.clipboard.is_empty() {
             return;
         }
         let itens = self.clipboard.clone();
-        // desmarca a seleção atual
-        for idx in self.selecionados() {
-            if let Some(n) = self.g.node_mut(idx) {
-                n.set_selected(false);
-            }
-        }
+        self.editor_state.selected_nodes.clear();
         for it in itens {
             let idx = self.adicionar_no_em(it.tipo, pos + it.offset);
-            self.params.insert(idx, it.params);
+            self.definir_params(idx, it.params);
             self.liberados.insert(idx);
-            if let Some(n) = self.g.node_mut(idx) {
-                n.set_selected(true);
-            }
+            self.editor_state.selected_nodes.push(idx);
         }
     }
 
-    /// Duplica os nós selecionados com um pequeno deslocamento.
     pub fn duplicar_selecionados(&mut self) {
         self.copiar_selecionados();
         if let Some(centro) = self.centro_selecionados() {
@@ -158,23 +131,21 @@ impl GraphPanel {
         }
     }
 
-    /// Remove os nós selecionados (exceto fixos: master e Canvas).
     pub fn deletar_selecionados(&mut self) {
         for idx in self.selecionados() {
             if self.is_fixo(idx) {
                 continue;
             }
-            self.g.remove_node(idx);
+            self.editor_state.graph.remove_node(idx);
             self.params.remove(&idx);
             self.liberados.remove(&idx);
         }
         self.limpar_grupos();
     }
 
-    /// Descarta de cada grupo os nós que já não existem; remove grupos vazios.
     pub fn limpar_grupos(&mut self) {
-        let vivos: HashSet<NodeIndex> =
-            self.g.nodes_iter().map(|(i, _)| i).collect();
+        let vivos: HashSet<NodeId> =
+            self.editor_state.graph.iter_nodes().collect();
         for grp in &mut self.grupos {
             grp.nos.retain(|i| vivos.contains(i));
         }

@@ -457,7 +457,7 @@ impl eframe::App for MovimentoApp {
                 // PREVIEW
 
                 // resolução do projeto (nó Canvas) reflete no canvas do preview
-                let cfg_preview = *self.graph.projeto();
+                let cfg_preview = self.graph.projeto();
                 self.preview.set_resolucao(cfg_preview.largura, cfg_preview.altura, cfg_preview.fundo);
 
                 // sistema procedural: cenas (formas + textos) vêm do grafo; o
@@ -566,7 +566,7 @@ impl eframe::App for MovimentoApp {
                         self.graph.show(ui);
 
                 // sincroniza a timeline com o nó Canvas do grafo
-                let cfg = *self.graph.projeto();
+                let cfg = self.graph.projeto();
                 crate::ui::timeline::definir_fps(cfg.fps);
                 self.timeline.content_seconds = cfg.duracao_seg;
                 self.timeline.loop_end = cfg.duracao_seg;

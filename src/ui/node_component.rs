@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use std::collections::HashMap;
 use std::sync::{OnceLock, RwLock};
 use std::string::String;
@@ -5,14 +7,14 @@ use std::string::String;
 use eframe::egui::{
     Color32, ComboBox, DragValue, Grid, Image, Response, TextStyle, Ui, Vec2,
 };
-use petgraph::stable_graph::NodeIndex;
+use crate::graph_editor::NodeId;
 use crate::nodes::{NodeParams, ProjetoConfig, TipoNo};
 
 /// Ações que podem ser solicitadas pelo inspector de um nó.
 #[derive(Debug, Clone, Copy)]
 pub enum AcaoInspector {
     Nenhuma,
-    FocarCena(NodeIndex),
+    FocarCena(NodeId),
     CriarLayer,
     RemoverLayer,
     SubirLayer,
@@ -152,7 +154,7 @@ fn hex_de(c: Color32) -> String {
 }
 
 /// Meia-extensão (w/2, h/2) do cartão do nó em coordenadas de canvas.
-/// Usado pelo `egui_graphs` (hit-test/tamanho) e para posicionar o corpo.
+/// Usado pelo `egui-graph-edit` (hit-test/tamanho) e para posicionar o corpo.
 /// O tamanho é responsivo: reflete a última medida do conteúdo do tipo.
 /// (ver `registrar_medida`), com fallback enquanto não há medida.
 /// Largura fixa (vem de `fallback_size`), altura medida do conteúdo.
@@ -170,13 +172,13 @@ pub fn content_size(tipo: TipoNo) -> Vec2 {
 /// Desenha os parâmetros editáveis do nó DENTRO do corpo do cartão
 /// (abaixo do cabeçalho, onde fica o nome), em layout de inspector:
 /// rótulos alinhados em coluna à esquerda e campos à direita.
-/// `cenas` é a lista de (nome, NodeIndex) de cena (para o combobox de Layers/Shape e listagem no Cena).
+/// `cenas` é a lista de (nome, NodeId) de cena (para o combobox de Layers/Shape e listagem no Cena).
 /// Retorna uma ação solicitada pelo inspector (ex.: focar em cena, criar layer).
 pub fn show_content(
     ui: &mut Ui,
     tipo: TipoNo,
     params: Option<&mut NodeParams>,
-    cenas: &[(String, NodeIndex)],
+    cenas: &[(String, NodeId)],
     topo_tela: f32,
     zoom: f32,
 ) -> AcaoInspector {
@@ -632,7 +634,7 @@ fn grid_texto(ui: &mut Ui, label: &str, v: &mut String) {
 }
 
 /// Linha com rótulo + combobox de cena (vincula Layers/Shape a uma cena).
-fn grid_combo_cena(ui: &mut Ui, label: &str, cena: &mut String, cenas: &[(String, NodeIndex)]) {
+fn grid_combo_cena(ui: &mut Ui, label: &str, cena: &mut String, cenas: &[(String, NodeId)]) {
     let r = Grid::new(("cena", label))
         .num_columns(2)
         .spacing([8.0, 3.0])
