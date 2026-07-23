@@ -13,3 +13,5 @@ release/
 
 .DS_Store
 Thumbs.db
+
+egui-graph-edit/
