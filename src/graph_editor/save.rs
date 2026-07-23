@@ -20,7 +20,8 @@ impl GraphPanel {
             let node = &self.editor_state.graph[nid];
             let loc = self.editor_state.node_positions.get(nid).copied().unwrap_or(Pos2::ZERO);
             idx_map.insert(nid, i);
-            nos.push((node.user_data.tipo, loc, node.user_data.params.clone()));
+            let params = self.params.get(&nid).cloned().unwrap_or_else(|| node.user_data.params.clone());
+            nos.push((node.user_data.tipo, loc, params));
         }
 
         let mut arestas = Vec::new();

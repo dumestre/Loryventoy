@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
 use std::borrow::Cow;
+use std::collections::HashMap;
 
 use eframe::egui::{Color32, Vec2, Ui};
 use egui_graph_edit::{
@@ -10,9 +11,14 @@ use egui_graph_edit::{
 pub use egui_graph_edit::id_type::NodeId;
 
 use crate::nodes::{NodeParams, TipoNo, portos};
+use crate::ui::node_component::AcaoInspector;
 
 #[derive(Default)]
-pub struct UserState;
+pub struct UserState {
+    pub params: HashMap<NodeId, NodeParams>,
+    pub cenas: Vec<(String, NodeId)>,
+    pub acao_inspector: AcaoInspector,
+}
 
 #[derive(Clone)]
 pub struct GraphNode {
@@ -110,12 +116,30 @@ impl WidgetValueTrait for GraphValueType {
 
     fn value_widget(
         &mut self,
-        _param_name: &str,
+        param_name: &str,
         _node_id: NodeId,
-        _ui: &mut Ui,
+        ui: &mut Ui,
         _user_state: &mut Self::UserState,
         _node_data: &Self::NodeData,
     ) -> Vec<GraphResponse> {
+        match self {
+            GraphValueType::Scalar(v) => {
+                ui.horizontal(|ui| {
+                    ui.label(param_name);
+                    ui.add(eframe::egui::DragValue::new(v).speed(0.01));
+                });
+            }
+            GraphValueType::Vec2(v) => {
+                ui.horizontal(|ui| {
+                    ui.label(param_name);
+                    ui.label("X");
+                    ui.add(eframe::egui::DragValue::new(&mut v.x).speed(0.5));
+                    ui.label("Y");
+                    ui.add(eframe::egui::DragValue::new(&mut v.y).speed(0.5));
+                });
+            }
+            GraphValueType::None => {}
+        }
         vec![]
     }
 }
@@ -128,11 +152,17 @@ impl NodeDataTrait for GraphNode {
 
     fn bottom_ui(
         &self,
-        _ui: &mut Ui,
-        _node_id: NodeId,
+        ui: &mut Ui,
+        node_id: NodeId,
         _graph: &egui_graph_edit::Graph<Self, Self::DataType, Self::ValueType>,
-        _user_state: &mut Self::UserState,
+        user_state: &mut Self::UserState,
     ) -> Vec<NodeResponse<Self::Response, Self>> {
+        let params = user_state.params.get_mut(&node_id);
+        let cenas = &user_state.cenas;
+        let acao = crate::ui::node_component::show_content(
+            ui, self.tipo, params, cenas, 0.0, 1.0,
+        );
+        user_state.acao_inspector = acao;
         vec![]
     }
 
@@ -181,16 +211,16 @@ impl NodeTemplateTrait for NodeTemplate {
         let tipo = self.tipo();
         let spec = portos(tipo);
         for p in spec.entradas.iter() {
-            let dt = if p.is_vetor() {
-                GraphDataType::Vec2
+            let (dt, vt) = if p.is_vetor() {
+                (GraphDataType::Vec2, GraphValueType::Vec2(Vec2::ZERO))
             } else {
-                GraphDataType::Scalar
+                (GraphDataType::Scalar, GraphValueType::Scalar(0.0))
             };
             graph.add_input_param(
                 node_id,
                 p.nome.to_string(),
                 dt,
-                GraphValueType::None,
+                vt,
                 InputParamKind::ConnectionOrConstant,
                 true,
             );

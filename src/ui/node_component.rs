@@ -11,8 +11,9 @@ use crate::graph_editor::NodeId;
 use crate::nodes::{NodeParams, ProjetoConfig, TipoNo};
 
 /// Ações que podem ser solicitadas pelo inspector de um nó.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 pub enum AcaoInspector {
+    #[default]
     Nenhuma,
     FocarCena(NodeId),
     CriarLayer,

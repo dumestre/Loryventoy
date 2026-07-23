@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use eframe::egui::{
-    self, Area, Button, Id, Key, Order,
+    self, Button, Key,
     Pos2, Rect, Sense, Stroke, Ui, Vec2,
 };
 use eframe::egui::epaint::{CircleShape, TextShape};
@@ -164,9 +164,13 @@ impl GraphPanel {
 
         let spec = portos(tipo);
         for p in spec.entradas.iter() {
-            let dt = if p.is_vetor() { types::GraphDataType::Vec2 } else { types::GraphDataType::Scalar };
+            let (dt, vt) = if p.is_vetor() {
+                (types::GraphDataType::Vec2, types::GraphValueType::Vec2(Vec2::ZERO))
+            } else {
+                (types::GraphDataType::Scalar, types::GraphValueType::Scalar(0.0))
+            };
             self.editor_state.graph.add_input_param(
-                nid, p.nome.to_string(), dt, types::GraphValueType::None,
+                nid, p.nome.to_string(), dt, vt,
                 egui_graph_edit::InputParamKind::ConnectionOrConstant, true,
             );
         }
@@ -610,12 +614,20 @@ impl GraphPanel {
         self.limpar_grupos();
         self.desenhar_grupos_fundo(ui, editor_rect, pan, zoom);
 
+        let mut user_state = UserState {
+            params: self.params.clone(),
+            cenas: self.cenas_disponiveis_com_indice(),
+            acao_inspector: crate::ui::node_component::AcaoInspector::Nenhuma,
+        };
+
         let responses = self.editor_state.draw_graph_editor(
             ui,
             AllNodeTemplates,
-            &mut UserState::default(),
+            &mut user_state,
             Vec::default(),
         );
+
+        self.params = user_state.params;
 
         for resp in &responses.node_responses {
             match resp {
@@ -792,72 +804,32 @@ impl GraphPanel {
             None => {}
         }
 
-        let mut infos: Vec<(NodeId, TipoNo, bool, Pos2)> = Vec::new();
-        for idx in self.editor_state.graph.iter_nodes() {
-            if let Some(pos) = self.editor_state.node_positions.get(idx) {
-                let tipo = self.obter_tipo(idx);
-                let selected = self.editor_state.selected_nodes.contains(&idx);
-                infos.push((idx, tipo, selected, *pos));
-            }
-        }
-        infos.sort_by(|a, b| {
-            let a_sel = a.2;
-            let b_sel = b.2;
-            a_sel.cmp(&b_sel)
-        });
-
-        for &(idx, tipo, _selected, loc) in &infos {
-            let half = node_component::content_size(tipo);
-            let node_screen_min = (loc.to_vec2() + pan + editor_rect.min.to_vec2()).to_pos2();
-            let node_rect = Rect::from_min_size(node_screen_min, half * 2.0);
-            if !editor_rect.intersects(node_rect) {
-                continue;
-            }
-            let body_min = Pos2::new(
-                node_rect.min.x + node_component::MARGEM_X,
-                node_rect.min.y + node_component::CABECALHO_H + node_component::MARGEM_Y,
-            );
-            let clip_no = node_rect.intersect(editor_rect);
-            let cenas = self.cenas_disponiveis_com_indice();
-            let params = self.params.get_mut(&idx);
-            let mut acao_inspector = node_component::AcaoInspector::Nenhuma;
-            let i_raw = Id::new(idx);
-            let area_resp = Area::new(Id::new(("no_conteudo", i_raw)))
-                .order(Order::Foreground)
-                .fixed_pos(body_min)
-                .movable(false)
-                .constrain(false)
-                .show(ui.ctx(), |ui| {
-                    ui.set_clip_rect(clip_no);
-                    node_component::escalar_estilo(ui, zoom);
-                    ui.push_id(i_raw, |ui| {
-                        acao_inspector = node_component::show_content(
-                            ui, tipo, params, &cenas, body_min.y, zoom,
-                        );
-                    });
-                });
-            match acao_inspector {
-                node_component::AcaoInspector::FocarCena(ci) => {
-                    if let Some(pos) = self.editor_state.node_positions.get(ci) {
-                        self.editor_state.pan_zoom.pan = editor_rect.center().to_vec2() - pos.to_vec2() - editor_rect.min.to_vec2();
-                    }
-                    self.cena_ativa = Some(ci);
+        match user_state.acao_inspector {
+            node_component::AcaoInspector::FocarCena(ci) => {
+                if let Some(pos) = self.editor_state.node_positions.get(ci) {
+                    self.editor_state.pan_zoom.pan = editor_rect.center().to_vec2() - pos.to_vec2() - editor_rect.min.to_vec2();
                 }
-                node_component::AcaoInspector::CriarLayer => {
-                    self.criar_layer_para_cena_atual();
-                }
-                node_component::AcaoInspector::RemoverLayer => {
+                self.cena_ativa = Some(ci);
+            }
+            node_component::AcaoInspector::CriarLayer => {
+                self.criar_layer_para_cena_atual();
+            }
+            node_component::AcaoInspector::RemoverLayer => {
+                if let Some(&idx) = self.editor_state.selected_nodes.first() {
                     self.remover_layer_atual(idx);
                 }
-                node_component::AcaoInspector::SubirLayer => {
+            }
+            node_component::AcaoInspector::SubirLayer => {
+                if let Some(&idx) = self.editor_state.selected_nodes.first() {
                     self.mover_layer_atual(idx, 1);
                 }
-                node_component::AcaoInspector::DescerLayer => {
+            }
+            node_component::AcaoInspector::DescerLayer => {
+                if let Some(&idx) = self.editor_state.selected_nodes.first() {
                     self.mover_layer_atual(idx, -1);
                 }
-                node_component::AcaoInspector::Nenhuma => {}
             }
-            node_component::registrar_medida(tipo, area_resp.response.rect.size(), zoom);
+            node_component::AcaoInspector::Nenhuma => {}
         }
 
         let p_canvas = p_screen.map(|p| {
