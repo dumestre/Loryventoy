@@ -17,5 +17,5 @@ noise = "0.9"
 cosmic-text = "0.12"
 image = "0.25"
 lyon = "1.0.19"
-egui-graph-edit = "0.9.1"
+egui-graph-edit = { path = "egui-graph-edit/egui-graph-edit" }
 

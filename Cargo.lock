@@ -1040,8 +1040,6 @@ dependencies = [
 [[package]]
 name = "egui-graph-edit"
 version = "0.9.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f4c085aa829ca67e24ad6ed8c1196341ada354fe8f7eeac734f1f1ee15e34aab"
 dependencies = [
  "egui",
  "slotmap",
