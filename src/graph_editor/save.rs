@@ -42,7 +42,7 @@ impl GraphPanel {
         (nos, arestas)
     }
 
-    pub fn carregar_snapshot(&mut self, nos: &[(TipoNo, Pos2, NodeParams)], _arestas: &[SnapshotAresta]) {
+    pub fn carregar_snapshot(&mut self, nos: &[(TipoNo, Pos2, NodeParams)], arestas: &[SnapshotAresta]) {
         self.editor_state.graph = super::types::MyGraph::default();
         self.editor_state.node_order.clear();
         self.editor_state.node_positions = Default::default();
@@ -50,11 +50,24 @@ impl GraphPanel {
         self.editor_state.selected_nodes.clear();
         self.params.clear();
         self.liberados.clear();
+        self.dsl_ids.clear();
 
+        let mut idx_to_nid: Vec<NodeId> = Vec::new();
         for (tipo, loc, params) in nos.iter() {
             let nid = self.adicionar_no_em(*tipo, *loc);
             self.definir_params(nid, params.clone());
+            idx_to_nid.push(nid);
         }
+
+        for (de, para, info) in arestas {
+            if let (Some(&src), Some(&dst)) = (idx_to_nid.get(*de), idx_to_nid.get(*para)) {
+                self.conectar_por_idx(src, info.saida, dst, info.entrada);
+            }
+        }
+
+        self.canvas = idx_to_nid.iter().zip(nos.iter()).find(|(_, (t, _, _))| *t == TipoNo::Canvas).map(|(n, _)| *n);
+        self.master = idx_to_nid.iter().zip(nos.iter()).find(|(_, (t, _, _))| *t == TipoNo::Saida).map(|(n, _)| *n);
+        self.cena = idx_to_nid.iter().zip(nos.iter()).find(|(_, (t, _, _))| *t == TipoNo::Cena).map(|(n, _)| *n);
     }
 
     pub fn empurrar_historico(&mut self) {

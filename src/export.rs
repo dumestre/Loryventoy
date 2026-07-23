@@ -427,7 +427,7 @@ pub fn exportar_frames(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::procedural::{CenaPreview, GVec2, PenPath, PreviewData};
+    use crate::procedural::{CenaPreview, LayerPreview, GVec2, PenPath, PreviewData};
     use crate::dsl::Program;
     use eframe::egui::Color32;
 

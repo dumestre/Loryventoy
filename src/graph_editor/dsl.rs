@@ -286,23 +286,26 @@ impl GraphPanel {
             }
         }
 
-        self.criar_nos_padrao();
-        if let Some(ci) = self.canvas {
-            if let Some(NodeParams::Canvas(c)) = self.params.get_mut(&ci) {
-                *c = proj;
-            }
+        self.editor_state = super::types::MyEditorState::default();
+        self.params.clear();
+        self.liberados.clear();
+        self.grupos.clear();
+        self.dsl_ids.clear();
+        self.cena_ativa = None;
+
+        let canvas = self.adicionar_no_em(TipoNo::Canvas, self.canvas_loc);
+        let master = self.adicionar_no_em(TipoNo::Saida, self.master_loc);
+        self.canvas = Some(canvas);
+        self.master = Some(master);
+        self.cena = None;
+
+        if let Some(NodeParams::Canvas(c)) = self.params.get_mut(&canvas) {
+            *c = proj;
         }
 
         let mut ids: HashMap<String, NodeId> = HashMap::new();
-        if let Some(c) = self.canvas {
-            ids.insert("canvas".to_string(), c);
-        }
-        if let Some(c) = self.cena {
-            ids.insert("scene".to_string(), c);
-        }
-        if let Some(m) = self.master {
-            ids.insert("master".to_string(), m);
-        }
+        ids.insert("canvas".to_string(), canvas);
+        ids.insert("master".to_string(), master);
 
         for tl in &prog {
             if let TopLevel::Node(n) = tl {
@@ -317,6 +320,44 @@ impl GraphPanel {
                 ids.insert(n.id.clone(), idx);
                 self.dsl_ids.insert(n.id.clone(), idx);
                 aplicar_campos(self, idx, n)?;
+            }
+        }
+
+        let mut id_to_scene_name: HashMap<String, String> = HashMap::new();
+        for tl in &prog {
+            if let TopLevel::Node(n) = tl {
+                if n.tipo == "scene" {
+                    for (k, v) in &n.campos {
+                        if k == "name" {
+                            id_to_scene_name.insert(n.id.clone(), v.as_str());
+                        }
+                    }
+                }
+            }
+        }
+        for (_idx, params) in &mut self.params {
+            match params {
+                NodeParams::Layer { cena, .. }
+                | NodeParams::Shape { cena, .. }
+                | NodeParams::Texto { cena, .. }
+                | NodeParams::Pen { cena, .. } => {
+                    if let Some(scene_name) = id_to_scene_name.get(cena.as_str()) {
+                        *cena = scene_name.clone();
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        for tl in &prog {
+            if let TopLevel::Node(n) = tl {
+                if n.tipo == "scene" {
+                    if let Some(&idx) = ids.get(&n.id) {
+                        self.cena = Some(idx);
+                        ids.entry("scene".to_string()).or_insert(idx);
+                        break;
+                    }
+                }
             }
         }
 
