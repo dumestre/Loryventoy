@@ -3,7 +3,7 @@
 use std::borrow::Cow;
 use std::collections::HashMap;
 
-use eframe::egui::{Color32, RichText, Stroke, Vec2, Ui, Align, Layout};
+use eframe::egui::{Color32, Vec2, Ui};
 use egui_graph_edit::{
     DataTypeTrait, NodeDataTrait, NodeResponse, NodeTemplateIter,
     WidgetValueTrait, InputParamKind, NodeTemplateTrait, UserResponseTrait,
@@ -181,61 +181,13 @@ impl NodeDataTrait for GraphNode {
     fn output_ui(
         &self,
         ui: &mut Ui,
-        node_id: NodeId,
+        _node_id: NodeId,
         _graph: &egui_graph_edit::Graph<Self, Self::DataType, Self::ValueType>,
-        user_state: &mut Self::UserState,
+        _user_state: &mut Self::UserState,
         param_name: &str,
     ) -> Vec<NodeResponse<Self::Response, Self>> {
         if self.tipo == TipoNo::Layer {
-            let entry_info = user_state.params.get(&node_id).and_then(|p| {
-                if let NodeParams::Layer { layers, selected, .. } = p {
-                    layers.iter().position(|l| l.nome == param_name).map(|idx| {
-                        (idx, *selected == idx, layers[idx].nome.clone())
-                    })
-                } else {
-                    None
-                }
-            });
-
-            if let Some((entry_idx, is_selected, entry_nome)) = entry_info {
-                let mut acao = AcaoInspector::Nenhuma;
-                let icon_size = Vec2::new(16.0, 16.0);
-
-                let row_resp = ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
-                    let sel_text = if is_selected { "\u{25CF}" } else { "\u{25CB}" };
-                    if ui.selectable_label(is_selected, RichText::new(sel_text).strong()).clicked() {
-                        acao = AcaoInspector::SelecionarLayer(entry_idx);
-                    }
-
-                    ui.label(&entry_nome);
-
-                    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                        if ui.add(egui::Image::new(eframe::egui::include_image!("../ui/icons/delete.svg")).fit_to_exact_size(icon_size)).clicked() {
-                            acao = AcaoInspector::RemoverLayerEntry(entry_idx);
-                        }
-                        if ui.add(egui::Image::new(eframe::egui::include_image!("../ui/icons/arrow_down.svg")).fit_to_exact_size(icon_size)).clicked() {
-                            acao = AcaoInspector::DescerLayerEntry(entry_idx);
-                        }
-                        if ui.add(egui::Image::new(eframe::egui::include_image!("../ui/icons/arrow_up.svg")).fit_to_exact_size(icon_size)).clicked() {
-                            acao = AcaoInspector::SubirLayerEntry(entry_idx);
-                        }
-                    });
-                });
-
-                if is_selected {
-                    ui.painter().rect_stroke(
-                        row_resp.response.rect,
-                        0.0,
-                        Stroke::new(2.0, Color32::from_rgb(100, 180, 255)),
-                        egui::StrokeKind::Inside,
-                    );
-                }
-
-                if acao != AcaoInspector::Nenhuma {
-                    user_state.acao_inspector = acao;
-                }
-                return vec![];
-            }
+            return vec![];
         }
 
         ui.label(param_name);

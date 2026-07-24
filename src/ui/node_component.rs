@@ -247,21 +247,14 @@ pub fn show_content(
             }
         }
         TipoNo::Layer => {
-            if let NodeParams::Layer { cena, layers, selected } = params {
+            if let NodeParams::Layer { cena, .. } = params {
                 grid_combo_cena(ui, "Cena", cena, cenas);
-
-                if *selected < layers.len() {
-                    ui.separator();
-                    let entry = &mut layers[*selected];
-                    grid_texto(ui, "Nome", &mut entry.nome);
-                    grid_2(ui, "Ordem", &mut entry.ordem, -1000.0..=1000.0, "", 1);
-                    grid_2(ui, "Opacidade", &mut entry.opacidade, 0.0..=1.0, "", 2);
-                }
-
-                ui.separator();
-                if ui.small_button("+ Nova Layer").clicked() {
-                    acao = AcaoInspector::CriarLayerEntry;
-                }
+                ui.add_space(4.0);
+                ui.vertical_centered(|ui| {
+                    if ui.button("＋ Adicionar Layer").clicked() {
+                        acao = AcaoInspector::CriarLayerEntry;
+                    }
+                });
             }
         }
         TipoNo::Shape => {
