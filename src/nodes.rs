@@ -245,18 +245,18 @@ static P_ESC_XY: ParametroPorto = ParametroPorto {
 /// Especificações por tipo/lado (estáticas, referenciadas por `PortSpec`).
 static SAIDAS_TRANSFORM: [ParametroPorto; 3] = [P_POS_XYZ, P_ROT_XYZ, P_ESC_XYZ];
 static ENTRADAS_TRANSFORM: [ParametroPorto; 3] = [P_POS_XYZ, P_ROT_XYZ, P_ESC_XYZ];
-static ENTRADAS_SHAPE: [ParametroPorto; 6] =
-    [P_CANVAS, P_POS_XY, P_LARGURA, P_ALTURA, P_ROT, P_COR];
-static SAIDAS_SHAPE: [ParametroPorto; 5] = [P_POS_XY, P_LARGURA, P_ALTURA, P_ROT, P_COR];
-static SAIDAS_TEXTO: [ParametroPorto; 3] = [P_POS_XY, P_TAMANHO, P_COR];
+static ENTRADAS_SHAPE: [ParametroPorto; 5] =
+    [P_LAYER, P_POS_XY, P_LARGURA, P_ALTURA, P_ROT];
+static SAIDAS_SHAPE: [ParametroPorto; 4] = [P_POS_XY, P_LARGURA, P_ALTURA, P_ROT];
+static SAIDAS_TEXTO: [ParametroPorto; 2] = [P_POS_XY, P_TAMANHO];
 static ENTRADAS_SAIDA: [ParametroPorto; 1] = [P_CENA];
 static ENTRADAS_CENA: [ParametroPorto; 1] = [P_CANVAS];
 static SAIDAS_CENA: [ParametroPorto; 1] = [P_CENA];
-static ENTRADAS_PEN: [ParametroPorto; 2] = [P_CANVAS, P_POS_XY];
+static ENTRADAS_PEN: [ParametroPorto; 2] = [P_LAYER, P_POS_XY];
 static SAIDAS_PEN: [ParametroPorto; 2] = [P_PEN, P_POS_XY];
 static SAIDAS_RUIDO: [ParametroPorto; 1] = [P_RUIDO_OUT];
-static ENTRADAS_TEXTO: [ParametroPorto; 6] =
-    [P_CANVAS, P_POS_XY, P_TAMANHO, P_COR, P_OPACIDADE, P_ESC_XY];
+static ENTRADAS_TEXTO: [ParametroPorto; 5] =
+    [P_LAYER, P_POS_XY, P_TAMANHO, P_OPACIDADE, P_ESC_XY];
 static SAIDAS_ANIM: [ParametroPorto; 1] = [P_ANIM_OUT];
 
 /// Especificação de portos de um nó: rótulos de entrada (esquerda) e de
