@@ -16,10 +16,11 @@ pub enum AcaoInspector {
     #[default]
     Nenhuma,
     FocarCena(NodeId),
-    CriarLayer,
-    RemoverLayer,
-    SubirLayer,
-    DescerLayer,
+    CriarLayerEntry,
+    RemoverLayerEntry(usize),
+    SubirLayerEntry(usize),
+    DescerLayerEntry(usize),
+    SelecionarLayer(usize),
 }
 
 /// Margens internas do corpo do card e altura do cabeçalho, em unidades de
@@ -246,30 +247,72 @@ pub fn show_content(
             }
         }
         TipoNo::Layer => {
-            if let NodeParams::Layer { cena, nome, ordem, opacidade } = params {
+            if let NodeParams::Layer { cena, layers, selected } = params {
                 grid_combo_cena(ui, "Cena", cena, cenas);
-                grid_texto(ui, "Nome", nome);
-                grid_2(ui, "Ordem", ordem, -1000.0..=1000.0, "", 1);
-                grid_2(ui, "Opacidade", opacidade, 0.0..=1.0, "", 2);
 
                 ui.separator();
-                ui.label(egui::RichText::new("Gerenciar Layers").strong());
-                
-                let icon_size = Vec2::new(18.0, 18.0);
-                ui.horizontal(|ui| {
-                    if ui.add(Image::new(eframe::egui::include_image!("icons/add.svg")).fit_to_exact_size(icon_size)).clicked() {
-                        acao = AcaoInspector::CriarLayer;
+                ui.label(egui::RichText::new("Layers").strong());
+
+                let icon_size = Vec2::new(16.0, 16.0);
+                let mut remover_idx: Option<usize> = None;
+                let mut subir_idx: Option<usize> = None;
+                let mut descer_idx: Option<usize> = None;
+
+                for i in 0..layers.len() {
+                    let entry = &mut layers[i];
+                    let is_selected = *selected == i;
+
+                    ui.horizontal(|ui| {
+                        // Selection indicator
+                        let sel_text = if is_selected { "\u{25CF}" } else { "\u{25CB}" };
+                        if ui.selectable_label(is_selected, egui::RichText::new(sel_text).strong()).clicked() {
+                            acao = AcaoInspector::SelecionarLayer(i);
+                        }
+
+                        // Layer name (inline edit when selected)
+                        if is_selected {
+                            ui.text_edit_singleline(&mut entry.nome);
+                        } else {
+                            ui.label(&entry.nome);
+                        }
+
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                            if ui.add(Image::new(eframe::egui::include_image!("icons/delete.svg")).fit_to_exact_size(icon_size)).clicked() {
+                                remover_idx = Some(i);
+                            }
+                            if ui.add(Image::new(eframe::egui::include_image!("icons/arrow_down.svg")).fit_to_exact_size(icon_size)).clicked() {
+                                descer_idx = Some(i);
+                            }
+                            if ui.add(Image::new(eframe::egui::include_image!("icons/arrow_up.svg")).fit_to_exact_size(icon_size)).clicked() {
+                                subir_idx = Some(i);
+                            }
+                        });
+                    });
+
+                    // Show params inline when selected
+                    if is_selected {
+                        ui.indent(("layer_params", i), |ui| {
+                            grid_2(ui, "Ordem", &mut entry.ordem, -1000.0..=1000.0, "", 1);
+                            grid_2(ui, "Opacidade", &mut entry.opacidade, 0.0..=1.0, "", 2);
+                        });
                     }
-                    if ui.add(Image::new(eframe::egui::include_image!("icons/delete.svg")).fit_to_exact_size(icon_size)).clicked() {
-                        acao = AcaoInspector::RemoverLayer;
-                    }
-                    if ui.add(Image::new(eframe::egui::include_image!("icons/arrow_up.svg")).fit_to_exact_size(icon_size)).clicked() {
-                        acao = AcaoInspector::SubirLayer;
-                    }
-                    if ui.add(Image::new(eframe::egui::include_image!("icons/arrow_down.svg")).fit_to_exact_size(icon_size)).clicked() {
-                        acao = AcaoInspector::DescerLayer;
-                    }
-                });
+                }
+
+                ui.separator();
+                if ui.small_button("+ Nova Layer").clicked() {
+                    acao = AcaoInspector::CriarLayerEntry;
+                }
+
+                // Dispatch actions
+                if let Some(idx) = remover_idx {
+                    acao = AcaoInspector::RemoverLayerEntry(idx);
+                }
+                if let Some(idx) = subir_idx {
+                    acao = AcaoInspector::SubirLayerEntry(idx);
+                }
+                if let Some(idx) = descer_idx {
+                    acao = AcaoInspector::DescerLayerEntry(idx);
+                }
             }
         }
         TipoNo::Shape => {

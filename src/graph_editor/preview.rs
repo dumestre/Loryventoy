@@ -18,9 +18,7 @@ impl GraphPanel {
         preview.altura = cfg.altura as f32;
         preview.fundo = cfg.fundo;
 
-        let _graph = &self.editor_state.graph;
-
-        // Map Layer NodeId -> cena name, for quick lookup
+        // Map Layer NodeId -> cena name
         let mut layer_to_cena: HashMap<NodeId, String> = HashMap::new();
         for (&nid, params) in &self.params {
             if let NodeParams::Layer { cena, .. } = params {
@@ -48,51 +46,137 @@ impl GraphPanel {
                 layers: Vec::new(),
             };
 
-            // Collect layers belonging to this scene
-            let mut layer_nids: Vec<NodeId> = layer_to_cena.iter()
+            // Collect Layer nodes belonging to this scene
+            let layer_nids: Vec<NodeId> = layer_to_cena.iter()
                 .filter(|(_, c)| *c == nome_cena)
                 .map(|(&nid, _)| nid)
                 .collect();
 
-            // Sort by ordem
-            layer_nids.sort_by(|a, b| {
-                let ord_a = match self.params.get(a) {
-                    Some(NodeParams::Layer { ordem, .. }) => *ordem,
-                    _ => 0.0,
+            // For each Layer node, iterate its internal layer entries
+            for &layer_nid in &layer_nids {
+                let entries: Vec<(usize, String, f32, f32)> = match self.params.get(&layer_nid) {
+                    Some(NodeParams::Layer { layers, .. }) => {
+                        layers.iter().enumerate()
+                            .map(|(i, e)| (i, e.nome.clone(), e.ordem, e.opacidade))
+                            .collect()
+                    }
+                    _ => continue,
                 };
-                let ord_b = match self.params.get(b) {
-                    Some(NodeParams::Layer { ordem, .. }) => *ordem,
-                    _ => 0.0,
-                };
-                ord_a.partial_cmp(&ord_b).unwrap_or(std::cmp::Ordering::Equal)
-            });
 
-            // If no layers, create a default one
-            if layer_nids.is_empty() {
-                layer_nids.push(NodeId::default());
+                for (_entry_idx, nome, _ordem, opac) in &entries {
+                    let mut layer_preview = LayerPreview {
+                        nome: nome.clone(),
+                        opacidade: *opac,
+                        formas: Vec::new(),
+                        textos: Vec::new(),
+                        pen: Vec::new(),
+                    };
+
+                    // Find all nodes connected to this layer entry's output port
+                    let output_port_name = layer_preview.nome.clone();
+                    let output_id = self.editor_state.graph[layer_nid].outputs.iter()
+                        .find(|(name, _)| *name == output_port_name)
+                        .map(|(_, id)| *id);
+
+                    // Check if any Shape/Texto/Pen is connected to this output
+                    let mut has_connections = false;
+                    if let Some(oid) = output_id {
+                        for (&nid, params) in &self.params {
+                            match params {
+                                NodeParams::Shape { .. } | NodeParams::Texto { .. } | NodeParams::Pen { .. } => {
+                                    let graph = &self.editor_state.graph;
+                                    let node = &graph[nid];
+                                    for (_, input_id) in &node.inputs {
+                                        if let Some(connected_out) = graph.connection(*input_id) {
+                                            if connected_out == oid {
+                                                has_connections = true;
+                                                match params {
+                                                    NodeParams::Shape { .. } => {
+                                                        if let Some(gen) = self.build_shape_generator(nid, params) {
+                                                            layer_preview.formas.push(gen);
+                                                        }
+                                                    }
+                                                    NodeParams::Texto { .. } => {
+                                                        if let Some(item) = self.build_texto_item(nid, params) {
+                                                            layer_preview.textos.push(item);
+                                                        }
+                                                    }
+                                                    NodeParams::Pen { .. } => {
+                                                        if let Some(pp) = self.build_pen_path(nid, params) {
+                                                            layer_preview.pen.push(pp);
+                                                        }
+                                                    }
+                                                    _ => {}
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                _ => {}
+                            }
+                        }
+                    }
+
+                    // Fallback: if no connections and only one layer entry, include all scene nodes
+                    if !has_connections && entries.len() <= 1 {
+                        for (&nid, params) in &self.params {
+                            match params {
+                                NodeParams::Shape { .. } | NodeParams::Texto { .. } | NodeParams::Pen { .. } => {
+                                    let node_cena = match params {
+                                        NodeParams::Shape { cena, .. }
+                                        | NodeParams::Texto { cena, .. }
+                                        | NodeParams::Pen { cena, .. } => cena.as_str(),
+                                        _ => "",
+                                    };
+                                    if node_cena == nome_cena {
+                                        match params {
+                                            NodeParams::Shape { .. } => {
+                                                if let Some(gen) = self.build_shape_generator(nid, params) {
+                                                    layer_preview.formas.push(gen);
+                                                }
+                                            }
+                                            NodeParams::Texto { .. } => {
+                                                if let Some(item) = self.build_texto_item(nid, params) {
+                                                    layer_preview.textos.push(item);
+                                                }
+                                            }
+                                            NodeParams::Pen { .. } => {
+                                                if let Some(pp) = self.build_pen_path(nid, params) {
+                                                    layer_preview.pen.push(pp);
+                                                }
+                                            }
+                                            _ => {}
+                                        }
+                                    }
+                                }
+                                _ => {}
+                            }
+                        }
+                    }
+
+                    cena_preview.layers.push(layer_preview);
+                }
             }
 
-            for &layer_nid in &layer_nids {
-                let (nome, opac) = match self.params.get(&layer_nid) {
-                    Some(NodeParams::Layer { nome, opacidade, .. }) => {
-                        (nome.clone(), *opacidade)
-                    }
-                    _ => ("Layer 1".to_string(), 1.0),
-                };
-
+            // If no layers exist, create a default one with all scene nodes
+            if cena_preview.layers.is_empty() {
                 let mut layer_preview = LayerPreview {
-                    nome,
-                    opacidade: opac,
+                    nome: "Layer 1".to_string(),
+                    opacidade: 1.0,
                     formas: Vec::new(),
                     textos: Vec::new(),
                     pen: Vec::new(),
                 };
-
-                // Find all nodes that belong to this scene
                 for (&nid, params) in &self.params {
                     match params {
                         NodeParams::Shape { .. } | NodeParams::Texto { .. } | NodeParams::Pen { .. } => {
-                            if self.node_belongs_to_layer(nid, layer_nid, &layer_to_cena, nome_cena) {
+                            let node_cena = match params {
+                                NodeParams::Shape { cena, .. }
+                                | NodeParams::Texto { cena, .. }
+                                | NodeParams::Pen { cena, .. } => cena.as_str(),
+                                _ => "",
+                            };
+                            if node_cena == nome_cena {
                                 match params {
                                     NodeParams::Shape { .. } => {
                                         if let Some(gen) = self.build_shape_generator(nid, params) {
@@ -116,7 +200,6 @@ impl GraphPanel {
                         _ => {}
                     }
                 }
-
                 cena_preview.layers.push(layer_preview);
             }
 
@@ -124,53 +207,6 @@ impl GraphPanel {
         }
 
         preview
-    }
-
-    /// Checks if a Shape/Texto/Pen node belongs to a given layer.
-    /// A node belongs to a layer if:
-    /// 1. Its first input ("Canvas") connects to this layer's output, OR
-    /// 2. No layer connection exists and the node's cena matches the layer's cena
-    fn node_belongs_to_layer(
-        &self,
-        nid: NodeId,
-        layer_nid: NodeId,
-        layer_to_cena: &HashMap<NodeId, String>,
-        cena_name: &str,
-    ) -> bool {
-        let graph = &self.editor_state.graph;
-        let node = &graph[nid];
-
-        // Check if any input is connected to this layer's output
-        if let Some(layer_node) = graph.nodes.get(layer_nid) {
-            if let Some((_, layer_out_id)) = layer_node.outputs.first() {
-                for (_, input_id) in &node.inputs {
-                    if let Some(connected_out) = graph.connection(*input_id) {
-                        if connected_out == *layer_out_id {
-                            return true;
-                        }
-                    }
-                }
-            }
-        }
-
-        // Fallback: if no layer connection, node belongs to first layer of its scene
-        // (when there's only one layer, everything goes there)
-        let scene_layers: Vec<&NodeId> = layer_to_cena.iter()
-            .filter(|(_, c)| *c == cena_name)
-            .map(|(nid, _)| nid)
-            .collect();
-
-        if scene_layers.len() <= 1 {
-            let node_cena = match &self.params.get(&nid) {
-                Some(NodeParams::Shape { cena, .. }) => cena.as_str(),
-                Some(NodeParams::Texto { cena, .. }) => cena.as_str(),
-                Some(NodeParams::Pen { cena, .. }) => cena.as_str(),
-                _ => "",
-            };
-            return node_cena == cena_name;
-        }
-
-        false
     }
 
     fn build_shape_generator(&self, _nid: NodeId, params: &NodeParams) -> Option<ShapeGenerator> {

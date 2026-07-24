@@ -7,7 +7,7 @@ use eframe::egui::{
 use eframe::egui::epaint::{CircleShape, TextShape};
 use eframe::egui::Popup;
 
-use crate::nodes::{NodeParams, ProjetoConfig, TipoNo, portos};
+use crate::nodes::{NodeParams, LayerEntry, ProjetoConfig, TipoNo, portos};
 use crate::ui::graph_toolbar::{GraphToolbar, AcaoToolbar};
 use crate::ui::node_component;
 
@@ -141,7 +141,6 @@ impl GraphPanel {
                 *lc = nome.clone();
             }
         }
-        self.conectar_por_idx(layer, 0, cena, 0);
 
         self.dsl_ids.clear();
         self.dsl_ids.insert("canvas".to_string(), canvas);
@@ -312,6 +311,59 @@ impl GraphPanel {
         }
     }
 
+    fn sync_layer_ports(&mut self) {
+        let layer_nids: Vec<NodeId> = self.params.iter()
+            .filter(|(_, p)| matches!(p, NodeParams::Layer { .. }))
+            .map(|(&nid, _)| nid)
+            .collect();
+
+        for nid in layer_nids {
+            let entries: Vec<(String, f32)> = match self.params.get(&nid) {
+                Some(NodeParams::Layer { layers, .. }) => {
+                    layers.iter().map(|e| (e.nome.clone(), e.opacidade)).collect()
+                }
+                _ => continue,
+            };
+
+            let current_outputs: Vec<(String, egui_graph_edit::OutputId)> =
+                self.editor_state.graph[nid].outputs.clone();
+
+            // Build desired port names
+            let desired: Vec<String> = entries.iter().enumerate()
+                .map(|(i, (nome, _))| {
+                    if nome.is_empty() {
+                        format!("Layer {}", i + 1)
+                    } else {
+                        nome.clone()
+                    }
+                })
+                .collect();
+
+            // Remove ports that are no longer needed
+            let to_remove: Vec<egui_graph_edit::OutputId> = current_outputs.iter()
+                .filter(|(name, _)| !desired.contains(name))
+                .map(|(_, id)| *id)
+                .collect();
+            for oid in to_remove {
+                self.editor_state.graph.remove_output_param(oid);
+            }
+
+            // Add ports that are missing
+            let current_names: Vec<String> = self.editor_state.graph[nid].outputs.iter()
+                .map(|(name, _)| name.clone())
+                .collect();
+            for name in &desired {
+                if !current_names.contains(name) {
+                    self.editor_state.graph.add_output_param(
+                        nid,
+                        name.clone(),
+                        types::GraphDataType::Scalar,
+                    );
+                }
+            }
+        }
+    }
+
     pub fn criar_layer_para_cena_atual(&mut self) {
         self.empurrar_historico();
         let cenas = self.cenas_disponiveis();
@@ -323,40 +375,79 @@ impl GraphPanel {
             })
         }).or_else(|| cenas.first().cloned()).unwrap_or_default();
 
-        let loc = Pos2::new(
-            (self.contador as f32 % 3.0) * 260.0,
-            200.0 + (self.contador as f32 / 3.0) * 150.0,
-        );
-        let idx = self.adicionar_no_em(TipoNo::Layer, loc);
-        let cena_nome_conn = cena_nome.clone();
-        if let Some(NodeParams::Layer { cena, nome, .. }) = self.params.get_mut(&idx) {
-            *cena = cena_nome;
-            *nome = format!("Layer {}", self.contador);
+        // Find existing Layer node for this scene
+        let existing = self.params.iter().find_map(|(&idx, p)| {
+            if let NodeParams::Layer { cena, .. } = p {
+                if *cena == cena_nome { Some(idx) } else { None }
+            } else { None }
+        });
+
+        if let Some(layer_nid) = existing {
+            // Add new entry to existing Layer node
+            let count = match self.params.get(&layer_nid) {
+                Some(NodeParams::Layer { layers, .. }) => layers.len(),
+                _ => 0,
+            };
+            if let Some(NodeParams::Layer { layers, .. }) = self.params.get_mut(&layer_nid) {
+                layers.push(LayerEntry {
+                    nome: format!("Layer {}", count + 1),
+                    ordem: count as f32,
+                    opacidade: 1.0,
+                });
+            }
+        } else {
+            // Create new Layer node for this scene
+            let loc = Pos2::new(
+                (self.contador as f32 % 3.0) * 260.0,
+                200.0 + (self.contador as f32 / 3.0) * 150.0,
+            );
+            let idx = self.adicionar_no_em(TipoNo::Layer, loc);
+            if let Some(NodeParams::Layer { cena, layers, .. }) = self.params.get_mut(&idx) {
+                *cena = cena_nome;
+                layers.push(LayerEntry {
+                    nome: "Layer 1".to_string(),
+                    ordem: 0.0,
+                    opacidade: 1.0,
+                });
+            }
+            self.contador += 1;
         }
-        if let Some(cena_idx) = self.cena_ativa.or_else(|| {
-            self.params.iter().find_map(|(&nidx, p)| {
-                if let NodeParams::Cena { nome_cena, .. } = p {
-                    if *nome_cena == cena_nome_conn { Some(nidx) } else { None }
-                } else { None }
-            })
-        }) {
-            self.conectar_por_idx(idx, 0, cena_idx, 0);
-        }
-        self.contador += 1;
     }
 
-    pub fn remover_layer_atual(&mut self, layer_idx: NodeId) {
-        if self.params.get(&layer_idx).map_or(false, |p| matches!(p, NodeParams::Layer { .. })) {
+    pub fn remover_layer_entry(&mut self, layer_idx: NodeId, entry_idx: usize) {
+        let (should_remove_node, should_remove_entry) = match self.params.get(&layer_idx) {
+            Some(NodeParams::Layer { layers, .. }) => {
+                if entry_idx < layers.len() && layers.len() > 1 {
+                    (false, true)
+                } else if layers.len() == 1 {
+                    (true, false)
+                } else {
+                    (false, false)
+                }
+            }
+            _ => (false, false),
+        };
+        if should_remove_node {
             self.empurrar_historico();
             self.remover_no(layer_idx);
             self.limpar_grupos();
+        } else if should_remove_entry {
+            self.empurrar_historico();
+            if let Some(NodeParams::Layer { layers, selected, .. }) = self.params.get_mut(&layer_idx) {
+                layers.remove(entry_idx);
+                if *selected >= layers.len() {
+                    *selected = layers.len().saturating_sub(1);
+                }
+            }
         }
     }
 
-    pub fn mover_layer_atual(&mut self, layer_idx: NodeId, delta: i32) {
-        if let Some(NodeParams::Layer { ordem, .. }) = self.params.get_mut(&layer_idx) {
-            let novo = (*ordem as i32 + delta).max(0) as f32;
-            *ordem = novo;
+    pub fn mover_layer_entry(&mut self, layer_idx: NodeId, entry_idx: usize, delta: i32) {
+        if let Some(NodeParams::Layer { layers, .. }) = self.params.get_mut(&layer_idx) {
+            let new_idx = (entry_idx as i32 + delta) as usize;
+            if new_idx < layers.len() {
+                layers.swap(entry_idx, new_idx);
+            }
         }
     }
 
@@ -629,6 +720,9 @@ impl GraphPanel {
 
         self.params = user_state.params;
 
+        // Sync dynamic output ports for Layer nodes
+        self.sync_layer_ports();
+
         for resp in &responses.node_responses {
             match resp {
                 egui_graph_edit::NodeResponse::DeleteNodeUi(nid) => {
@@ -811,22 +905,29 @@ impl GraphPanel {
                 }
                 self.cena_ativa = Some(ci);
             }
-            node_component::AcaoInspector::CriarLayer => {
+            node_component::AcaoInspector::CriarLayerEntry => {
                 self.criar_layer_para_cena_atual();
             }
-            node_component::AcaoInspector::RemoverLayer => {
+            node_component::AcaoInspector::RemoverLayerEntry(entry_idx) => {
                 if let Some(&idx) = self.editor_state.selected_nodes.first() {
-                    self.remover_layer_atual(idx);
+                    self.remover_layer_entry(idx, entry_idx);
                 }
             }
-            node_component::AcaoInspector::SubirLayer => {
+            node_component::AcaoInspector::SubirLayerEntry(entry_idx) => {
                 if let Some(&idx) = self.editor_state.selected_nodes.first() {
-                    self.mover_layer_atual(idx, 1);
+                    self.mover_layer_entry(idx, entry_idx, -1);
                 }
             }
-            node_component::AcaoInspector::DescerLayer => {
+            node_component::AcaoInspector::DescerLayerEntry(entry_idx) => {
                 if let Some(&idx) = self.editor_state.selected_nodes.first() {
-                    self.mover_layer_atual(idx, -1);
+                    self.mover_layer_entry(idx, entry_idx, 1);
+                }
+            }
+            node_component::AcaoInspector::SelecionarLayer(entry_idx) => {
+                if let Some(&idx) = self.editor_state.selected_nodes.first() {
+                    if let Some(NodeParams::Layer { selected, .. }) = self.params.get_mut(&idx) {
+                        *selected = entry_idx;
+                    }
                 }
             }
             node_component::AcaoInspector::Nenhuma => {}

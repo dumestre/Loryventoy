@@ -1,7 +1,7 @@
 use eframe::egui::Color32;
 use serde::{Deserialize, Serialize};
 
-use crate::nodes::{NodeParams, ProjetoConfig, TipoNo};
+use crate::nodes::{NodeParams, LayerEntry, ProjetoConfig, TipoNo};
 use crate::graph_editor::ArestaInfo;
 
 /// Espelho serializável de um segmento de animação (`AnimSeg`).
@@ -12,6 +12,14 @@ pub struct AnimSegJson {
     pub v_ini: [f32; 2],
     pub v_fim: [f32; 2],
     pub easing: u8,
+}
+
+/// Espelho serializável de uma entrada de layer.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct LayerEntryJson {
+    pub nome: String,
+    pub ordem: f32,
+    pub opacidade: f32,
 }
 
 /// Espelho serializável do `NodeParams` (que contém `Color32` e campos
@@ -33,9 +41,8 @@ pub enum NodeParamsJson {
     },
     Layer {
         cena: String,
-        nome: String,
-        ordem: f32,
-        opacidade: f32,
+        layers: Vec<LayerEntryJson>,
+        selected: usize,
     },
     Texto {
         cena: String,
@@ -122,8 +129,16 @@ impl From<NodeParams> for NodeParamsJson {
             NodeParams::Cena { nome_cena, ativa, zoom, angulo, opacidade } => {
                 NodeParamsJson::Cena { nome_cena, ativa, zoom, angulo, opacidade }
             }
-            NodeParams::Layer { cena, nome, opacidade, ordem } => {
-                NodeParamsJson::Layer { cena, nome, opacidade, ordem }
+            NodeParams::Layer { cena, layers, selected } => {
+                NodeParamsJson::Layer {
+                    cena,
+                    layers: layers.into_iter().map(|l| LayerEntryJson {
+                        nome: l.nome,
+                        ordem: l.ordem,
+                        opacidade: l.opacidade,
+                    }).collect(),
+                    selected,
+                }
             }
             NodeParams::Texto { cena, conteudo, tamanho, negrito, italico, px, py, cor, trim_inicio, trim_fim, .. } => {
                 NodeParamsJson::Texto {
@@ -200,8 +215,16 @@ impl TryFrom<NodeParamsJson> for NodeParams {
             NodeParamsJson::Cena { nome_cena, ativa, zoom, angulo, opacidade } => {
                 NodeParams::Cena { nome_cena, ativa, zoom, angulo, opacidade }
             }
-            NodeParamsJson::Layer { cena, nome, opacidade, ordem } => {
-                NodeParams::Layer { cena, nome, opacidade, ordem }
+            NodeParamsJson::Layer { cena, layers, selected } => {
+                NodeParams::Layer {
+                    cena,
+                    layers: layers.into_iter().map(|l| LayerEntry {
+                        nome: l.nome,
+                        ordem: l.ordem,
+                        opacidade: l.opacidade,
+                    }).collect(),
+                    selected,
+                }
             }
             NodeParamsJson::Texto { cena, conteudo, tamanho, negrito, italico, px, py, cor, trim_inicio, trim_fim } => {
                 NodeParams::Texto {

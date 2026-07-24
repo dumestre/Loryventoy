@@ -98,8 +98,6 @@ impl TipoNo {
             // Canvas -> Cena (fluxo do projeto; Canvas -> Saída já vale por (_ , Saída))
             (TipoNo::Canvas, TipoNo::Cena) => true,
             (TipoNo::Cena, TipoNo::Cena) => true,
-            // Layers alimentam a Cena a que pertencem
-            (TipoNo::Layer, TipoNo::Cena) => true,
             // Layer -> Shape/Texto/Pen (layer pai de formas)
             (TipoNo::Layer, TipoNo::Shape | TipoNo::Texto | TipoNo::Pen) => true,
             // Shape/Texto/Pen alimentam a Cena a que pertencem
@@ -254,8 +252,6 @@ static SAIDAS_TEXTO: [ParametroPorto; 3] = [P_POS_XY, P_TAMANHO, P_COR];
 static ENTRADAS_SAIDA: [ParametroPorto; 1] = [P_CENA];
 static ENTRADAS_CENA: [ParametroPorto; 1] = [P_CANVAS];
 static SAIDAS_CENA: [ParametroPorto; 1] = [P_CENA];
-static ENTRADAS_LAYER: [ParametroPorto; 1] = [P_CENA];
-static SAIDAS_LAYER: [ParametroPorto; 1] = [P_LAYER];
 static ENTRADAS_PEN: [ParametroPorto; 2] = [P_CANVAS, P_POS_XY];
 static SAIDAS_PEN: [ParametroPorto; 2] = [P_PEN, P_POS_XY];
 static SAIDAS_RUIDO: [ParametroPorto; 1] = [P_RUIDO_OUT];
@@ -304,8 +300,8 @@ pub fn portos(tipo: TipoNo) -> PortSpec {
             saidas: &SAIDAS_CENA,
         },
         TipoNo::Layer => PortSpec {
-            entradas: &ENTRADAS_LAYER,
-            saidas: &SAIDAS_LAYER,
+            entradas: &[],
+            saidas: &[],
         },
         TipoNo::Shape => PortSpec {
             entradas: &ENTRADAS_SHAPE,
@@ -352,6 +348,14 @@ impl Default for ProjetoConfig {
     }
 }
 
+/// Entrada individual de layer dentro do container Layer.
+#[derive(Clone, Debug)]
+pub struct LayerEntry {
+    pub nome: String,
+    pub ordem: f32,
+    pub opacidade: f32,
+}
+
 /// Parâmetros editáveis de cada nó, em painel estilo inspector
 /// (rótulos alinhados em coluna + campos), como Unity / Cavalry.
 #[derive(Clone, Debug)]
@@ -370,12 +374,11 @@ pub enum NodeParams {
         angulo: f32,
         opacidade: f32,
     },
-    /// Nó de camadas de uma cena.
+    /// Container de camadas de uma cena. Cada entry gera 1 output port dinâmico.
     Layer {
         cena: String,
-        nome: String,
-        ordem: f32,
-        opacidade: f32,
+        layers: Vec<LayerEntry>,
+        selected: usize,
     },
     /// Texto procedural (rótulos/títulos), rasterizado com `cosmic-text`
     /// e desenhado no preview como elemento da cena.
@@ -473,9 +476,12 @@ impl NodeParams {
             },
             TipoNo::Layer => NodeParams::Layer {
                 cena: String::new(),
-                nome: "Layer 1".to_string(),
-                ordem: 0.0,
-                opacidade: 1.0,
+                layers: vec![LayerEntry {
+                    nome: "Layer 1".to_string(),
+                    ordem: 0.0,
+                    opacidade: 1.0,
+                }],
+                selected: 0,
             },
             TipoNo::Shape => NodeParams::Shape {
                 cena: String::new(),

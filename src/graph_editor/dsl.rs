@@ -58,17 +58,27 @@ fn aplicar_campos(
         }
         NodeParams::Layer {
             cena,
-            nome,
-            opacidade,
-            ordem,
+            layers,
             ..
         } => {
             for (c, v) in &n.campos {
                 match c.as_str() {
                     "scene" => *cena = v.as_str(),
-                    "name" => *nome = v.as_str(),
-                    "opacity" => *opacidade = v.as_num(),
-                    "order" => *ordem = v.as_num(),
+                    "name" => {
+                        if let Some(entry) = layers.first_mut() {
+                            entry.nome = v.as_str();
+                        }
+                    }
+                    "opacity" => {
+                        if let Some(entry) = layers.first_mut() {
+                            entry.opacidade = v.as_num();
+                        }
+                    }
+                    "order" => {
+                        if let Some(entry) = layers.first_mut() {
+                            entry.ordem = v.as_num();
+                        }
+                    }
                     _ => {}
                 }
             }
@@ -346,6 +356,36 @@ impl GraphPanel {
                     }
                 }
                 _ => {}
+            }
+        }
+
+        // Merge Layer nodes that share the same scene into the first one.
+        let layer_nids: Vec<NodeId> = self.params.iter()
+            .filter(|(_, p)| matches!(p, NodeParams::Layer { .. }))
+            .map(|(&nid, _)| nid)
+            .collect();
+        let mut scene_to_first: HashMap<String, NodeId> = HashMap::new();
+        for &nid in &layer_nids {
+            let cena = match self.params.get(&nid) {
+                Some(NodeParams::Layer { cena, .. }) => cena.clone(),
+                _ => continue,
+            };
+            if let Some(&first) = scene_to_first.get(&cena) {
+                let entries: Vec<_> = match self.params.get(&nid) {
+                    Some(NodeParams::Layer { layers, .. }) => layers.clone(),
+                    _ => continue,
+                };
+                if let Some(NodeParams::Layer { layers, .. }) = self.params.get_mut(&first) {
+                    layers.extend(entries);
+                }
+                self.remover_no(nid);
+                for (_, nid_val) in self.dsl_ids.iter_mut() {
+                    if *nid_val == nid {
+                        *nid_val = first;
+                    }
+                }
+            } else {
+                scene_to_first.insert(cena, nid);
             }
         }
 
