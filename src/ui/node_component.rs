@@ -284,10 +284,19 @@ pub fn show_content(
                             ui.painter().circle_stroke(rect.center(), 5.0, Stroke::new(1.0, Color32::from_rgb(80, 80, 90)));
                         }
                         // Toggle view
-                        let vis_label = if layers[i].visivel { "◉" } else { "◎" };
-                        let vis_btn = ui.small_button(vis_label).on_hover_text(
-                            if layers[i].visivel { "Ocultar layer" } else { "Mostrar layer" }
-                        );
+                        let vis_btn = if layers[i].visivel {
+                            ui.add(
+                                Image::new(eframe::egui::include_image!("../ui/icons/view_on.svg"))
+                                    .fit_to_exact_size(Vec2::splat(14.0))
+                                    .tint(Color32::from_rgb(126, 203, 154)),
+                            ).on_hover_text("Ocultar layer")
+                        } else {
+                            ui.add(
+                                Image::new(eframe::egui::include_image!("../ui/icons/view_off.svg"))
+                                    .fit_to_exact_size(Vec2::splat(14.0))
+                                    .tint(Color32::from_rgb(102, 102, 128)),
+                            ).on_hover_text("Mostrar layer")
+                        };
                         if vis_btn.clicked() {
                             layers[i].visivel = !layers[i].visivel;
                         }
