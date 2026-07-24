@@ -54,16 +54,19 @@ impl GraphPanel {
 
             // For each Layer node, iterate its internal layer entries
             for &layer_nid in &layer_nids {
-                let entries: Vec<(usize, String, f32, f32)> = match self.params.get(&layer_nid) {
+                let entries: Vec<(usize, String, f32, f32, bool)> = match self.params.get(&layer_nid) {
                     Some(NodeParams::Layer { layers, .. }) => {
                         layers.iter().enumerate()
-                            .map(|(i, e)| (i, e.nome.clone(), e.ordem, e.opacidade))
+                            .map(|(i, e)| (i, e.nome.clone(), e.ordem, e.opacidade, e.visivel))
                             .collect()
                     }
                     _ => continue,
                 };
 
-                for (_entry_idx, nome, _ordem, opac) in &entries {
+                for (_entry_idx, nome, _ordem, opac, visivel) in &entries {
+                    if !visivel {
+                        continue;
+                    }
                     let mut layer_preview = LayerPreview {
                         nome: nome.clone(),
                         opacidade: *opac,

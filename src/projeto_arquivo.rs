@@ -20,6 +20,14 @@ pub struct LayerEntryJson {
     pub nome: String,
     pub ordem: f32,
     pub opacidade: f32,
+    #[serde(default)]
+    pub cor: Option<[u8; 4]>,
+    #[serde(default = "default_true")]
+    pub visivel: bool,
+}
+
+fn default_true() -> bool {
+    true
 }
 
 /// Espelho serializável do `NodeParams` (que contém `Color32` e campos
@@ -136,6 +144,8 @@ impl From<NodeParams> for NodeParamsJson {
                         nome: l.nome,
                         ordem: l.ordem,
                         opacidade: l.opacidade,
+                        cor: Some(l.cor.to_array()),
+                        visivel: l.visivel,
                     }).collect(),
                     selected,
                 }
@@ -218,10 +228,14 @@ impl TryFrom<NodeParamsJson> for NodeParams {
             NodeParamsJson::Layer { cena, layers, selected } => {
                 NodeParams::Layer {
                     cena,
-                    layers: layers.into_iter().map(|l| LayerEntry {
+                    layers: layers.into_iter().enumerate().map(|(i, l)| LayerEntry {
                         nome: l.nome,
                         ordem: l.ordem,
                         opacidade: l.opacidade,
+                        cor: l.cor
+                            .map(|c| Color32::from_rgba_unmultiplied(c[0], c[1], c[2], c[3]))
+                            .unwrap_or_else(|| LayerEntry::cor_por_idx(i)),
+                        visivel: l.visivel,
                     }).collect(),
                     selected,
                 }

@@ -5,7 +5,8 @@ use std::sync::{OnceLock, RwLock};
 use std::string::String;
 
 use eframe::egui::{
-    Color32, ComboBox, DragValue, Grid, Image, Response, TextStyle, Ui, Vec2,
+    Align, Color32, ComboBox, DragValue, Grid, Image, Layout, Response,
+    Sense, Stroke, TextStyle, Ui, Vec2,
 };
 use crate::graph_editor::NodeId;
 use crate::nodes::{NodeParams, ProjetoConfig, TipoNo};
@@ -21,6 +22,8 @@ pub enum AcaoInspector {
     SubirLayerEntry(usize),
     DescerLayerEntry(usize),
     SelecionarLayer(usize),
+    ToggleVisivelLayer(usize),
+    RenomearLayerEntry(usize),
 }
 
 /// Margens internas do corpo do card e altura do cabeçalho, em unidades de
@@ -39,7 +42,7 @@ fn fallback_size(tipo: TipoNo) -> Vec2 {
         TipoNo::Transform => Vec2::new(100.0, 62.0),
         TipoNo::Canvas => Vec2::new(105.0, 72.0),
         TipoNo::Cena => Vec2::new(110.0, 70.0),
-        TipoNo::Layer => Vec2::new(110.0, 55.0),
+        TipoNo::Layer => Vec2::new(130.0, 75.0),
         TipoNo::Shape => Vec2::new(120.0, 80.0),
         TipoNo::Texto => Vec2::new(150.0, 90.0),
         TipoNo::Pen => Vec2::new(150.0, 120.0),
@@ -247,14 +250,98 @@ pub fn show_content(
             }
         }
         TipoNo::Layer => {
-            if let NodeParams::Layer { cena, .. } = params {
+            if let NodeParams::Layer { cena, layers, selected } = params {
                 grid_combo_cena(ui, "Cena", cena, cenas);
                 ui.add_space(4.0);
+                ui.separator();
+                ui.add_space(2.0);
+                // Botão add com ícone
                 ui.vertical_centered(|ui| {
-                    if ui.button("＋ Adicionar Layer").clicked() {
+                    let btn = ui.add(
+                        Image::new(eframe::egui::include_image!("../ui/icons/add.svg"))
+                            .fit_to_exact_size(Vec2::splat(16.0))
+                            .tint(Color32::from_rgb(150, 220, 150)),
+                    ).on_hover_text("Adicionar Layer");
+                    if btn.clicked() {
                         acao = AcaoInspector::CriarLayerEntry;
                     }
                 });
+                ui.add_space(4.0);
+                // Lista de layers
+                let mut acao_remover: Option<usize> = None;
+                let mut acao_subir: Option<usize> = None;
+                let mut acao_descer: Option<usize> = None;
+                let count = layers.len();
+                for i in 0..count {
+                    let is_selected = *selected == i;
+                    ui.horizontal(|ui| {
+                        // Bolinha de cor
+                        let (rect, _) = ui.allocate_exact_size(Vec2::new(14.0, 14.0), Sense::hover());
+                        let cor = layers[i].cor;
+                        let alpha = if layers[i].visivel { 255 } else { 80 };
+                        ui.painter().circle_filled(rect.center(), 5.0, cor.gamma_multiply(alpha as f32 / 255.0));
+                        if !layers[i].visivel {
+                            ui.painter().circle_stroke(rect.center(), 5.0, Stroke::new(1.0, Color32::from_rgb(80, 80, 90)));
+                        }
+                        // Toggle view
+                        let vis_label = if layers[i].visivel { "◉" } else { "◎" };
+                        let vis_btn = ui.small_button(vis_label).on_hover_text(
+                            if layers[i].visivel { "Ocultar layer" } else { "Mostrar layer" }
+                        );
+                        if vis_btn.clicked() {
+                            layers[i].visivel = !layers[i].visivel;
+                        }
+                        // Nome editável (clique seleciona, duplo clique renomeia inline)
+                        let nome_txt = if is_selected {
+                            egui::RichText::new(&layers[i].nome).strong().color(Color32::from_rgb(220, 220, 240))
+                        } else {
+                            egui::RichText::new(&layers[i].nome)
+                        };
+                        let resp = ui.add(egui::Label::new(nome_txt).sense(Sense::click()));
+                        if resp.double_clicked() {
+                            acao = AcaoInspector::SelecionarLayer(i);
+                        } else if resp.clicked() {
+                            acao = AcaoInspector::SelecionarLayer(i);
+                        }
+                        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                            // Delete
+                            let del_btn = ui.add(
+                                Image::new(eframe::egui::include_image!("../ui/icons/delete.svg"))
+                                    .fit_to_exact_size(Vec2::splat(12.0))
+                                    .tint(Color32::from_rgb(220, 120, 120)),
+                            ).on_hover_text("Remover layer");
+                            if del_btn.clicked() {
+                                acao_remover = Some(i);
+                            }
+                            // Seta baixo
+                            let down_btn = ui.add(
+                                Image::new(eframe::egui::include_image!("../ui/icons/arrow_down.svg"))
+                                    .fit_to_exact_size(Vec2::splat(12.0))
+                                    .tint(Color32::from_rgb(180, 180, 190)),
+                            ).on_hover_text("Mover para baixo");
+                            if down_btn.clicked() {
+                                acao_descer = Some(i);
+                            }
+                            // Seta cima
+                            let up_btn = ui.add(
+                                Image::new(eframe::egui::include_image!("../ui/icons/arrow_up.svg"))
+                                    .fit_to_exact_size(Vec2::splat(12.0))
+                                    .tint(Color32::from_rgb(180, 180, 190)),
+                            ).on_hover_text("Mover para cima");
+                            if up_btn.clicked() {
+                                acao_subir = Some(i);
+                            }
+                        });
+                    });
+                }
+                // Processar ações estruturais (fora do loop para evitar borrow issues)
+                if let Some(i) = acao_remover {
+                    acao = AcaoInspector::RemoverLayerEntry(i);
+                } else if let Some(i) = acao_subir {
+                    acao = AcaoInspector::SubirLayerEntry(i);
+                } else if let Some(i) = acao_descer {
+                    acao = AcaoInspector::DescerLayerEntry(i);
+                }
             }
         }
         TipoNo::Shape => {

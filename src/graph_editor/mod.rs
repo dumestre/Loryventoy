@@ -393,6 +393,8 @@ impl GraphPanel {
                     nome: format!("Layer {}", count + 1),
                     ordem: count as f32,
                     opacidade: 1.0,
+                    cor: LayerEntry::cor_por_idx(count),
+                    visivel: true,
                 });
             }
         } else {
@@ -408,6 +410,8 @@ impl GraphPanel {
                     nome: "Layer 1".to_string(),
                     ordem: 0.0,
                     opacidade: 1.0,
+                    cor: LayerEntry::cor_por_idx(0),
+                    visivel: true,
                 });
             }
             self.contador += 1;
@@ -931,6 +935,8 @@ impl GraphPanel {
                 }
             }
             node_component::AcaoInspector::Nenhuma => {}
+            node_component::AcaoInspector::ToggleVisivelLayer(_) => {}
+            node_component::AcaoInspector::RenomearLayerEntry(_) => {}
         }
 
         let p_canvas = p_screen.map(|p| {
