@@ -187,6 +187,16 @@ fn icon_button(ui: &mut Ui, image: Image<'_>, size: f32) -> Response {
     }).inner
 }
 
+fn hover_bg(ui: &Ui, resp: &Response, color: Color32) {
+    if resp.hovered() {
+        let r = resp.rect;
+        ui.painter().rect_filled(r.expand(1.0), 2.0, color);
+    }
+}
+
+const HOVER_VERDE: Color32 = Color32::from_rgba_premultiplied(16, 31, 19, 40);
+const HOVER_VERMELHO: Color32 = Color32::from_rgba_premultiplied(39, 16, 16, 50);
+
 /// Renderiza o cabeçalho do Layer (combo de cena + separador + botão add).
 /// Chamado pela primeira chamada de `output_ui`.
 pub fn render_layer_header(
@@ -205,10 +215,7 @@ pub fn render_layer_header(
             eframe::egui::include_image!("../ui/icons/add_clean.svg").into(),
             16.0,
         ).on_hover_text("Adicionar Layer");
-        if btn.hovered() {
-            let r = btn.rect;
-            ui.painter().rect_filled(r.expand(2.0), 3.0, Color32::from_rgba_premultiplied(100, 200, 120, 8));
-        }
+        hover_bg(ui, &btn, HOVER_VERDE);
         if btn.clicked() {
             acao = AcaoInspector::CriarLayerEntry;
         }
@@ -248,10 +255,7 @@ pub fn render_layer_row(
                 14.0,
             ).on_hover_text("Mostrar layer")
         };
-        if vis_btn.hovered() {
-            let r = vis_btn.rect;
-            ui.painter().rect_filled(r.expand(1.5), 3.0, Color32::from_rgba_premultiplied(100, 200, 120, 8));
-        }
+        hover_bg(ui, &vis_btn, HOVER_VERDE);
         if vis_btn.clicked() {
             layers[i].visivel = !layers[i].visivel;
         }
@@ -260,7 +264,13 @@ pub fn render_layer_row(
         } else {
             egui::RichText::new(&layers[i].nome)
         };
-        let resp = ui.add(egui::Label::new(nome_txt).sense(Sense::click()));
+        let resp = ui.scope(|ui| {
+            ui.visuals_mut().widgets.hovered.bg_fill = Color32::TRANSPARENT;
+            ui.visuals_mut().widgets.hovered.weak_bg_fill = Color32::TRANSPARENT;
+            ui.visuals_mut().widgets.active.bg_fill = Color32::TRANSPARENT;
+            ui.visuals_mut().widgets.active.weak_bg_fill = Color32::TRANSPARENT;
+            ui.add(egui::Label::new(nome_txt).sense(Sense::click()))
+        }).inner;
         if resp.clicked() {
             acao = AcaoInspector::SelecionarLayer(i);
         }
@@ -270,10 +280,7 @@ pub fn render_layer_row(
                 eframe::egui::include_image!("../ui/icons/delete_clean.svg").into(),
                 13.0,
             ).on_hover_text("Remover layer");
-            if del_btn.hovered() {
-                let r = del_btn.rect;
-                ui.painter().rect_filled(r.expand(1.5), 3.0, Color32::from_rgba_premultiplied(200, 80, 80, 8));
-            }
+            hover_bg(ui, &del_btn, HOVER_VERMELHO);
             if del_btn.clicked() {
                 acao = AcaoInspector::RemoverLayerEntry(i);
             }
@@ -282,10 +289,7 @@ pub fn render_layer_row(
                 eframe::egui::include_image!("../ui/icons/arrow_down_clean.svg").into(),
                 13.0,
             ).on_hover_text("Mover para trás");
-            if down_btn.hovered() {
-                let r = down_btn.rect;
-                ui.painter().rect_filled(r.expand(1.5), 3.0, Color32::from_rgba_premultiplied(100, 200, 120, 8));
-            }
+            hover_bg(ui, &down_btn, HOVER_VERDE);
             if down_btn.clicked() {
                 acao = AcaoInspector::SubirLayerEntry(i);
             }
@@ -294,10 +298,7 @@ pub fn render_layer_row(
                 eframe::egui::include_image!("../ui/icons/arrow_up_clean.svg").into(),
                 13.0,
             ).on_hover_text("Mover para frente");
-            if up_btn.hovered() {
-                let r = up_btn.rect;
-                ui.painter().rect_filled(r.expand(1.5), 3.0, Color32::from_rgba_premultiplied(100, 200, 120, 8));
-            }
+            hover_bg(ui, &up_btn, HOVER_VERDE);
             if up_btn.clicked() {
                 acao = AcaoInspector::DescerLayerEntry(i);
             }
