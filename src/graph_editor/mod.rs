@@ -814,7 +814,9 @@ impl GraphPanel {
             self.agrupar_selecionados();
         }
 
-        if ui.ctx().input(|i| i.key_pressed(Key::Delete) || i.key_pressed(Key::Backspace)) {
+        if self.renaming_layer.is_none()
+            && ui.ctx().input(|i| i.key_pressed(Key::Delete) || i.key_pressed(Key::Backspace))
+        {
             let sel: Vec<NodeId> = self.editor_state.selected_nodes.iter().cloned().collect();
             if !sel.is_empty() {
                 self.empurrar_historico();
