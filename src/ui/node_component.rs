@@ -264,19 +264,20 @@ pub fn show_content(
                     ).on_hover_text("Adicionar Layer");
                     if btn.hovered() {
                         let r = btn.rect;
-                        ui.painter().rect_filled(r.expand(3.0), 4.0, Color32::from_rgba_premultiplied(80, 180, 100, 40));
+                        ui.painter().rect_filled(r.expand(2.0), 3.0, Color32::from_rgba_premultiplied(100, 200, 120, 20));
                     }
                     if btn.clicked() {
                         acao = AcaoInspector::CriarLayerEntry;
                     }
                 });
                 ui.add_space(4.0);
-                // Lista de layers
+                // Lista de layers — ordem de baixo pra cima (última adicionada no topo)
                 let mut acao_remover: Option<usize> = None;
                 let mut acao_subir: Option<usize> = None;
                 let mut acao_descer: Option<usize> = None;
                 let count = layers.len();
-                for i in 0..count {
+                for rev_i in 0..count {
+                    let i = count - 1 - rev_i;
                     let is_selected = *selected == i;
                     ui.horizontal(|ui| {
                         // Bolinha de cor
@@ -303,7 +304,7 @@ pub fn show_content(
                         };
                         if vis_btn.hovered() {
                             let r = vis_btn.rect;
-                            ui.painter().rect_filled(r.expand(2.0), 4.0, Color32::from_rgba_premultiplied(80, 180, 100, 40));
+                            ui.painter().rect_filled(r.expand(1.5), 3.0, Color32::from_rgba_premultiplied(100, 200, 120, 20));
                         }
                         if vis_btn.clicked() {
                             layers[i].visivel = !layers[i].visivel;
@@ -327,47 +328,48 @@ pub fn show_content(
                             ).on_hover_text("Remover layer");
                             if del_btn.hovered() {
                                 let r = del_btn.rect;
-                                ui.painter().rect_filled(r.expand(2.0), 4.0, Color32::from_rgba_premultiplied(180, 60, 60, 40));
+                                ui.painter().rect_filled(r.expand(1.5), 3.0, Color32::from_rgba_premultiplied(200, 80, 80, 20));
                             }
                             if del_btn.clicked() {
                                 acao_remover = Some(i);
                             }
-                            // Seta baixo
-                            let down_btn = ui.add(
-                                Image::new(eframe::egui::include_image!("../ui/icons/arrow_down_clean.svg"))
-                                    .fit_to_exact_size(Vec2::splat(13.0))
-                                    .sense(Sense::click()),
-                            ).on_hover_text("Mover para baixo");
-                            if down_btn.hovered() {
-                                let r = down_btn.rect;
-                                ui.painter().rect_filled(r.expand(2.0), 4.0, Color32::from_rgba_premultiplied(80, 180, 100, 40));
-                            }
-                            if down_btn.clicked() {
-                                acao_descer = Some(i);
-                            }
-                            // Seta cima
+                            // Seta cima visual = mover p/ frente (índice +1)
                             let up_btn = ui.add(
                                 Image::new(eframe::egui::include_image!("../ui/icons/arrow_up_clean.svg"))
                                     .fit_to_exact_size(Vec2::splat(13.0))
                                     .sense(Sense::click()),
-                            ).on_hover_text("Mover para cima");
+                            ).on_hover_text("Mover para frente");
                             if up_btn.hovered() {
                                 let r = up_btn.rect;
-                                ui.painter().rect_filled(r.expand(2.0), 4.0, Color32::from_rgba_premultiplied(80, 180, 100, 40));
+                                ui.painter().rect_filled(r.expand(1.5), 3.0, Color32::from_rgba_premultiplied(100, 200, 120, 20));
                             }
                             if up_btn.clicked() {
                                 acao_subir = Some(i);
+                            }
+                            // Seta baixo visual = mover p/ trás (índice -1)
+                            let down_btn = ui.add(
+                                Image::new(eframe::egui::include_image!("../ui/icons/arrow_down_clean.svg"))
+                                    .fit_to_exact_size(Vec2::splat(13.0))
+                                    .sense(Sense::click()),
+                            ).on_hover_text("Mover para trás");
+                            if down_btn.hovered() {
+                                let r = down_btn.rect;
+                                ui.painter().rect_filled(r.expand(1.5), 3.0, Color32::from_rgba_premultiplied(100, 200, 120, 20));
+                            }
+                            if down_btn.clicked() {
+                                acao_descer = Some(i);
                             }
                         });
                     });
                 }
                 // Processar ações estruturais (fora do loop)
+                // Na ordem visual invertida: "cima" = aumentar índice, "baixo" = diminuir
                 if let Some(i) = acao_remover {
                     acao = AcaoInspector::RemoverLayerEntry(i);
                 } else if let Some(i) = acao_subir {
-                    acao = AcaoInspector::SubirLayerEntry(i);
-                } else if let Some(i) = acao_descer {
                     acao = AcaoInspector::DescerLayerEntry(i);
+                } else if let Some(i) = acao_descer {
+                    acao = AcaoInspector::SubirLayerEntry(i);
                 }
             }
         }
