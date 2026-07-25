@@ -262,18 +262,6 @@ pub fn render_layer_row(
             if del_btn.clicked() {
                 acao = AcaoInspector::RemoverLayerEntry(i);
             }
-            let up_btn = ui.add(
-                Image::new(eframe::egui::include_image!("../ui/icons/arrow_up_clean.svg"))
-                    .fit_to_exact_size(Vec2::splat(13.0))
-                    .sense(Sense::click()),
-            ).on_hover_text("Mover para frente");
-            if up_btn.hovered() {
-                let r = up_btn.rect;
-                ui.painter().rect_filled(r.expand(1.5), 3.0, Color32::from_rgba_premultiplied(100, 200, 120, 20));
-            }
-            if up_btn.clicked() {
-                acao = AcaoInspector::DescerLayerEntry(i);
-            }
             let down_btn = ui.add(
                 Image::new(eframe::egui::include_image!("../ui/icons/arrow_down_clean.svg"))
                     .fit_to_exact_size(Vec2::splat(13.0))
@@ -285,6 +273,18 @@ pub fn render_layer_row(
             }
             if down_btn.clicked() {
                 acao = AcaoInspector::SubirLayerEntry(i);
+            }
+            let up_btn = ui.add(
+                Image::new(eframe::egui::include_image!("../ui/icons/arrow_up_clean.svg"))
+                    .fit_to_exact_size(Vec2::splat(13.0))
+                    .sense(Sense::click()),
+            ).on_hover_text("Mover para frente");
+            if up_btn.hovered() {
+                let r = up_btn.rect;
+                ui.painter().rect_filled(r.expand(1.5), 3.0, Color32::from_rgba_premultiplied(100, 200, 120, 20));
+            }
+            if up_btn.clicked() {
+                acao = AcaoInspector::DescerLayerEntry(i);
             }
         });
     });

@@ -3,7 +3,7 @@
 use std::borrow::Cow;
 use std::collections::HashMap;
 
-use eframe::egui::{Color32, Vec2, Ui};
+use eframe::egui::{Align, Color32, Layout, Vec2, Ui};
 use egui_graph_edit::{
     DataTypeTrait, NodeDataTrait, NodeResponse, NodeTemplateIter,
     WidgetValueTrait, InputParamKind, NodeTemplateTrait, UserResponseTrait,
@@ -218,12 +218,14 @@ impl NodeDataTrait for GraphNode {
         let params = user_state.params.get_mut(&node_id);
         if let Some(NodeParams::Layer { layers, selected, .. }) = params {
             if let Some(idx) = layers.iter().position(|l| l.nome == param_name) {
-                let r = crate::ui::node_component::render_layer_row(
-                    ui, idx, layers, *selected,
-                );
-                if r != AcaoInspector::Nenhuma {
-                    user_state.acao_inspector = r;
-                }
+                ui.with_layout(Layout::left_to_right(Align::Min), |ui| {
+                    let r = crate::ui::node_component::render_layer_row(
+                        ui, idx, layers, *selected,
+                    );
+                    if r != AcaoInspector::Nenhuma {
+                        user_state.acao_inspector = r;
+                    }
+                });
             }
         }
         vec![]
