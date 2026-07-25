@@ -255,13 +255,17 @@ pub fn show_content(
                 ui.add_space(4.0);
                 ui.separator();
                 ui.add_space(2.0);
-                // Botão add com ícone
+                // Botão add — só o ícone, sem fundo
                 ui.vertical_centered(|ui| {
                     let btn = ui.add(
-                        Image::new(eframe::egui::include_image!("../ui/icons/add.svg"))
+                        Image::new(eframe::egui::include_image!("../ui/icons/add_clean.svg"))
                             .fit_to_exact_size(Vec2::splat(16.0))
-                            .tint(Color32::from_rgb(150, 220, 150)),
+                            .sense(Sense::click()),
                     ).on_hover_text("Adicionar Layer");
+                    if btn.hovered() {
+                        let r = btn.rect;
+                        ui.painter().rect_filled(r.expand(3.0), 4.0, Color32::from_rgba_premultiplied(80, 180, 100, 40));
+                    }
                     if btn.clicked() {
                         acao = AcaoInspector::CriarLayerEntry;
                     }
@@ -278,8 +282,8 @@ pub fn show_content(
                         // Bolinha de cor
                         let (rect, _) = ui.allocate_exact_size(Vec2::new(14.0, 14.0), Sense::hover());
                         let cor = layers[i].cor;
-                        let alpha = if layers[i].visivel { 255 } else { 80 };
-                        ui.painter().circle_filled(rect.center(), 5.0, cor.gamma_multiply(alpha as f32 / 255.0));
+                        let alpha = if layers[i].visivel { 1.0 } else { 0.35 };
+                        ui.painter().circle_filled(rect.center(), 5.0, cor.gamma_multiply(alpha));
                         if !layers[i].visivel {
                             ui.painter().circle_stroke(rect.center(), 5.0, Stroke::new(1.0, Color32::from_rgb(80, 80, 90)));
                         }
@@ -288,62 +292,76 @@ pub fn show_content(
                             ui.add(
                                 Image::new(eframe::egui::include_image!("../ui/icons/view_on.svg"))
                                     .fit_to_exact_size(Vec2::splat(14.0))
-                                    .tint(Color32::from_rgb(126, 203, 154)),
+                                    .sense(Sense::click()),
                             ).on_hover_text("Ocultar layer")
                         } else {
                             ui.add(
                                 Image::new(eframe::egui::include_image!("../ui/icons/view_off.svg"))
                                     .fit_to_exact_size(Vec2::splat(14.0))
-                                    .tint(Color32::from_rgb(102, 102, 128)),
+                                    .sense(Sense::click()),
                             ).on_hover_text("Mostrar layer")
                         };
+                        if vis_btn.hovered() {
+                            let r = vis_btn.rect;
+                            ui.painter().rect_filled(r.expand(2.0), 4.0, Color32::from_rgba_premultiplied(80, 180, 100, 40));
+                        }
                         if vis_btn.clicked() {
                             layers[i].visivel = !layers[i].visivel;
                         }
-                        // Nome editável (clique seleciona, duplo clique renomeia inline)
+                        // Nome
                         let nome_txt = if is_selected {
                             egui::RichText::new(&layers[i].nome).strong().color(Color32::from_rgb(220, 220, 240))
                         } else {
                             egui::RichText::new(&layers[i].nome)
                         };
                         let resp = ui.add(egui::Label::new(nome_txt).sense(Sense::click()));
-                        if resp.double_clicked() {
-                            acao = AcaoInspector::SelecionarLayer(i);
-                        } else if resp.clicked() {
+                        if resp.clicked() {
                             acao = AcaoInspector::SelecionarLayer(i);
                         }
                         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                             // Delete
                             let del_btn = ui.add(
-                                Image::new(eframe::egui::include_image!("../ui/icons/delete.svg"))
-                                    .fit_to_exact_size(Vec2::splat(12.0))
-                                    .tint(Color32::from_rgb(220, 120, 120)),
+                                Image::new(eframe::egui::include_image!("../ui/icons/delete_clean.svg"))
+                                    .fit_to_exact_size(Vec2::splat(13.0))
+                                    .sense(Sense::click()),
                             ).on_hover_text("Remover layer");
+                            if del_btn.hovered() {
+                                let r = del_btn.rect;
+                                ui.painter().rect_filled(r.expand(2.0), 4.0, Color32::from_rgba_premultiplied(180, 60, 60, 40));
+                            }
                             if del_btn.clicked() {
                                 acao_remover = Some(i);
                             }
                             // Seta baixo
                             let down_btn = ui.add(
-                                Image::new(eframe::egui::include_image!("../ui/icons/arrow_down.svg"))
-                                    .fit_to_exact_size(Vec2::splat(12.0))
-                                    .tint(Color32::from_rgb(180, 180, 190)),
+                                Image::new(eframe::egui::include_image!("../ui/icons/arrow_down_clean.svg"))
+                                    .fit_to_exact_size(Vec2::splat(13.0))
+                                    .sense(Sense::click()),
                             ).on_hover_text("Mover para baixo");
+                            if down_btn.hovered() {
+                                let r = down_btn.rect;
+                                ui.painter().rect_filled(r.expand(2.0), 4.0, Color32::from_rgba_premultiplied(80, 180, 100, 40));
+                            }
                             if down_btn.clicked() {
                                 acao_descer = Some(i);
                             }
                             // Seta cima
                             let up_btn = ui.add(
-                                Image::new(eframe::egui::include_image!("../ui/icons/arrow_up.svg"))
-                                    .fit_to_exact_size(Vec2::splat(12.0))
-                                    .tint(Color32::from_rgb(180, 180, 190)),
+                                Image::new(eframe::egui::include_image!("../ui/icons/arrow_up_clean.svg"))
+                                    .fit_to_exact_size(Vec2::splat(13.0))
+                                    .sense(Sense::click()),
                             ).on_hover_text("Mover para cima");
+                            if up_btn.hovered() {
+                                let r = up_btn.rect;
+                                ui.painter().rect_filled(r.expand(2.0), 4.0, Color32::from_rgba_premultiplied(80, 180, 100, 40));
+                            }
                             if up_btn.clicked() {
                                 acao_subir = Some(i);
                             }
                         });
                     });
                 }
-                // Processar ações estruturais (fora do loop para evitar borrow issues)
+                // Processar ações estruturais (fora do loop)
                 if let Some(i) = acao_remover {
                     acao = AcaoInspector::RemoverLayerEntry(i);
                 } else if let Some(i) = acao_subir {
