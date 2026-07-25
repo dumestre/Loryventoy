@@ -2,7 +2,7 @@
 name = "Loryventoy"
 version = "0.1.0"
 edition = "2021"
-description = "Loryventoy - Ventoy GUI"
+description = "Editor de motion graphics procedural baseado em nós"
 license = "GPL-3.0"
 repository = "https://github.com/dumestre/Loryventoy"
 
@@ -13,9 +13,9 @@ path = "src/main.rs"
 [package.metadata.bundle]
 name = "Loryventoy"
 icon = ["app.ico", "app.icns", "app.png"]
-category = "Utility"
-short-description = "GUI para Ventoy"
-long-description = "Interface gráfica para gerenciar Ventoy"
+category = "Graphics"
+short-description = "Editor de motion graphics node-based"
+long-description = "Editor de animação e motion design com paradigma node-based + timeline. Alternativa open-source a After Effects, Cavalry."
 license = "GPL-3.0"
 homepage = "https://github.com/dumestre/Loryventoy"
 
