@@ -264,13 +264,29 @@ pub fn render_layer_row(
             layers[i].visivel = !layers[i].visivel;
         }
         if is_renaming {
+            let mut renamed = false;
             let edit = ui.add(
                 egui::TextEdit::singleline(&mut layers[i].nome)
                     .desired_width(120.0)
-                    .font(TextStyle::Monospace),
+                    .font(TextStyle::Monospace)
+                    .lock_focus(true),
             );
+            if edit.has_focus() && !edit.lost_focus() {
+                ui.ctx().memory_mut(|m| m.request_focus(edit.id));
+            }
+            // Consome teclas para não propagar pro graph editor
+            if edit.has_focus() {
+                ui.input(|i| {
+                    if i.key_pressed(egui::Key::Escape) {
+                        renamed = true; // cancela renomeação
+                    }
+                });
+            }
             if edit.lost_focus() || ui.input(|i| i.key_pressed(egui::Key::Enter)) {
                 finish_rename = true;
+            }
+            if renamed {
+                start_rename = true; // reverte para modo não-editando (cancela)
             }
         } else {
             let nome_txt = if is_selected {
