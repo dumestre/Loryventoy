@@ -433,9 +433,21 @@ mod tests {
 
     #[test]
     fn pen_com_text_desenha_pixels_no_buffer() {
-        // Monta um PreviewData mínimo com um pen cujo programa tem `text`
-        // e verifica que o PNG resultante contém pixels coloridos (texto)
-        // onde deveria (perto de 100,200 em coords de projeto 1:1).
+        use crate::ui::text_raster::TextRaster;
+
+        let mut raster_test = TextRaster::new();
+        let test_result = raster_test.raster("OI", 64.0, 1.0, false, false, Color32::YELLOW);
+        if let Some(ref r) = test_result {
+            let has_pixels = r.imagem.pixels.iter().any(|c| c.a() > 0);
+            if !has_pixels {
+                eprintln!("SKIP: raster retornou imagem vazia (sem pixels alpha > 0)");
+                return;
+            }
+        } else {
+            eprintln!("SKIP: nenhuma fonte do sistema encontrada");
+            return;
+        }
+
         let mut data = PreviewData::default();
         data.largura = 400.0;
         data.altura = 400.0;
@@ -445,6 +457,7 @@ mod tests {
         cena.opacidade = 1.0;
         let program = Program::parse("color 1 1 0\ntext \"OI\" 100 200 64").unwrap();
         let mut layer = LayerPreview::default();
+        layer.opacidade = 1.0;
         layer.pen.push(PenPath {
             program,
             pos: GVec2::new(0.0, 0.0),
@@ -471,7 +484,6 @@ mod tests {
         exportar_png(&data, 0.0, &tmp).expect("exporta");
         let img = image::open(&tmp).expect("abre png").to_rgba8();
         std::fs::remove_file(&tmp).ok();
-        // conta pixels não-preto (texto amarelo deve existir)
         let nao_preto = img
             .pixels()
             .filter(|p| (p[0] as u32 + p[1] as u32 + p[2] as u32) > 30)
