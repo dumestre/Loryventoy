@@ -18,12 +18,12 @@ pub enum AcaoInspector {
     Nenhuma,
     FocarCena(NodeId),
     CriarLayerEntry,
-    RemoverLayerEntry(usize),
-    SubirLayerEntry(usize),
-    DescerLayerEntry(usize),
-    SelecionarLayer(usize),
-    ToggleVisivelLayer(usize),
-    RenomearLayerEntry(usize),
+    RemoverLayerEntry(NodeId, usize),
+    SubirLayerEntry(NodeId, usize),
+    DescerLayerEntry(NodeId, usize),
+    SelecionarLayer(NodeId, usize),
+    ToggleVisivelLayer(NodeId, usize),
+    RenomearLayerEntry(NodeId, usize),
 }
 
 /// Margens internas do corpo do card e altura do cabeçalho, em unidades de
@@ -231,6 +231,7 @@ pub fn render_layer_row(
     i: usize,
     layers: &mut [LayerEntry],
     selected: usize,
+    node_id: NodeId,
 ) -> AcaoInspector {
     let mut acao = AcaoInspector::Nenhuma;
     let is_selected = selected == i;
@@ -272,7 +273,7 @@ pub fn render_layer_row(
             ui.add(egui::Label::new(nome_txt).sense(Sense::click()))
         }).inner;
         if resp.clicked() {
-            acao = AcaoInspector::SelecionarLayer(i);
+            acao = AcaoInspector::SelecionarLayer(node_id, i);
         }
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
             let del_btn = icon_button(
@@ -282,7 +283,7 @@ pub fn render_layer_row(
             ).on_hover_text("Remover layer");
             hover_bg(ui, &del_btn, HOVER_VERMELHO);
             if del_btn.clicked() {
-                acao = AcaoInspector::RemoverLayerEntry(i);
+                acao = AcaoInspector::RemoverLayerEntry(node_id, i);
             }
             let down_btn = icon_button(
                 ui,
@@ -291,7 +292,7 @@ pub fn render_layer_row(
             ).on_hover_text("Mover para trás");
             hover_bg(ui, &down_btn, HOVER_VERDE);
             if down_btn.clicked() {
-                acao = AcaoInspector::SubirLayerEntry(i);
+                acao = AcaoInspector::SubirLayerEntry(node_id, i);
             }
             let up_btn = icon_button(
                 ui,
@@ -300,7 +301,7 @@ pub fn render_layer_row(
             ).on_hover_text("Mover para frente");
             hover_bg(ui, &up_btn, HOVER_VERDE);
             if up_btn.clicked() {
-                acao = AcaoInspector::DescerLayerEntry(i);
+                acao = AcaoInspector::DescerLayerEntry(node_id, i);
             }
         });
     });
@@ -391,7 +392,7 @@ pub fn show_content(
                 let count = layers.len();
                 for rev_i in 0..count {
                     let i = count - 1 - rev_i;
-                    let r = render_layer_row(ui, i, layers, *selected);
+                    let r = render_layer_row(ui, i, layers, *selected, NodeId::default());
                     if r != AcaoInspector::Nenhuma && acao == AcaoInspector::Nenhuma { acao = r; }
                 }
             }

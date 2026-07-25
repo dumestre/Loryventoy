@@ -328,8 +328,8 @@ impl GraphPanel {
             let current_outputs: Vec<(String, egui_graph_edit::OutputId)> =
                 self.editor_state.graph[nid].outputs.clone();
 
-            // Build desired port names
-            let desired: Vec<String> = entries.iter().enumerate()
+            // Build desired port names (reversed so bottom = oldest)
+            let mut desired: Vec<String> = entries.iter().enumerate()
                 .map(|(i, (nome, _))| {
                     if nome.is_empty() {
                         format!("Layer {}", i + 1)
@@ -338,6 +338,7 @@ impl GraphPanel {
                     }
                 })
                 .collect();
+            desired.reverse();
 
             // Remove ports that are no longer needed
             let to_remove: Vec<egui_graph_edit::OutputId> = current_outputs.iter()
@@ -912,31 +913,23 @@ impl GraphPanel {
             node_component::AcaoInspector::CriarLayerEntry => {
                 self.criar_layer_para_cena_atual();
             }
-            node_component::AcaoInspector::RemoverLayerEntry(entry_idx) => {
-                if let Some(&idx) = self.editor_state.selected_nodes.first() {
-                    self.remover_layer_entry(idx, entry_idx);
-                }
+            node_component::AcaoInspector::RemoverLayerEntry(nid, entry_idx) => {
+                self.remover_layer_entry(nid, entry_idx);
             }
-            node_component::AcaoInspector::SubirLayerEntry(entry_idx) => {
-                if let Some(&idx) = self.editor_state.selected_nodes.first() {
-                    self.mover_layer_entry(idx, entry_idx, -1);
-                }
+            node_component::AcaoInspector::SubirLayerEntry(nid, entry_idx) => {
+                self.mover_layer_entry(nid, entry_idx, -1);
             }
-            node_component::AcaoInspector::DescerLayerEntry(entry_idx) => {
-                if let Some(&idx) = self.editor_state.selected_nodes.first() {
-                    self.mover_layer_entry(idx, entry_idx, 1);
-                }
+            node_component::AcaoInspector::DescerLayerEntry(nid, entry_idx) => {
+                self.mover_layer_entry(nid, entry_idx, 1);
             }
-            node_component::AcaoInspector::SelecionarLayer(entry_idx) => {
-                if let Some(&idx) = self.editor_state.selected_nodes.first() {
-                    if let Some(NodeParams::Layer { selected, .. }) = self.params.get_mut(&idx) {
-                        *selected = entry_idx;
-                    }
+            node_component::AcaoInspector::SelecionarLayer(nid, entry_idx) => {
+                if let Some(NodeParams::Layer { selected, .. }) = self.params.get_mut(&nid) {
+                    *selected = entry_idx;
                 }
             }
             node_component::AcaoInspector::Nenhuma => {}
-            node_component::AcaoInspector::ToggleVisivelLayer(_) => {}
-            node_component::AcaoInspector::RenomearLayerEntry(_) => {}
+            node_component::AcaoInspector::ToggleVisivelLayer(_, _) => {}
+            node_component::AcaoInspector::RenomearLayerEntry(_, _) => {}
         }
 
         let p_canvas = p_screen.map(|p| {

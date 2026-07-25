@@ -222,7 +222,7 @@ impl NodeDataTrait for GraphNode {
             if let Some(idx) = layers.iter().position(|l| l.nome == param_name) {
                 ui.with_layout(Layout::left_to_right(Align::Min), |ui| {
                     let r = crate::ui::node_component::render_layer_row(
-                        ui, idx, layers, *selected,
+                        ui, idx, layers, *selected, node_id,
                     );
                     if r != AcaoInspector::Nenhuma {
                         user_state.acao_inspector = r;
