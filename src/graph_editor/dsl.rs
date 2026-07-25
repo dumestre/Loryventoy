@@ -6,7 +6,7 @@ use eframe::egui::Pos2;
 
 use crate::dsl::project_dsl::{self, Expr, NodeDef, ProjectBlock, ScriptError};
 use crate::dsl::patch_dsl::{self, PatchCmd};
-use crate::nodes::{NodeParams, TipoNo};
+use crate::nodes::{NodeParams, TipoNo, portos};
 
 use super::types::NodeId;
 use super::GraphPanel;
@@ -401,6 +401,8 @@ impl GraphPanel {
             }
         }
 
+        self.sync_layer_ports();
+
         for tl in &prog {
             if let TopLevel::Edge(e) = tl {
                 let src = *ids.get(&e.de).ok_or_else(|| {
@@ -417,21 +419,32 @@ impl GraphPanel {
                 })?;
                 let src_tipo = self.obter_tipo(src);
                 let dst_tipo = self.obter_tipo(dst);
-                let saida_i =
-                    indice_porto(src_tipo, &e.saida, true).ok_or_else(|| {
-                        ScriptError::Apply(format!(
-                            "porta de saída '{}' inválida em '{}'",
-                            e.saida, e.de
-                        ))
-                    })?;
-                let entrada_i =
-                    indice_porto(dst_tipo, &e.entrada, false).ok_or_else(|| {
-                        ScriptError::Apply(format!(
-                            "porta de entrada '{}' inválida em '{}'",
-                            e.entrada, e.para
-                        ))
-                    })?;
-                self.conectar_por_idx(src, saida_i, dst, entrada_i);
+                if src_tipo == TipoNo::Layer {
+                    let entrada_i =
+                        indice_porto(dst_tipo, &e.entrada, false).ok_or_else(|| {
+                            ScriptError::Apply(format!(
+                                "porta de entrada '{}' inválida em '{}'",
+                                e.entrada, e.para
+                            ))
+                        })?;
+                    self.conectar_por_nome(src, &e.saida, dst, &portos(dst_tipo).entradas[entrada_i].nome);
+                } else {
+                    let saida_i =
+                        indice_porto(src_tipo, &e.saida, true).ok_or_else(|| {
+                            ScriptError::Apply(format!(
+                                "porta de saída '{}' inválida em '{}'",
+                                e.saida, e.de
+                            ))
+                        })?;
+                    let entrada_i =
+                        indice_porto(dst_tipo, &e.entrada, false).ok_or_else(|| {
+                            ScriptError::Apply(format!(
+                                "porta de entrada '{}' inválida em '{}'",
+                                e.entrada, e.para
+                            ))
+                        })?;
+                    self.conectar_por_idx(src, saida_i, dst, entrada_i);
+                }
             }
         }
 
@@ -546,14 +559,68 @@ impl GraphPanel {
                     self.limpar_grupos();
                 }
                 PatchCmd::Connect(c) => {
-                    let (src, dst, saida_i, entrada_i) =
-                        self.resolver_conexao(&c)?;
-                    self.conectar_por_idx(src, saida_i, dst, entrada_i);
+                    let src = *self.dsl_ids.get(&c.de).ok_or_else(|| {
+                        ScriptError::Apply(format!("nó '{}' não existe", c.de))
+                    })?;
+                    let dst = *self.dsl_ids.get(&c.para).ok_or_else(|| {
+                        ScriptError::Apply(format!("nó '{}' não existe", c.para))
+                    })?;
+                    let src_tipo = self.obter_tipo(src);
+                    let dst_tipo = self.obter_tipo(dst);
+                    if src_tipo == TipoNo::Layer {
+                        let entrada_i =
+                            project_dsl::indice_porto(dst_tipo, &c.entrada, false)
+                                .ok_or_else(|| {
+                                    ScriptError::Apply(format!(
+                                        "porta de entrada '{}' inválida em '{}'",
+                                        c.entrada, c.para
+                                    ))
+                                })?;
+                        self.conectar_por_nome(src, &c.saida, dst, &portos(dst_tipo).entradas[entrada_i].nome);
+                    } else {
+                        let (src2, dst2, saida_i, entrada_i) =
+                            self.resolver_conexao(&c)?;
+                        self.conectar_por_idx(src2, saida_i, dst2, entrada_i);
+                    }
                 }
                 PatchCmd::Disconnect(c) => {
-                    let (src, dst, saida_i, entrada_i) =
-                        self.resolver_conexao(&c)?;
-                    self.remover_aresta_entre(src, saida_i, dst, entrada_i);
+                    let src = *self.dsl_ids.get(&c.de).ok_or_else(|| {
+                        ScriptError::Apply(format!("nó '{}' não existe", c.de))
+                    })?;
+                    let dst = *self.dsl_ids.get(&c.para).ok_or_else(|| {
+                        ScriptError::Apply(format!("nó '{}' não existe", c.para))
+                    })?;
+                    let src_tipo = self.obter_tipo(src);
+                    let dst_tipo = self.obter_tipo(dst);
+                    if src_tipo == TipoNo::Layer {
+                        let entrada_i =
+                            project_dsl::indice_porto(dst_tipo, &c.entrada, false)
+                                .ok_or_else(|| {
+                                    ScriptError::Apply(format!(
+                                        "porta de entrada '{}' inválida em '{}'",
+                                        c.entrada, c.para
+                                    ))
+                                })?;
+                        if let Some(out) = self.find_output(src, &c.saida) {
+                            let input_id = self.find_input(dst, &portos(dst_tipo).entradas[entrada_i].nome);
+                            if let Some(inp) = input_id {
+                                let mut alvo = None;
+                                for (input_conn, output_conn) in self.editor_state.graph.iter_connections() {
+                                    if input_conn == inp && output_conn == out {
+                                        alvo = Some(input_conn);
+                                        break;
+                                    }
+                                }
+                                if let Some(input_to_remove) = alvo {
+                                    self.editor_state.graph.remove_connection(input_to_remove);
+                                }
+                            }
+                        }
+                    } else {
+                        let (src2, dst2, saida_i, entrada_i) =
+                            self.resolver_conexao(&c)?;
+                        self.remover_aresta_entre(src2, saida_i, dst2, entrada_i);
+                    }
                 }
             }
         }

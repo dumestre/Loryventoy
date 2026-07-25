@@ -238,6 +238,7 @@ repeat 25 {
 project "Formas" { width 1280 height 720 fps 30 duration 6 background #202028 }
 
 scene s1 { name "Cena 1" opacity 1.0 }
+layer l1 { scene s1 name "Formas" }
 
 shape sh3 {
   scene s1
@@ -249,7 +250,8 @@ shape sh3 {
   speed 3
 }
 
-edge s1.out -> master.in
+edge l1.Formas -> sh3.Layer
+edge sh3.out -> master.in
 
 ---
 
@@ -264,6 +266,7 @@ project "Exemplo" {
 }
 
 scene s1 { name "Cena 1" opacity 1.0 }
+layer l1 { scene s1 name "Formas" }
 
 pen coracao_principal {
   scene s1
@@ -333,7 +336,12 @@ pen coracao_orbitando {
   }
 }
 
-edge s1.out -> master.in
+edge l1.Formas -> coracao_principal.Layer
+edge l1.Formas -> particulas.Layer
+edge l1.Formas -> coracao_orbitando.Layer
+edge coracao_principal.out -> master.in
+edge particulas.out -> master.in
+edge coracao_orbitando.out -> master.in
 ---
 
 # Caminho com Point / LineTo / CurveTo
@@ -346,6 +354,7 @@ project "Caminho Limpo" {
 }
 
 scene s1 { name "Cena 1" opacity 1.0 }
+layer l1 { scene s1 name "Formas" }
 
 pen traco {
   scene s1
@@ -363,7 +372,8 @@ pen traco {
   }
 }
 
-edge s1.out -> master.in
+edge l1.Formas -> traco.Layer
+edge traco.out -> master.in
 ---
 
 # Espiral Mágica
@@ -373,6 +383,7 @@ project "Espiral Magica" {
 }
 
 scene s1 { name "Cena 1" opacity 1.0 }
+layer l1 { scene s1 name "Formas" }
 
 pen espiral {
   scene s1
@@ -390,7 +401,8 @@ pen espiral {
   }
 }
 
-edge s1.out -> master.in
+edge l1.Formas -> espiral.Layer
+edge espiral.out -> master.in
 ---
 
 # Título com Texto (nó Texto) e Animação
@@ -403,6 +415,7 @@ project "Titulo" {
 }
 
 scene s1 { name "Cena 1" opacity 1.0 }
+layer l1 { scene s1 name "Formas" }
 
 # Texto via nó Texto (estático, sem animação por DSL)
 text titulo {
@@ -424,7 +437,10 @@ pen subtitulo_anim {
   }
 }
 
-edge s1.out -> master.in
+edge l1.Formas -> titulo.Layer
+edge l1.Formas -> subtitulo_anim.Layer
+edge titulo.out -> master.in
+edge subtitulo_anim.out -> master.in
 ---
 
 # Texto Desenhado na Caneta (comando text)
@@ -437,6 +453,7 @@ project "Texto na Caneta" {
 }
 
 scene s1 { name "Cena 1" opacity 1.0 }
+layer l1 { scene s1 name "Formas" }
 
 pen rotulo {
   scene s1
@@ -450,7 +467,8 @@ pen rotulo {
   }
 }
 
-edge s1.out -> master.in
+edge l1.Formas -> rotulo.Layer
+edge rotulo.out -> master.in
 ---
 
 # Texto + Caneta na Mesma Cena
@@ -462,6 +480,7 @@ project "Texto + Pen" {
 }
 
 scene s1 { name "Cena 1" opacity 1.0 }
+layer l1 { scene s1 name "Formas" }
 
 text titulo {
   scene s1
@@ -488,7 +507,10 @@ pen decor {
   }
 }
 
-edge s1.out -> master.in
+edge l1.Formas -> titulo.Layer
+edge l1.Formas -> decor.Layer
+edge titulo.out -> master.in
+edge decor.out -> master.in
 ---
 
 # Primitivas de Forma na Caneta
@@ -500,6 +522,7 @@ project "Primitivas" {
 }
 
 scene s1 { name "Cena 1" opacity 1.0 }
+layer l1 { scene s1 name "Formas" }
 
 pen formas {
   scene s1
@@ -519,7 +542,8 @@ pen formas {
   }
 }
 
-edge s1.out -> master.in
+edge l1.Formas -> formas.Layer
+edge formas.out -> master.in
 ---
 
 # Texto Rico na Caneta
@@ -531,6 +555,7 @@ project "Texto Rico" {
 }
 
 scene s1 { name "Cena 1" opacity 1.0 }
+layer l1 { scene s1 name "Formas" }
 
 pen aviso {
   scene s1
@@ -545,7 +570,8 @@ pen aviso {
   }
 }
 
-edge s1.out -> master.in
+edge l1.Formas -> aviso.Layer
+edge aviso.out -> master.in
 ---
 
 # Random Determinístico na Caneta
@@ -558,6 +584,7 @@ project "Random" {
 }
 
 scene s1 { name "Cena 1" opacity 1.0 }
+layer l1 { scene s1 name "Formas" }
 
 pen confete {
   scene s1
@@ -573,7 +600,8 @@ pen confete {
   }
 }
 
-edge s1.out -> master.in
+edge l1.Formas -> confete.Layer
+edge confete.out -> master.in
 ---
 
 # Transformações: translate / rotate / scale
@@ -586,6 +614,7 @@ project "Transform" {
 }
 
 scene s1 { name "Cena 1" opacity 1.0 }
+layer l1 { scene s1 name "Formas" }
 
 pen anel {
   scene s1
@@ -603,7 +632,8 @@ pen anel {
   }
 }
 
-edge s1.out -> master.in
+edge l1.Formas -> anel.Layer
+edge anel.out -> master.in
 ---
 
 # push / pop (estado salvo)
@@ -616,6 +646,7 @@ project "PushPop" {
 }
 
 scene s1 { name "Cena 1" opacity 1.0 }
+layer l1 { scene s1 name "Formas" }
 
 pen blocos {
   scene s1
@@ -635,7 +666,8 @@ pen blocos {
   }
 }
 
-edge s1.out -> master.in
+edge l1.Formas -> blocos.Layer
+edge blocos.out -> master.in
 ---
 
 # Atribuição direta (sem let)
@@ -648,6 +680,7 @@ project "Atribuicao" {
 }
 
 scene s1 { name "Cena 1" opacity 1.0 }
+layer l1 { scene s1 name "Formas" }
 
 pen trilha {
   scene s1
@@ -666,7 +699,8 @@ pen trilha {
   }
 }
 
-edge s1.out -> master.in
+edge l1.Formas -> trilha.Layer
+edge trilha.out -> master.in
 ---
 
 # lerp e map (interpolação / reescala)
@@ -679,6 +713,7 @@ project "LerpMap" {
 }
 
 scene s1 { name "Cena 1" opacity 1.0 }
+layer l1 { scene s1 name "Formas" }
 
 pen barra {
   scene s1
@@ -701,7 +736,8 @@ pen barra {
   }
 }
 
-edge s1.out -> master.in
+edge l1.Formas -> barra.Layer
+edge barra.out -> master.in
 ---
 
 # snake (linha serpenteante)
@@ -713,6 +749,7 @@ project "Snake" {
 }
 
 scene s1 { name "Cena 1" opacity 1.0 }
+layer l1 { scene s1 name "Formas" }
 
 pen cobra {
   scene s1
@@ -725,7 +762,8 @@ pen cobra {
   }
 }
 
-edge s1.out -> master.in
+edge l1.Formas -> cobra.Layer
+edge cobra.out -> master.in
 ---
 
 # Animação: variáveis implícitas e easing
@@ -738,6 +776,7 @@ project "Anim" {
 }
 
 scene s1 { name "Cena 1" opacity 1.0 }
+layer l1 { scene s1 name "Formas" }
 
 pen pulse {
   scene s1
@@ -760,7 +799,8 @@ pen pulse {
   }
 }
 
-edge s1.out -> master.in
+edge l1.Formas -> pulse.Layer
+edge pulse.out -> master.in
 ---
 
 # Trim Paths (recorte de percurso)
@@ -778,6 +818,7 @@ project "Trim Effect" {
 }
 
 scene s1 { name "Cena 1" opacity 1.0 }
+layer l1 { scene s1 name "Formas" }
 
 # Estrela: mostra apenas a primeira metade (trim_end = 0.5)
 shape estrela {
@@ -855,7 +896,18 @@ text texto_trim {
   trim_end 0.6
 }
 
-edge s1.out -> master.in
+edge l1.Formas -> estrela.Layer
+edge l1.Formas -> triangulo.Layer
+edge l1.Formas -> retangulo.Layer
+edge l1.Formas -> circulo_trim.Layer
+edge l1.Formas -> espiral_trim.Layer
+edge l1.Formas -> texto_trim.Layer
+edge estrela.out -> master.in
+edge triangulo.out -> master.in
+edge retangulo.out -> master.in
+edge circulo_trim.out -> master.in
+edge espiral_trim.out -> master.in
+edge texto_trim.out -> master.in
 
 ---
 
@@ -868,6 +920,7 @@ project "Easing" {
 }
 
 scene s1 { name "Cena 1" opacity 1.0 }
+layer l1 { scene s1 name "Formas" }
 
 pen barras {
   scene s1
@@ -885,5 +938,6 @@ pen barras {
   }
 }
 
-edge s1.out -> master.in
+edge l1.Formas -> barras.Layer
+edge barras.out -> master.in
 ---

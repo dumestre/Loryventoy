@@ -539,11 +539,15 @@ pen p1 {
     }
 }
 
-layer l1 { scene s1 opacity 0.8 }
+layer l1 { scene s1 name "Formas" }
 
 # Conexões entre portos de nós
-edge s1.out -> master.in
-edge sh1.pos -> tx1.pos
+edge l1.Formas -> sh1.Layer
+edge l1.Formas -> tx1.Layer
+edge l1.Formas -> p1.Layer
+edge sh1.out -> master.in
+edge tx1.out -> master.in
+edge p1.out -> master.in
 `
 
 ## Comandos de alto nível

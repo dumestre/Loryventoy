@@ -9,6 +9,7 @@
 //! ```text
 //! project "Video" { width 1920 height 1080 fps 30 duration 10 background #1e1e26 }
 //! scene s1 { name "Cena 1" opacity 1.0 }
+//! layer l1 { scene s1 name "Formas" }
 //! shape sh1 { scene s1 type rect pos 960 540 size 300 200 color #eb9678 }
 //! pen p1 {
 //!   scene s1 pos 960 540 stroke 3 fill on
@@ -16,7 +17,10 @@
 //!     repeat 5 { let a = i*72 line (cos(a)*200) (sin(a)*200) } close fill on
 //!   }
 //! }
-//! edge s1.out -> master.in
+//! edge l1.Formas -> sh1.Layer
+//! edge l1.Formas -> p1.Layer
+//! edge sh1.out -> master.in
+//! edge p1.out -> master.in
 //! ```
 
 use eframe::egui::Color32;
@@ -540,6 +544,7 @@ mod tests {
     const SCRIPT: &str = "\
 project \"Demo\" { width 1920 height 1080 fps 30 duration 8 background #1e1e26 }
 scene s1 { name \"Cena 1\" opacity 1.0 }
+layer l1 { scene s1 name \"Formas\" }
 shape sh1 { scene s1 type star pos 960 540 size 300 300 color #eb9678 }
 pen p1 {
   scene s1 pos 960 540 stroke 3 fill on
@@ -547,7 +552,10 @@ pen p1 {
     repeat 5 { line (cos(i)*10) (sin(i)*10) }
   }
 }
-edge s1.out -> master.in
+edge l1.Formas -> sh1.Layer
+edge l1.Formas -> p1.Layer
+edge sh1.out -> master.in
+edge p1.out -> master.in
 ";
 
     #[test]
@@ -598,8 +606,8 @@ pen p1 {
             }
         }
         assert_eq!(projetos, 1);
-        assert_eq!(nos, 3);
-        assert_eq!(edges, 1);
+        assert_eq!(nos, 4);
+        assert_eq!(edges, 4);
     }
 
     #[test]

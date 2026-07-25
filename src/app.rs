@@ -836,6 +836,7 @@ project \"Exemplo\" {
 }
 
 scene s1 { name \"Cena 1\" opacity 1.0 }
+layer l1 { scene s1 name \"Formas\" }
 
 pen coracao_principal {
   scene s1
@@ -905,7 +906,12 @@ pen coracao_orbitando {
   }
 }
 
-edge s1.out -> master.in
+edge l1.Formas -> coracao_principal.Layer
+edge l1.Formas -> particulas.Layer
+edge l1.Formas -> coracao_orbitando.Layer
+edge coracao_principal.out -> master.in
+edge particulas.out -> master.in
+edge coracao_orbitando.out -> master.in
 ";
 
 /// Um exemplo, exibido na aba "Exemplos" da janela de Script.
@@ -1041,6 +1047,7 @@ fn caneta_para_projeto(codigo_caneta: &str) -> String {
     let mut proj = String::new();
     proj.push_str("project \"Exemplo\" { width 1920 height 1080 fps 30 duration 8 background #1e1e26 }\n\n");
     proj.push_str("scene s1 { name \"Cena 1\" opacity 1.0 }\n\n");
+    proj.push_str("layer l1 { scene s1 name \"Formas\" }\n\n");
     proj.push_str("pen p1 {\n");
     proj.push_str("  scene s1\n");
     proj.push_str("  pos 960 540\n");
@@ -1054,7 +1061,8 @@ fn caneta_para_projeto(codigo_caneta: &str) -> String {
     }
     proj.push_str("  }\n");
     proj.push_str("}\n\n");
-    proj.push_str("edge s1.out -> master.in\n");
+    proj.push_str("edge l1.Formas -> p1.Layer\n");
+    proj.push_str("edge p1.out -> master.in\n");
     proj
 }
 
