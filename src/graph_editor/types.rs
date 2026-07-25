@@ -165,7 +165,9 @@ impl NodeDataTrait for GraphNode {
         let acao = crate::ui::node_component::show_content(
             ui, self.tipo, params, cenas, 0.0, 1.0,
         );
-        user_state.acao_inspector = acao;
+        if acao != AcaoInspector::Nenhuma {
+            user_state.acao_inspector = acao;
+        }
         vec![]
     }
 
