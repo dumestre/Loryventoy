@@ -99,13 +99,7 @@ impl HubPanel {
         let mut nomes: Vec<String> = Vec::new();
         for ent in entries.flatten() {
             let path = ent.path();
-            if path.extension().and_then(|e| e.to_str()) == Some("json")
-                && path
-                    .file_name()
-                    .and_then(|f| f.to_str())
-                    .map(|f| f.ends_with(".movimento.json"))
-                    .unwrap_or(false)
-            {
+            if path.extension().and_then(|e| e.to_str()) == Some("lory") {
                 if let Some(nome) = path.file_name().and_then(|f| f.to_str()) {
                     nomes.push(nome.to_string());
                 }
@@ -156,7 +150,7 @@ impl HubPanel {
     pub fn salvar_atual(&self, data: &ProjetoArquivo) -> Result<(), String> {
         match &self.current_project {
             Some(nome) => self.salvar(nome, data),
-            None => self.salvar("projeto.movimento.json", data),
+            None => self.salvar("projeto.lory", data),
         }
     }
 
@@ -223,7 +217,7 @@ impl HubPanel {
                         ui.horizontal(|ui| {
                             if ui.add(egui::Button::new(egui::RichText::new("Criar").color(egui::Color32::WHITE)).fill(egui::Color32::from_rgba_premultiplied(241, 60, 119, 200)).corner_radius(R6).min_size(egui::vec2(100.0, 32.0))).clicked() {
                                 let base = if self.nome_novo.trim().is_empty() { "projeto" } else { self.nome_novo.trim() };
-                                let nome = format!("{base}.movimento.json");
+                                let nome = format!("{base}.lory");
                                 if self.caminho(&nome).exists() {
                                     self.aviso = Some(format!("ja existe: {nome}"));
                                 } else {

@@ -233,7 +233,7 @@ impl MovimentoApp {
 
     /// Salva o projeto atual em arquivo JSON (caminho fixo na pasta do
     /// usuário). Sem dependência externa de diálogo: grava em
-    /// `<dir_usuario>/movimento/projeto.movimento.json`.
+    /// `<dir_usuario>/movimento/projeto.lory`.
     fn salvar_projeto(&mut self) {
         let (nos, arestas) = self.graph.snapshot();
         let arquivo = ProjetoArquivo::from_graph(&nos, &arestas, &self.script_text);
@@ -248,7 +248,7 @@ impl MovimentoApp {
         };
         let dir = std::env::current_dir()
             .unwrap_or_else(|_| std::path::PathBuf::from("."));
-        let caminho = dir.join("projeto.movimento.json");
+        let caminho = dir.join("projeto.lory");
         match std::fs::write(&caminho, json) {
             Ok(()) => {
                 let msg = format!("salvo em {}", caminho.display());
@@ -267,7 +267,7 @@ impl MovimentoApp {
     fn carregar_projeto(&mut self) {
         let dir = std::env::current_dir()
             .unwrap_or_else(|_| std::path::PathBuf::from("."));
-        let caminho = dir.join("projeto.movimento.json");
+        let caminho = dir.join("projeto.lory");
         let texto = match std::fs::read_to_string(&caminho) {
             Ok(t) => t,
             Err(e) => {
