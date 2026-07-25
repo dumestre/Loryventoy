@@ -62,6 +62,7 @@ pub struct GraphPanel {
     undo_stack: Vec<(Vec<save::SnapshotNo>, Vec<save::SnapshotAresta>)>,
     redo_stack: Vec<(Vec<save::SnapshotNo>, Vec<save::SnapshotAresta>)>,
     dsl_ids: HashMap<String, NodeId>,
+    renaming_layer: Option<(NodeId, usize)>,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -100,6 +101,7 @@ impl GraphPanel {
             undo_stack: Vec::new(),
             redo_stack: Vec::new(),
             dsl_ids: HashMap::new(),
+            renaming_layer: None,
         };
         panel.criar_nos_padrao();
         panel
@@ -325,9 +327,6 @@ impl GraphPanel {
                 _ => continue,
             };
 
-            let current_outputs: Vec<(String, egui_graph_edit::OutputId)> =
-                self.editor_state.graph[nid].outputs.clone();
-
             // Build desired port names (reversed so bottom = oldest)
             let mut desired: Vec<String> = entries.iter().enumerate()
                 .map(|(i, (nome, _))| {
@@ -340,26 +339,43 @@ impl GraphPanel {
                 .collect();
             desired.reverse();
 
-            // Remove ports that are no longer needed
-            let to_remove: Vec<egui_graph_edit::OutputId> = current_outputs.iter()
-                .filter(|(name, _)| !desired.contains(name))
-                .map(|(_, id)| *id)
-                .collect();
-            for oid in to_remove {
-                self.editor_state.graph.remove_output_param(oid);
-            }
-
-            // Add ports that are missing
-            let current_names: Vec<String> = self.editor_state.graph[nid].outputs.iter()
+            // Save current order for comparison
+            let current_order: Vec<String> = self.editor_state.graph[nid].outputs.iter()
                 .map(|(name, _)| name.clone())
                 .collect();
+
+            if current_order == desired {
+                continue;
+            }
+
+            // Save connections: output_name -> list of InputIds connected to it
+            let current_outputs: Vec<(String, egui_graph_edit::OutputId)> =
+                self.editor_state.graph[nid].outputs.clone();
+            let mut saved_connections: HashMap<String, Vec<egui_graph_edit::InputId>> = HashMap::new();
+            for (input_id, &output_id) in self.editor_state.graph.connections.iter() {
+                if self.editor_state.graph.outputs[output_id].node == nid {
+                    if let Some((name, _)) = current_outputs.iter().find(|(_, id)| *id == output_id) {
+                        saved_connections.entry(name.clone()).or_default().push(input_id);
+                    }
+                }
+            }
+
+            // Remove ALL output ports (this also removes their connections)
+            for (_, oid) in &current_outputs {
+                self.editor_state.graph.remove_output_param(*oid);
+            }
+
+            // Re-add in desired order and reconnect
             for name in &desired {
-                if !current_names.contains(name) {
-                    self.editor_state.graph.add_output_param(
-                        nid,
-                        name.clone(),
-                        types::GraphDataType::Scalar,
-                    );
+                let new_oid = self.editor_state.graph.add_output_param(
+                    nid,
+                    name.clone(),
+                    types::GraphDataType::Scalar,
+                );
+                if let Some(inputs) = saved_connections.get(name) {
+                    for &input_id in inputs {
+                        self.editor_state.graph.add_connection(new_oid, input_id);
+                    }
                 }
             }
         }
@@ -384,15 +400,15 @@ impl GraphPanel {
         });
 
         if let Some(layer_nid) = existing {
-            // Add new entry to existing Layer node
+            // Add new entry to existing Layer node (at the top)
             let count = match self.params.get(&layer_nid) {
                 Some(NodeParams::Layer { layers, .. }) => layers.len(),
                 _ => 0,
             };
             if let Some(NodeParams::Layer { layers, .. }) = self.params.get_mut(&layer_nid) {
-                layers.push(LayerEntry {
+                layers.insert(0, LayerEntry {
                     nome: format!("Layer {}", count + 1),
-                    ordem: count as f32,
+                    ordem: 0.0,
                     opacidade: 1.0,
                     cor: LayerEntry::cor_por_idx(count),
                     visivel: true,
@@ -407,7 +423,7 @@ impl GraphPanel {
             let idx = self.adicionar_no_em(TipoNo::Layer, loc);
             if let Some(NodeParams::Layer { cena, layers, .. }) = self.params.get_mut(&idx) {
                 *cena = cena_nome;
-                layers.push(LayerEntry {
+                layers.insert(0, LayerEntry {
                     nome: "Layer 1".to_string(),
                     ordem: 0.0,
                     opacidade: 1.0,
@@ -714,6 +730,7 @@ impl GraphPanel {
             params: self.params.clone(),
             cenas: self.cenas_disponiveis_com_indice(),
             acao_inspector: crate::ui::node_component::AcaoInspector::Nenhuma,
+            renaming_layer: self.renaming_layer,
         };
 
         let responses = self.editor_state.draw_graph_editor(

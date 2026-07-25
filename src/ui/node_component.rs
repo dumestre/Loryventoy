@@ -232,8 +232,11 @@ pub fn render_layer_row(
     layers: &mut [LayerEntry],
     selected: usize,
     node_id: NodeId,
-) -> AcaoInspector {
+    is_renaming: bool,
+) -> (AcaoInspector, bool) {
     let mut acao = AcaoInspector::Nenhuma;
+    let mut start_rename = false;
+    let mut finish_rename = false;
     let is_selected = selected == i;
     ui.horizontal(|ui| {
         let (rect, _) = ui.allocate_exact_size(Vec2::new(14.0, 14.0), Sense::hover());
@@ -260,20 +263,33 @@ pub fn render_layer_row(
         if vis_btn.clicked() {
             layers[i].visivel = !layers[i].visivel;
         }
-        let nome_txt = if is_selected {
-            egui::RichText::new(&layers[i].nome).strong().color(Color32::from_rgb(220, 220, 240))
+        if is_renaming {
+            let edit = ui.add(
+                egui::TextEdit::singleline(&mut layers[i].nome)
+                    .desired_width(120.0)
+                    .font(TextStyle::Monospace),
+            );
+            if edit.lost_focus() || ui.input(|i| i.key_pressed(egui::Key::Enter)) {
+                finish_rename = true;
+            }
         } else {
-            egui::RichText::new(&layers[i].nome)
-        };
-        let resp = ui.scope(|ui| {
-            ui.visuals_mut().widgets.hovered.bg_fill = Color32::TRANSPARENT;
-            ui.visuals_mut().widgets.hovered.weak_bg_fill = Color32::TRANSPARENT;
-            ui.visuals_mut().widgets.active.bg_fill = Color32::TRANSPARENT;
-            ui.visuals_mut().widgets.active.weak_bg_fill = Color32::TRANSPARENT;
-            ui.add(egui::Label::new(nome_txt).sense(Sense::click()))
-        }).inner;
-        if resp.clicked() {
-            acao = AcaoInspector::SelecionarLayer(node_id, i);
+            let nome_txt = if is_selected {
+                egui::RichText::new(&layers[i].nome).strong().color(Color32::from_rgb(220, 220, 240))
+            } else {
+                egui::RichText::new(&layers[i].nome)
+            };
+            let resp = ui.scope(|ui| {
+                ui.visuals_mut().widgets.hovered.bg_fill = Color32::TRANSPARENT;
+                ui.visuals_mut().widgets.hovered.weak_bg_fill = Color32::TRANSPARENT;
+                ui.visuals_mut().widgets.active.bg_fill = Color32::TRANSPARENT;
+                ui.visuals_mut().widgets.active.weak_bg_fill = Color32::TRANSPARENT;
+                ui.add(egui::Label::new(nome_txt).sense(Sense::click()))
+            }).inner;
+            if resp.double_clicked() {
+                start_rename = true;
+            } else if resp.clicked() {
+                acao = AcaoInspector::SelecionarLayer(node_id, i);
+            }
         }
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
             let del_btn = icon_button(
@@ -305,10 +321,8 @@ pub fn render_layer_row(
             }
         });
     });
-    acao
+    (acao, start_rename || finish_rename)
 }
-
-/// Desenha os parâmetros editáveis do nó DENTRO do corpo do cartão
 /// (abaixo do cabeçalho, onde fica o nome), em layout de inspector:
 /// rótulos alinhados em coluna à esquerda e campos à direita.
 /// `cenas` é a lista de (nome, NodeId) de cena (para o combobox de Layers/Shape e listagem no Cena).
@@ -392,7 +406,7 @@ pub fn show_content(
                 let count = layers.len();
                 for rev_i in 0..count {
                     let i = count - 1 - rev_i;
-                    let r = render_layer_row(ui, i, layers, *selected, NodeId::default());
+                    let (r, _) = render_layer_row(ui, i, layers, *selected, NodeId::default(), false);
                     if r != AcaoInspector::Nenhuma && acao == AcaoInspector::Nenhuma { acao = r; }
                 }
             }

@@ -18,6 +18,7 @@ pub struct UserState {
     pub params: HashMap<NodeId, NodeParams>,
     pub cenas: Vec<(String, NodeId)>,
     pub acao_inspector: AcaoInspector,
+    pub renaming_layer: Option<(NodeId, usize)>,
 }
 
 #[derive(Clone)]
@@ -217,15 +218,30 @@ impl NodeDataTrait for GraphNode {
             return vec![];
         }
 
+        let is_renaming = user_state.renaming_layer == Some((node_id,
+            user_state.params.get(&node_id)
+                .and_then(|p| if let NodeParams::Layer { layers, .. } = p {
+                    layers.iter().position(|l| l.nome == param_name)
+                } else { None })
+                .unwrap_or(0),
+        ));
+
         let params = user_state.params.get_mut(&node_id);
         if let Some(NodeParams::Layer { layers, selected, .. }) = params {
             if let Some(idx) = layers.iter().position(|l| l.nome == param_name) {
                 ui.with_layout(Layout::left_to_right(Align::Min), |ui| {
-                    let r = crate::ui::node_component::render_layer_row(
-                        ui, idx, layers, *selected, node_id,
+                    let (r, rename_changed) = crate::ui::node_component::render_layer_row(
+                        ui, idx, layers, *selected, node_id, is_renaming,
                     );
                     if r != AcaoInspector::Nenhuma {
                         user_state.acao_inspector = r;
+                    }
+                    if rename_changed {
+                        if is_renaming {
+                            user_state.renaming_layer = None;
+                        } else {
+                            user_state.renaming_layer = Some((node_id, idx));
+                        }
                     }
                 });
             }
