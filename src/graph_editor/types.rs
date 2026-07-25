@@ -164,7 +164,7 @@ impl NodeDataTrait for GraphNode {
         let params = user_state.params.get_mut(&node_id);
         let cenas = &user_state.cenas;
         let acao = crate::ui::node_component::show_content(
-            ui, self.tipo, params, cenas, 0.0, 1.0,
+            ui, self.tipo, params, cenas, node_id, 0.0, 1.0,
         );
         if acao != AcaoInspector::Nenhuma {
             user_state.acao_inspector = acao;

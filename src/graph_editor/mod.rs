@@ -412,6 +412,7 @@ impl GraphPanel {
                     opacidade: 1.0,
                     cor: LayerEntry::cor_por_idx(count),
                     visivel: true,
+                    renomeando: false,
                 });
             }
         } else {
@@ -429,6 +430,7 @@ impl GraphPanel {
                     opacidade: 1.0,
                     cor: LayerEntry::cor_por_idx(0),
                     visivel: true,
+                    renomeando: false,
                 });
             }
             self.contador += 1;
@@ -946,7 +948,13 @@ impl GraphPanel {
             }
             node_component::AcaoInspector::Nenhuma => {}
             node_component::AcaoInspector::ToggleVisivelLayer(_, _) => {}
-            node_component::AcaoInspector::RenomearLayerEntry(_, _) => {}
+            node_component::AcaoInspector::RenomearLayerEntry(nid, entry_idx) => {
+                if let Some(NodeParams::Layer { layers, .. }) = self.params.get_mut(&nid) {
+                    if let Some(_layer) = layers.get_mut(entry_idx) {
+                        self.sync_layer_ports();
+                    }
+                }
+            }
         }
 
         let p_canvas = p_screen.map(|p| {

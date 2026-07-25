@@ -292,6 +292,7 @@ pub struct LayerEntry {
     pub opacidade: f32,
     pub cor: Color32,
     pub visivel: bool,
+    pub renomeando: bool,
 }
 
 impl LayerEntry {

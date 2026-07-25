@@ -236,6 +236,7 @@ impl TryFrom<NodeParamsJson> for NodeParams {
                             .map(|c| Color32::from_rgba_unmultiplied(c[0], c[1], c[2], c[3]))
                             .unwrap_or_else(|| LayerEntry::cor_por_idx(i)),
                         visivel: l.visivel,
+                        renomeando: false,
                     }).collect(),
                     selected,
                 }
