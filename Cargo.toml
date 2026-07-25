@@ -2,7 +2,22 @@
 name = "Loryventoy"
 version = "0.1.0"
 edition = "2021"
-icon = "app.ico"
+description = "Loryventoy - Ventoy GUI"
+license = "GPL-3.0"
+repository = "https://github.com/seu-usuario/Loryventoy"
+
+[[bin]]
+name = "Loryventoy"
+path = "src/main.rs"
+
+[package.metadata.bundle]
+name = "Loryventoy"
+icon = ["app.ico", "app.icns", "app.png"]
+category = "Utility"
+short-description = "GUI para Ventoy"
+long-description = "Interface gráfica para gerenciar Ventoy"
+license = "GPL-3.0"
+homepage = "https://github.com/seu-usuario/Loryventoy"
 
 [dependencies]
 eframe = "0.35"
@@ -18,4 +33,12 @@ cosmic-text = "0.12"
 image = "0.25"
 lyon = "1.0.19"
 egui-graph-edit = { path = "egui-graph-edit/egui-graph-edit" }
+
+[build-dependencies]
+winres = { version = "0.1", optional = true }
+image = { version = "0.25", optional = true }
+
+[target.'cfg(target_os = "windows")'.build-dependencies]
+winres = "0.1"
+image = "0.25"
 
