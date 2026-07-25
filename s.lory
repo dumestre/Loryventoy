@@ -26,7 +26,7 @@
       "pos_y": 0.0,
       "params": {
         "kind": "cena",
-        "nome_cena": "Cena 1",
+        "nome_cena": "intro",
         "ativa": true,
         "zoom": 1.0,
         "angulo": 0.0,
@@ -67,16 +67,31 @@
         ],
         "selected": 0
       }
+    },
+    {
+      "tipo": "Layers",
+      "pos_x": 300.0,
+      "pos_y": 40.0,
+      "params": {
+        "kind": "layer",
+        "cena": "intro",
+        "layers": [
+          {
+            "nome": "Layer 1",
+            "ordem": 0.0,
+            "opacidade": 1.0,
+            "cor": [
+              90,
+              170,
+              235,
+              255
+            ],
+            "visivel": true
+          }
+        ],
+        "selected": 0
+      }
     }
   ],
-  "arestas": [
-    {
-      "de": 1,
-      "para": 2,
-      "saida": 0,
-      "saida_comp": null,
-      "entrada": 0,
-      "entrada_comp": null
-    }
-  ]
+  "arestas": []
 }
