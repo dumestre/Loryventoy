@@ -3,8 +3,6 @@
 use std::borrow::Cow;
 use std::collections::HashMap;
 
-use std::cell::Cell;
-
 use eframe::egui::{Color32, Vec2, Ui};
 use egui_graph_edit::{
     DataTypeTrait, NodeDataTrait, NodeResponse, NodeTemplateIter,
@@ -14,10 +12,6 @@ pub use egui_graph_edit::id_type::NodeId;
 
 use crate::nodes::{NodeParams, TipoNo, portos};
 use crate::ui::node_component::AcaoInspector;
-
-thread_local! {
-    static LAYER_HEADER_RENDERED: Cell<bool> = const { Cell::new(false) };
-}
 
 #[derive(Default)]
 pub struct UserState {
@@ -164,7 +158,6 @@ impl NodeDataTrait for GraphNode {
         user_state: &mut Self::UserState,
     ) -> Vec<NodeResponse<Self::Response, Self>> {
         if self.tipo == TipoNo::Layer {
-            LAYER_HEADER_RENDERED.with(|f| f.set(false));
             return vec![];
         }
         let params = user_state.params.get_mut(&node_id);
@@ -173,6 +166,27 @@ impl NodeDataTrait for GraphNode {
             ui, self.tipo, params, cenas, 0.0, 1.0,
         );
         user_state.acao_inspector = acao;
+        vec![]
+    }
+
+    fn content_before_outputs(
+        &self,
+        ui: &mut Ui,
+        node_id: NodeId,
+        _graph: &egui_graph_edit::Graph<Self, Self::DataType, Self::ValueType>,
+        user_state: &mut Self::UserState,
+    ) -> Vec<NodeResponse<Self::Response, Self>> {
+        if self.tipo != TipoNo::Layer {
+            return vec![];
+        }
+        let params = user_state.params.get_mut(&node_id);
+        let cenas = &user_state.cenas;
+        if let Some(NodeParams::Layer { cena, .. }) = params {
+            let acao = crate::ui::node_component::render_layer_header(ui, cena, cenas);
+            if acao != AcaoInspector::Nenhuma {
+                user_state.acao_inspector = acao;
+            }
+        }
         vec![]
     }
 
@@ -201,38 +215,16 @@ impl NodeDataTrait for GraphNode {
             return vec![];
         }
 
-        let mut acao = AcaoInspector::Nenhuma;
-
-        ui.vertical(|ui| {
-            let header_done = LAYER_HEADER_RENDERED.with(|f| {
-                let done = f.get();
-                if !done { f.set(true); }
-                done
-            });
-
-            if !header_done {
-                let params = user_state.params.get_mut(&node_id);
-                let cenas = &user_state.cenas;
-                if let Some(NodeParams::Layer { cena, .. }) = params {
-                    acao = crate::ui::node_component::render_layer_header(ui, cena, cenas);
+        let params = user_state.params.get_mut(&node_id);
+        if let Some(NodeParams::Layer { layers, selected, .. }) = params {
+            if let Some(idx) = layers.iter().position(|l| l.nome == param_name) {
+                let r = crate::ui::node_component::render_layer_row(
+                    ui, idx, layers, *selected,
+                );
+                if r != AcaoInspector::Nenhuma {
+                    user_state.acao_inspector = r;
                 }
             }
-
-            let params = user_state.params.get_mut(&node_id);
-            if let Some(NodeParams::Layer { layers, selected, .. }) = params {
-                if let Some(idx) = layers.iter().position(|l| l.nome == param_name) {
-                    let r = crate::ui::node_component::render_layer_row(
-                        ui, idx, layers, *selected,
-                    );
-                    if r != AcaoInspector::Nenhuma && acao == AcaoInspector::Nenhuma {
-                        acao = r;
-                    }
-                }
-            }
-        });
-
-        if acao != AcaoInspector::Nenhuma {
-            user_state.acao_inspector = acao;
         }
         vec![]
     }
