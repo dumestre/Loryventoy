@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 description = "Loryventoy - Ventoy GUI"
 license = "GPL-3.0"
-repository = "https://github.com/seu-usuario/Loryventoy"
+repository = "https://github.com/dumestre/Loryventoy"
 
 [[bin]]
 name = "Loryventoy"
@@ -17,7 +17,7 @@ category = "Utility"
 short-description = "GUI para Ventoy"
 long-description = "Interface gráfica para gerenciar Ventoy"
 license = "GPL-3.0"
-homepage = "https://github.com/seu-usuario/Loryventoy"
+homepage = "https://github.com/dumestre/Loryventoy"
 
 [dependencies]
 eframe = "0.35"
