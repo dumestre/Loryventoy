@@ -743,6 +743,7 @@ impl GraphPanel {
         );
 
         self.params = user_state.params;
+        self.renaming_layer = user_state.renaming_layer;
 
         // Sync dynamic output ports for Layer nodes
         self.sync_layer_ports();

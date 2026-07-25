@@ -164,4 +164,4 @@ GPL-3.0 — veja `LICENSE` (ou cabeçalho do `Cargo.toml`).
 
 ---
 
-**Desenvolvido com Rust + egui**. Contribuições bem-vindas!
+**Desenvolvido com Rust + egui**. Contribuições bem-vindas!+
