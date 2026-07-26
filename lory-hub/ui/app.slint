@@ -336,32 +336,30 @@ component VersionCard inherits Rectangle {
             background: Palette.accent;
             border-width: 1px;
             border-color: Palette.accent;
-            clip: true;
             Rectangle {
-                x: 0; y: 0;
                 width: parent.width * versao.install_progress;
                 height: parent.height;
                 background: Palette.accent;
                 opacity: 0.35;
             }
             VerticalBox {
-                alignment: LayoutAlignment.stretch;
+                alignment: LayoutAlignment.center;
                 cross-axis-alignment: CrossAxisAlignment.center;
                 spacing: 0px;
                 Text {
                     text: versao.install_status == "downloading" ? "Baixando " + versao.download_size : "Instalando...";
+                    vertical-alignment: TextVerticalAlignment.center;
                     color: Palette.bg-surface;
                     font-size: 10px;
                     font-weight: 700;
                     horizontal-alignment: TextHorizontalAlignment.center;
-                    vertical-alignment: TextVerticalAlignment.center;
                 }
                 if versao.install_status == "downloading" : Text {
                     text: versao.install_progress * 100 + "%";
-                    color: Palette.bg-surface;
-                    font-size: 9px;
-                    horizontal-alignment: TextHorizontalAlignment.center;
                     vertical-alignment: TextVerticalAlignment.center;
+                    color: Palette.bg-surface;
+                    font-size: 10px;
+                    horizontal-alignment: TextHorizontalAlignment.center;
                 }
             }
         }
