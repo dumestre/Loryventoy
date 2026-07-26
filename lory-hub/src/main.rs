@@ -47,6 +47,14 @@ fn sync_ui(window: &AppWindow, state: &HubState) {
 }
 
 fn main() -> Result<(), slint::PlatformError> {
+    let mut collection = slint::fontique_010::shared_collection();
+    let fonts_dir = std::path::Path::new("fonts");
+    for name in &["Poppins-Regular.ttf", "Poppins-Medium.ttf", "Poppins-SemiBold.ttf", "Poppins-Bold.ttf", "Poppins-ExtraBold.ttf"] {
+        if let Ok(data) = std::fs::read(fonts_dir.join(name)) {
+            let blob = slint::fontique_010::fontique::Blob::new(std::sync::Arc::new(data));
+            let _ = collection.register_fonts(blob, None);
+        }
+    }
     let window = AppWindow::new()?;
 
     let state = Rc::new(RefCell::new(HubState::new()));
