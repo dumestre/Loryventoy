@@ -33,7 +33,7 @@ cosmic-text = "0.12"
 image = "0.25"
 lyon = "1.0.19"
 egui-graph-edit = { path = "egui-graph-edit/egui-graph-edit" }
-slint = { version = "1", features = ["unstable-fontique-010"] }
+rfd = "0.15"
 
 [build-dependencies]
 winres = { version = "0.1", optional = true }

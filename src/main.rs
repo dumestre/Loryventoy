@@ -1,4 +1,5 @@
 mod app;
+mod biblioteca;
 mod nodes;
 mod projeto_arquivo;
 mod procedural;

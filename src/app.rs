@@ -13,34 +13,6 @@ use crate::ui::{
     bartool::BarTool,
 };
 
-#[cfg(target_os = "windows")]
-mod library {
-    slint::include_modules!();
-}
-
-#[cfg(target_os = "windows")]
-use slint::ComponentHandle;
-
-#[cfg(target_os = "windows")]
-fn abrir_biblioteca() {
-    std::thread::spawn(|| {
-        let _ = slint::fontique_010::shared_collection();
-        let mut collection = slint::fontique_010::shared_collection();
-        let fonts_dir = std::path::Path::new("fonts");
-        for name in &["Poppins-Regular.ttf", "Poppins-Medium.ttf", "Poppins-SemiBold.ttf", "Poppins-Bold.ttf", "Poppins-ExtraBold.ttf"] {
-            if let Ok(data) = std::fs::read(fonts_dir.join(name)) {
-                let blob = slint::fontique_010::fontique::Blob::new(std::sync::Arc::new(data));
-                let _ = collection.register_fonts(blob, None);
-            }
-        }
-
-        if let Ok(window) = library::BibliotecaWindow::new() {
-            let _ = window.run();
-        }
-    });
-}
-
-
 pub struct MovimentoApp {
 
     preview: PreviewPanel,
@@ -72,7 +44,7 @@ pub struct MovimentoApp {
     carregar_pendente: bool,
     projeto_aviso: Option<String>,
 
-    biblioteca_aberta: bool,
+    biblioteca: crate::biblioteca::Biblioteca,
 }
 
 
@@ -118,7 +90,7 @@ impl MovimentoApp {
             carregar_pendente: false,
             projeto_aviso: None,
 
-            biblioteca_aberta: false,
+            biblioteca: crate::biblioteca::Biblioteca::new(),
         };
 
         if let Some(path) = start_project {
@@ -402,10 +374,7 @@ impl eframe::App for MovimentoApp {
                             self.script_open = true;
                         }
                         if ui.button("Biblioteca").clicked() {
-                            if !self.biblioteca_aberta {
-                                self.biblioteca_aberta = true;
-                                abrir_biblioteca();
-                            }
+                            self.biblioteca.toggle();
                         }
                         if ui.button("Sair").clicked() {
                             ui.ctx().send_viewport_cmd(
@@ -839,6 +808,23 @@ impl eframe::App for MovimentoApp {
                 // janela fechada: prepara para reaplicar tamanho/pos na
                 // próxima abertura
                 self.script_primeira_vez = true;
+            }
+        }
+
+        // ---- JANELA DE BIBLIOTECA ----
+        if self.biblioteca.is_open() {
+            let mut open = true;
+            egui::Window::new("Biblioteca")
+                .id(egui::Id::new("biblioteca_janela"))
+                .open(&mut open)
+                .resizable(true)
+                .min_width(400.0)
+                .min_height(300.0)
+                .show(ui.ctx(), |ui| {
+                    self.biblioteca.mostrar(ui);
+                });
+            if !open {
+                self.biblioteca.toggle();
             }
         }
     }
