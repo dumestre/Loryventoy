@@ -1,0 +1,680 @@
+import { ScrollView, VerticalBox, HorizontalBox } from "std-widgets.slint";
+
+// ─── Data Structures ───────────────────────────────────────────────────────
+
+struct ProjetoInfo {
+    nome: string,
+    caminho: string,
+    modified: string,
+    size_label: string,
+}
+
+struct VersaoInfo {
+    numero: string,
+    titulo: string,
+    item0: string,
+    item1: string,
+    item2: string,
+    item3: string,
+    extra_count: int,
+    is_installed: bool,
+    is_atual: bool,
+}
+
+// ─── Palette ───────────────────────────────────────────────────────────────
+
+global Palette {
+    out property <color> bg-deep: #121014;
+    out property <color> bg-card: #242028;
+    out property <color> bg-surface: #1a171c;
+    out property <color> accent: #F13C77;
+    out property <color> accent-dim: #F13C7740;
+    out property <color> text-primary: #EBE4EE;
+    out property <color> text-secondary: #948490;
+    out property <color> text-danger: #FF6E78;
+    out property <color> border: #38323A;
+}
+
+// ─── Reusable Components ───────────────────────────────────────────────────
+
+component NavButton inherits Rectangle {
+    in property <string> label-text;
+    in property <bool> active: false;
+    callback clicked;
+
+    height: 38px;
+    border-radius: 8px;
+    background: active ? Palette.accent-dim : transparent;
+    animate background { duration: 150ms; }
+
+    TouchArea {
+        clicked => { root.clicked(); }
+    }
+
+    Text {
+        text: root.label-text;
+        color: root.active ? Palette.accent : Palette.text-secondary;
+        font-size: 13px;
+        font-weight: root.active ? 700 : 400;
+        horizontal-alignment: left;
+        vertical-alignment: center;
+        x: 12px;
+        animate color { duration: 150ms; }
+    }
+}
+
+component PrimaryButton inherits Rectangle {
+    in property <string> label-text;
+    in property <color> bg: Palette.accent;
+    in property <color> fg: white;
+    callback clicked;
+
+    height: 32px;
+    border-radius: 6px;
+    background: root.bg;
+
+    property <bool> hovered: false;
+    opacity: hovered ? 0.85 : 1.0;
+    animate opacity { duration: 120ms; }
+
+    TouchArea {
+        mouse-cursor: pointer;
+        pointer-event(e) => {
+            if e.kind == PointerEventKind.move { root.hovered = true; }
+        }
+        clicked => { root.clicked(); }
+    }
+
+    HorizontalBox {
+        padding-left: 14px;
+        padding-right: 14px;
+        height: 32px;
+        Text {
+            text: root.label-text;
+            color: root.fg;
+            font-size: 12px;
+            font-weight: 600;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+    }
+}
+
+component GhostButton inherits Rectangle {
+    in property <string> label-text;
+    in property <color> fg: Palette.text-secondary;
+    callback clicked;
+
+    height: 32px;
+    border-radius: 6px;
+    background: transparent;
+    border-width: 1px;
+    border-color: Palette.border;
+
+    property <bool> hovered: false;
+    animate background { duration: 120ms; }
+
+    TouchArea {
+        mouse-cursor: pointer;
+        pointer-event(e) => {
+            if e.kind == PointerEventKind.move { root.hovered = true; }
+        }
+        clicked => { root.clicked(); }
+    }
+
+    if hovered : Rectangle {
+        background: #ffffff10;
+        border-radius: 6px;
+    }
+
+    HorizontalBox {
+        padding-left: 12px;
+        padding-right: 12px;
+        height: 32px;
+        Text {
+            text: root.label-text;
+            color: root.fg;
+            font-size: 12px;
+            font-weight: 500;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+    }
+}
+
+component Tag inherits Rectangle {
+    in property <string> text-label;
+    in property <color> bg: Palette.bg-card;
+    in property <color> fg: Palette.text-secondary;
+
+    height: 22px;
+    border-radius: 4px;
+    background: root.bg;
+
+    HorizontalBox {
+        padding-left: 8px;
+        padding-right: 8px;
+        height: 22px;
+        Text {
+            text: root.text-label;
+            color: root.fg;
+            font-size: 10px;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+    }
+}
+
+component ProjectCard inherits Rectangle {
+    in property <ProjetoInfo> projeto;
+    callback open-project(string);
+    callback delete-project(string);
+
+    background: Palette.bg-card;
+    border-radius: 12px;
+    border-width: 1px;
+    border-color: hovered ? Palette.accent-dim : Palette.border;
+
+    property <bool> hovered: false;
+    animate border-color { duration: 150ms; }
+
+    TouchArea {
+        pointer-event(e) => {
+            if e.kind == PointerEventKind.move { root.hovered = true; }
+            if e.kind == PointerEventKind.cancel { root.hovered = false; }
+        }
+    }
+
+    VerticalBox {
+        padding: 16px;
+        spacing: 6px;
+
+        Text {
+            text: projeto.nome;
+            color: Palette.text-primary;
+            font-size: 13px;
+            font-weight: 700;
+            overflow: elide;
+        }
+        Text {
+            text: projeto.modified;
+            color: Palette.text-secondary;
+            font-size: 10px;
+        }
+        Text {
+            text: projeto.size-label;
+            color: Palette.text-secondary;
+            font-size: 10px;
+        }
+
+        Rectangle { height: 6px; }
+
+        HorizontalBox {
+            spacing: 8px;
+            alignment: start;
+
+            PrimaryButton {
+                label-text: "Abrir";
+                width: 68px;
+                clicked => { root.open-project(root.projeto.caminho); }
+            }
+            GhostButton {
+                label-text: "Excluir";
+                fg: Palette.text-danger;
+                width: 68px;
+                clicked => { root.delete-project(root.projeto.caminho); }
+            }
+        }
+    }
+}
+
+component BulletItem inherits HorizontalBox {
+    in property <string> item-text;
+    spacing: 6px;
+    alignment: start;
+    padding: 0;
+
+    Text { text: "•"; color: Palette.accent; font-size: 11px; width: 12px; }
+    Text { text: item-text; color: Palette.text-secondary; font-size: 11px; wrap: word-wrap; }
+}
+
+component VersionCard inherits Rectangle {
+    in property <VersaoInfo> versao;
+    callback install(string);
+    callback uninstall(string);
+
+    background: Palette.bg-card;
+    border-radius: 12px;
+    border-width: 1px;
+    border-color: versao.is-atual ? Palette.accent : Palette.border;
+
+    VerticalBox {
+        alignment: LayoutAlignment.stretch;
+        cross-axis-alignment: CrossAxisAlignment.stretch;
+        padding: 16px;
+        spacing: 4px;
+
+        HorizontalBox {
+            spacing: 8px;
+            alignment: start;
+            Text {
+                text: "v" + versao.numero;
+                color: Palette.text-primary;
+                font-size: 16px;
+                font-weight: 700;
+            }
+            if versao.is-atual : Tag {
+                text-label: "atual";
+                bg: Palette.accent-dim;
+                fg: Palette.accent;
+            }
+        }
+
+        Text {
+            text: versao.titulo;
+            color: Palette.text-secondary;
+            font-size: 12px;
+        }
+
+        Rectangle { height: 8px; }
+
+        if versao.item0 != "" : BulletItem { item-text: versao.item0; }
+        if versao.item1 != "" : BulletItem { item-text: versao.item1; }
+        if versao.item2 != "" : BulletItem { item-text: versao.item2; }
+        if versao.item3 != "" : BulletItem { item-text: versao.item3; }
+        if versao.extra-count > 0 : Text {
+            text: "+" + versao.extra-count + " mais";
+            color: Palette.text-secondary;
+            font-size: 10px;
+        }
+
+        Rectangle { height: 12px; }
+
+        if versao.is-installed : GhostButton {
+            label-text: "Desinstalar";
+            fg: Palette.text-danger;
+            clicked => { root.uninstall(root.versao.numero); }
+        }
+        if !versao.is-installed : PrimaryButton {
+            label-text: "Instalar";
+            clicked => { root.install(root.versao.numero); }
+        }
+    }
+}
+
+// ─── Pages ─────────────────────────────────────────────────────────────────
+
+component PageProjetos inherits Rectangle {
+    in property <[ProjetoInfo]> projetos;
+    in property <string> query;
+    callback open-project(string);
+    callback delete-project(string);
+    callback new-project();
+    callback refresh();
+    callback set-query(string);
+
+    background: Palette.bg-surface;
+
+    VerticalBox {
+        padding: 24px;
+        spacing: 0px;
+
+        // Header
+        HorizontalBox {
+            spacing: 12px;
+            alignment: start;
+            height: 40px;
+
+            Text {
+                text: "Projetos";
+                color: Palette.text-primary;
+                font-size: 20px;
+                font-weight: 700;
+                vertical-alignment: center;
+            }
+            Rectangle { horizontal-stretch: 1; }
+            Rectangle {
+                width: 220px;
+                height: 34px;
+                background: Palette.bg-card;
+                border-radius: 6px;
+                border-width: 1px;
+                border-color: Palette.border;
+                TextInput {
+                    x: 10px;
+                    width: parent.width - 20px;
+                    height: parent.height;
+                    text: root.query;
+                    font-size: 13px;
+                    color: Palette.text-primary;
+                    edited => { root.set-query(self.text); }
+                }
+            }
+            GhostButton {
+                label-text: "↻";
+                width: 36px;
+                clicked => { root.refresh(); }
+            }
+        }
+
+        Rectangle { height: 16px; }
+
+        // Empty state
+        if projetos.length == 0 : Rectangle {
+            vertical-stretch: 1;
+            background: Palette.bg-card;
+            border-radius: 12px;
+            border-width: 1px;
+            border-color: Palette.border;
+
+            VerticalBox {
+                alignment: LayoutAlignment.center;
+                cross-axis-alignment: CrossAxisAlignment.center;
+                spacing: 12px;
+                padding: 48px;
+
+                Text {
+                    text: "Nenhum projeto ainda";
+                    color: Palette.text-primary;
+                    font-size: 16px;
+                    font-weight: 600;
+                    horizontal-alignment: center;
+                }
+                Text {
+                    text: "Crie um novo projeto para começar";
+                    color: Palette.text-secondary;
+                    font-size: 12px;
+                    horizontal-alignment: center;
+                }
+                Rectangle { height: 8px; }
+                PrimaryButton {
+                    label-text: "+ Novo Projeto";
+                    width: 160px;
+                    horizontal-stretch: 0;
+                    clicked => { root.new-project(); }
+                }
+            }
+        }
+
+        // Project grid
+        if projetos.length > 0 : ScrollView {
+            vertical-stretch: 1;
+
+            VerticalBox {
+                spacing: 12px;
+
+                for proj in root.projetos : ProjectCard {
+                    projeto: proj;
+                    open-project(c) => { root.open-project(c); }
+                    delete-project(c) => { root.delete-project(c); }
+                }
+            }
+        }
+
+        Rectangle { height: 16px; }
+
+        // Bottom create button
+        HorizontalBox {
+            alignment: end;
+            PrimaryButton {
+                label-text: "+ Novo Projeto";
+                width: 160px;
+                clicked => { root.new-project(); }
+            }
+        }
+    }
+}
+
+component PageInstalacoes inherits Rectangle {
+    in property <[VersaoInfo]> versoes;
+    callback install(string);
+    callback uninstall(string);
+
+    background: Palette.bg-surface;
+
+    VerticalBox {
+        padding: 24px;
+        spacing: 0px;
+
+        Text {
+            text: "Instalações";
+            color: Palette.text-primary;
+            font-size: 20px;
+            font-weight: 700;
+        }
+        Rectangle { height: 16px; }
+
+        ScrollView {
+            vertical-stretch: 1;
+            VerticalBox {
+                spacing: 12px;
+                for v in root.versoes : VersionCard {
+                    versao: v;
+                    install(n) => { root.install(n); }
+                    uninstall(n) => { root.uninstall(n); }
+                }
+            }
+        }
+    }
+}
+
+component PageSobre inherits Rectangle {
+    in property <[VersaoInfo]> versoes;
+    in property <string> versao-atual;
+
+    background: Palette.bg-surface;
+
+    ScrollView {
+        VerticalBox {
+            padding: 24px;
+            spacing: 0px;
+            alignment: start;
+
+            Text {
+                text: "Sobre";
+                color: Palette.text-primary;
+                font-size: 22px;
+                font-weight: 700;
+            }
+            Rectangle { height: 24px; }
+
+            Rectangle {
+                background: Palette.bg-card;
+                border-radius: 16px;
+                border-width: 1px;
+                border-color: Palette.border;
+
+                VerticalBox {
+                    padding: 24px;
+                    spacing: 8px;
+                    alignment: center;
+
+                    Text {
+                        text: "Loryventoy";
+                        color: Palette.text-primary;
+                        font-size: 28px;
+                        font-weight: 800;
+                        horizontal-alignment: center;
+                    }
+                    Text {
+                        text: "v" + versao-atual;
+                        color: Palette.accent;
+                        font-size: 14px;
+                        font-weight: 600;
+                        horizontal-alignment: center;
+                    }
+                    Rectangle { height: 8px; }
+                    Text {
+                        text: "Editor de animação procedural baseado em nós.";
+                        color: Palette.text-secondary;
+                        font-size: 13px;
+                        horizontal-alignment: center;
+                        wrap: word-wrap;
+                    }
+                }
+            }
+
+            Rectangle { height: 24px; }
+
+            Text {
+                text: "Histórico de Versões";
+                color: Palette.text-primary;
+                font-size: 16px;
+                font-weight: 700;
+            }
+            Rectangle { height: 12px; }
+
+            for v in root.versoes : Rectangle {
+                background: v.is-atual ? Palette.accent-dim : Palette.bg-card;
+                border-radius: 8px;
+                border-width: 1px;
+                border-color: v.is-atual ? Palette.accent : Palette.border;
+                height: 56px;
+
+                HorizontalBox {
+                    padding: 16px;
+                    spacing: 12px;
+                    alignment: start;
+
+                    Text {
+                        text: "v" + v.numero;
+                        color: Palette.text-primary;
+                        font-size: 13px;
+                        font-weight: 700;
+                        vertical-alignment: center;
+                        width: 60px;
+                    }
+                    Text {
+                        text: v.titulo;
+                        color: Palette.text-secondary;
+                        font-size: 12px;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ─── Main Window ───────────────────────────────────────────────────────────
+
+export component AppWindow inherits Window {
+    title: "Loryventoy Hub";
+    preferred-width: 1024px;
+    preferred-height: 720px;
+    min-width: 800px;
+    min-height: 560px;
+    background: Palette.bg-deep;
+
+    // State properties (set from Rust)
+    in-out property <int> current-page: 0;
+    in-out property <[ProjetoInfo]> projetos: [];
+    in-out property <[VersaoInfo]> versoes: [];
+    in-out property <string> versao-atual: "";
+    in-out property <string> query: "";
+
+    // Callbacks (connected from Rust)
+    callback select-page(int);
+    callback open-project(string);
+    callback delete-project(string);
+    callback new-project();
+    callback refresh();
+    callback set-query(string);
+    callback install-version(string);
+    callback uninstall-version(string);
+
+    HorizontalBox {
+        padding: 0;
+        spacing: 0;
+
+        // ── Sidebar ──────────────────────────────────────────────────────
+        Rectangle {
+            width: 200px;
+            background: Palette.bg-deep;
+
+            VerticalBox {
+                padding: 16px;
+                spacing: 6px;
+                alignment: start;
+
+                // Logo
+                Text {
+                    text: "Loryventoy";
+                    color: Palette.text-primary;
+                    font-size: 18px;
+                    font-weight: 800;
+                }
+                Text {
+                    text: "v" + versao-atual;
+                    color: Palette.accent;
+                    font-size: 11px;
+                    font-weight: 600;
+                }
+
+                Rectangle { height: 20px; }
+
+                // Nav items
+                NavButton {
+                    label-text: "Projetos";
+                    active: current-page == 0;
+                    clicked => { root.select-page(0); }
+                }
+                NavButton {
+                    label-text: "Instalações";
+                    active: current-page == 1;
+                    clicked => { root.select-page(1); }
+                }
+                NavButton {
+                    label-text: "Sobre";
+                    active: current-page == 2;
+                    clicked => { root.select-page(2); }
+                }
+
+                Rectangle { vertical-stretch: 1; }
+
+                // Footer
+                Rectangle {
+                    height: 1px;
+                    background: Palette.border;
+                }
+                Rectangle { height: 4px; }
+                Text {
+                    text: "© 2025 Loryventoy";
+                    color: Palette.text-secondary;
+                    font-size: 9px;
+                }
+            }
+        }
+
+        // Divider
+        Rectangle {
+            width: 1px;
+            background: Palette.border;
+        }
+
+        // ── Content Area ─────────────────────────────────────────────────
+        Rectangle {
+            horizontal-stretch: 1;
+            clip: true;
+
+            if current-page == 0 : PageProjetos {
+                projetos: root.projetos;
+                query: root.query;
+                open-project(c) => { root.open-project(c); }
+                delete-project(c) => { root.delete-project(c); }
+                new-project() => { root.new-project(); }
+                refresh() => { root.refresh(); }
+                set-query(q) => { root.set-query(q); root.query = q; }
+            }
+            if current-page == 1 : PageInstalacoes {
+                versoes: root.versoes;
+                install(n) => { root.install-version(n); }
+                uninstall(n) => { root.uninstall-version(n); }
+            }
+            if current-page == 2 : PageSobre {
+                versoes: root.versoes;
+                versao-atual: root.versao-atual;
+            }
+        }
+    }
+}

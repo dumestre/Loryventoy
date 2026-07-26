@@ -56,15 +56,14 @@ impl MovimentoApp {
 
 
     pub fn new(
-        cc: &eframe::CreationContext<'_>
+        cc: &eframe::CreationContext<'_>,
+        start_project: Option<String>
     ) -> Self {
 
         theme::apply_theme(&cc.egui_ctx);
         egui_extras::install_image_loaders(&cc.egui_ctx);
 
-
-        Self {
-
+        let mut app = Self {
             preview: PreviewPanel::new(),
             timeline: TimelinePanel::new(),
             graph: GraphPanel::new(),
@@ -75,11 +74,9 @@ impl MovimentoApp {
             frame_accum: 0.0,
             last_time: 0.0,
 
-
             preview_height: 400.0,
             timeline_height: 80.0,
             graph_height: 300.0,
-
 
             min_panel_height: 100.0,
             splitter_size: 2.0,
@@ -98,7 +95,19 @@ impl MovimentoApp {
 
             hub: HubPanel::new(),
             no_hub: true,
+        };
+
+        if let Some(path) = start_project {
+            if let Ok(raw) = std::fs::read_to_string(&path) {
+                if let Ok(proj) = serde_json::from_str::<ProjetoArquivo>(&raw) {
+                    app.carregar_arquivo_hub(proj);
+                    app.no_hub = false; // Oculta o hub antigo
+                    app.hub.current_project = Some(path);
+                }
+            }
         }
+
+        app
     }
 
 

@@ -40,12 +40,16 @@ fn main() -> eframe::Result<()> {
         ..Default::default()
     };
 
+    let mut args = std::env::args();
+    args.next(); // Pula executável
+    let start_project = args.next();
+
     eframe::run_native(
         "Loryventoy",
         options,
-        Box::new(|cc| {
+        Box::new(move |cc| {
             Ok(Box::new(
-                app::MovimentoApp::new(cc)
+                app::MovimentoApp::new(cc, start_project)
             ))
         }),
     )
