@@ -38,7 +38,6 @@ rfd = "0.15"
 [build-dependencies]
 winres = { version = "0.1", optional = true }
 image = { version = "0.25", optional = true }
-slint-build = "1"
 
 [target.'cfg(target_os = "windows")'.build-dependencies]
 winres = "0.1"

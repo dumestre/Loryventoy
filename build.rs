@@ -46,9 +46,6 @@ fn main() {
         build_windows_resources(&icon_ico);
     }
 
-    // Compila componentes Slint
-    slint_build::compile("src/ui/library.slint").expect("Falha ao compilar library.slint");
-
     // Instruções específicas por plataforma
     match target_os.as_str() {
         "windows" => {
@@ -69,5 +66,4 @@ fn main() {
 
     println!("cargo:rerun-if-changed=app.ico");
     println!("cargo:rerun-if-changed=build.rs");
-    println!("cargo:rerun-if-changed=src/ui/library.slint");
 }
