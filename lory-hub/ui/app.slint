@@ -363,7 +363,7 @@ component FolderButton inherits Rectangle {
             vertical-alignment: ImageVerticalAlignment.center;
             width: 16px;
             height: 16px;
-            horizontal-alignment: ImageHorizontalAlignment.center;
+            horizontal-alignment: ImageHorizontalAlignment.left;
         }
         Text {
             text: root.label-text;
@@ -415,15 +415,12 @@ component PageProjetos inherits Rectangle {
             }
             Rectangle { horizontal-stretch: 0; }
             GhostButton {
+                background: Palette.accent;
+                fg: Palette.bg-surface;
+                label-text: "Abrir";
                 width: 70px;
                 clicked => { root.open-project-file(); }
-                Text {
-                    text: "Abrir";
-                    color: Palette.text-secondary;
-                    font-size: 12px;
-                    horizontal-alignment: TextHorizontalAlignment.center;
-                    vertical-alignment: center;
-                }
+                
             }
             FolderButton {
                 width: 140px;
