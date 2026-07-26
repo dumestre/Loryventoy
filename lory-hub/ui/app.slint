@@ -291,6 +291,7 @@ component VersionCard inherits Rectangle {
         Text {
             text: versao.titulo;
             color: Palette.text-secondary;
+            font-family: "poppins";
             font-size: 12px;
         }
 
@@ -303,6 +304,7 @@ component VersionCard inherits Rectangle {
         if versao.extra-count > 0 : Text {
             text: "+" + versao.extra-count + " mais";
             color: Palette.text-secondary;
+            font-family: "poppins";
             font-size: 10px;
         }
 
