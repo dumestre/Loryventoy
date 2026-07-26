@@ -468,6 +468,8 @@ component PageInstalacoes inherits Rectangle {
     background: Palette.bg-surface;
 
     VerticalBox {
+        alignment: LayoutAlignment.stretch;
+        cross-axis-alignment: CrossAxisAlignment.stretch;
         padding: 24px;
         spacing: 0px;
 
@@ -477,6 +479,7 @@ component PageInstalacoes inherits Rectangle {
             font-family: "poppins";
             font-size: 20px;
             font-weight: 700;
+            horizontal-alignment: TextHorizontalAlignment.center;
         }
         Rectangle { height: 16px; }
 
@@ -504,7 +507,7 @@ component PageSobre inherits Rectangle {
         VerticalBox {
             padding: 24px;
             spacing: 0px;
-            alignment: start;
+            alignment: LayoutAlignment.center;
 
             Text {
                 text: "Sobre";
