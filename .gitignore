@@ -14,4 +14,4 @@ release/
 .DS_Store
 Thumbs.db
 
-egui-graph-edit/
+# egui-graph-edit agora é parte do projeto (não mais repo aninhado)
