@@ -47,6 +47,7 @@ fn sync_ui(window: &AppWindow, state: &HubState) {
 }
 
 fn main() -> Result<(), slint::PlatformError> {
+    let window = AppWindow::new()?;
     let mut collection = slint::fontique_010::shared_collection();
     let fonts_dir = std::path::Path::new("fonts");
     for name in &["Poppins-Regular.ttf", "Poppins-Medium.ttf", "Poppins-SemiBold.ttf", "Poppins-Bold.ttf", "Poppins-ExtraBold.ttf"] {
@@ -55,7 +56,6 @@ fn main() -> Result<(), slint::PlatformError> {
             let _ = collection.register_fonts(blob, None);
         }
     }
-    let window = AppWindow::new()?;
 
     let state = Rc::new(RefCell::new(HubState::new()));
 
