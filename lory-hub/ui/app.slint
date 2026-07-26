@@ -388,7 +388,6 @@ component PageProjetos inherits Rectangle {
 
         // Empty state
         if projetos.length == 0 : Rectangle {
-            vertical-stretch: 1;
             background: Palette.bg-card;
             border-radius: 12px;
             border-width: 1px;
@@ -398,6 +397,7 @@ component PageProjetos inherits Rectangle {
                 alignment: LayoutAlignment.center;
                 cross-axis-alignment: CrossAxisAlignment.center;
                 spacing: 12px;
+                width: 0px;
                 padding: 48px;
 
                 Text {
@@ -428,6 +428,8 @@ component PageProjetos inherits Rectangle {
             vertical-stretch: 1;
 
             VerticalBox {
+                alignment: LayoutAlignment.start;
+                cross-axis-alignment: CrossAxisAlignment.start;
                 spacing: 12px;
 
                 for proj in root.projetos : ProjectCard {
@@ -442,7 +444,8 @@ component PageProjetos inherits Rectangle {
 
         // Bottom create button
         HorizontalBox {
-            alignment: end;
+            alignment: LayoutAlignment.center;
+            cross-axis-alignment: CrossAxisAlignment.center;
             PrimaryButton {
                 label-text: "+ Novo Projeto";
                 width: 160px;
