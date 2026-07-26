@@ -37,7 +37,8 @@ global Palette {
     out property <color> accent-dim: #FF9F6440;
     out property <color> text-primary: #EBE4EE;
     out property <color> text-secondary: #948490;
-    out property <color> text-danger: #6eff8d;
+    out property <color> text-danger: #ff6e6e;
+    out property <color> badge-noti: #2eff51;
     out property <color> border: #38323A;
 }
 
@@ -72,7 +73,7 @@ component NavButton inherits Rectangle {
         width: 10px;
         height: 10px;
         border-radius: 5px;
-        background: Palette.text-danger;
+        background: Palette.badge-noti;
         x: parent.width - 18px;
         y: parent.height / 2 - 5px;
     }
