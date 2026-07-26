@@ -6,6 +6,7 @@ use hub_data::{HubState, VERSOES, VERSAO_ATUAL};
 use slint::{ModelRc, VecModel};
 use std::rc::Rc;
 use std::cell::RefCell;
+use rfd;
 
 fn make_projeto_model(state: &HubState) -> ModelRc<ProjetoInfo> {
     let items: Vec<ProjetoInfo> = state.projetos.iter().map(|p| {
@@ -44,6 +45,9 @@ fn sync_ui(window: &AppWindow, state: &HubState) {
     window.set_projetos(make_projeto_model(state));
     window.set_versoes(make_versao_model(state));
     window.set_versao_atual(VERSAO_ATUAL.into());
+    window.set_pasta_projetos(state.pasta_projetos.clone().into());
+    window.set_show_new_modal(state.show_new_modal);
+    window.set_new_project_name(state.new_project_name.clone().into());
 }
 
 fn main() -> Result<(), slint::PlatformError> {
@@ -126,6 +130,64 @@ fn main() -> Result<(), slint::PlatformError> {
         let state = state.clone();
         window.on_new_project(move || {
             state.borrow_mut().create_project("novo_projeto");
+            if let Some(w) = window_weak.upgrade() {
+                sync_ui(&w, &state.borrow());
+            }
+        });
+    }
+
+    // close-new-modal
+    {
+        let window_weak = window.as_weak();
+        let state = state.clone();
+        window.on_close_new_modal(move || {
+            state.borrow_mut().show_new_modal = false;
+            state.borrow_mut().new_project_name.clear();
+            if let Some(w) = window_weak.upgrade() {
+                sync_ui(&w, &state.borrow());
+            }
+        });
+    }
+
+    // pick-folder
+    {
+        let window_weak = window.as_weak();
+        let state = state.clone();
+        window.on_pick_folder(move || {
+            if let Some(folder) = rfd::FileDialog::new().pick_folder() {
+                let folder_str = folder.to_string_lossy().to_string();
+                state.borrow_mut().pasta_projetos = folder_str;
+                state.borrow_mut().refresh_projects();
+                if let Some(w) = window_weak.upgrade() {
+                    sync_ui(&w, &state.borrow());
+                }
+            }
+        });
+    }
+
+    // open-project-file
+    {
+        let state = state.clone();
+        window.on_open_project_file(move || {
+            if let Some(file) = rfd::FileDialog::new()
+                .add_filter("Lory Project", &["lory"])
+                .pick_file()
+            {
+                let caminho = file.to_string_lossy().to_string();
+                state.borrow_mut().open_project(&caminho);
+            }
+        });
+    }
+
+    // create-named-project
+    {
+        let window_weak = window.as_weak();
+        let state = state.clone();
+        window.on_create_named_project(move |nome| {
+            let nome_str = nome.to_string();
+            state.borrow_mut().create_project(&nome_str);
+            state.borrow_mut().show_new_modal = false;
+            state.borrow_mut().new_project_name.clear();
             if let Some(w) = window_weak.upgrade() {
                 sync_ui(&w, &state.borrow());
             }

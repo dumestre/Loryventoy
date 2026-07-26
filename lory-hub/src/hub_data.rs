@@ -135,6 +135,7 @@ pub struct HubState {
     pub sort: SortBy,
     pub show_new_modal: bool,
     pub new_project_name: String,
+    pub pasta_projetos: String,
     pub delete_target: Option<String>,
     pub show_toast: Option<String>,
     pub open_project: Option<ProjetoArquivo>,
@@ -150,6 +151,7 @@ impl HubState {
             sort: SortBy::Data,
             show_new_modal: false,
             new_project_name: String::new(),
+            pasta_projetos: String::from("."),
             delete_target: None,
             show_toast: None,
             open_project: None,
@@ -159,7 +161,7 @@ impl HubState {
     }
 
     pub fn refresh_projects(&mut self) {
-        let pasta = ".";
+        let pasta = self.pasta_projetos.clone();
         self.projetos.clear();
         let dir = PathBuf::from(pasta);
         let entries = match fs::read_dir(&dir) {
@@ -233,7 +235,7 @@ impl HubState {
     pub fn create_project(&mut self, nome: &str) {
         let base = if nome.trim().is_empty() { "projeto" } else { nome.trim() };
         let nome_file = format!("{base}.lory");
-        let path = PathBuf::from(".").join(&nome_file);
+        let path = PathBuf::from(&self.pasta_projetos).join(&nome_file);
         if path.exists() {
             return;
         }

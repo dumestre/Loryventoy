@@ -330,14 +330,66 @@ component VersionCard inherits Rectangle {
 
 // ─── Pages ─────────────────────────────────────────────────────────────────
 
+component FolderButton inherits Rectangle {
+    in property <string> label-text;
+    callback clicked;
+    height: 32px;
+    border-radius: 6px;
+    background: transparent;
+    border-width: 1px;
+    border-color: Palette.border;
+    property <bool> hovered: false;
+    animate background { duration: 120ms; }
+    TouchArea {
+        mouse-cursor: pointer;
+        pointer-event(e) => {
+            if e.kind == PointerEventKind.move { root.hovered = true; }
+        }
+        clicked => { root.clicked(); }
+    }
+    if hovered : Rectangle {
+        background: #ffffff10;
+        border-radius: 6px;
+    }
+    HorizontalBox {
+        padding-left: 8px;
+        padding-right: 8px;
+        spacing: 6px;
+        height: 32px;
+        alignment: center;
+        cross-axis-alignment: CrossAxisAlignment.stretch;
+        Image {
+            source: @image-url("../icons/folder.svg");
+            vertical-alignment: ImageVerticalAlignment.center;
+            width: 16px;
+            height: 16px;
+            horizontal-alignment: ImageHorizontalAlignment.center;
+        }
+        Text {
+            text: root.label-text;
+            color: Palette.text-secondary;
+            font-size: 11px;
+            horizontal-alignment: TextHorizontalAlignment.start;
+            vertical-alignment: center;
+        }
+    }
+}
+
 component PageProjetos inherits Rectangle {
     in property <[ProjetoInfo]> projetos;
     in property <string> query;
+    in property <string> pasta-projetos: ".";
+    in-out property <bool> show-new-modal: false;
+    in-out property <string> new-project-name: "";
     callback open-project(string);
     callback delete-project(string);
     callback new-project();
     callback refresh();
     callback set-query(string);
+    callback pick-folder();
+    callback open-project-file();
+    callback create-named-project(string);
+    callback close-new-modal();
 
     background: Palette.bg-surface;
 
@@ -362,6 +414,22 @@ component PageProjetos inherits Rectangle {
                 vertical-alignment: center;
             }
             Rectangle { horizontal-stretch: 0; }
+            GhostButton {
+                width: 70px;
+                clicked => { root.open-project-file(); }
+                Text {
+                    text: "Abrir";
+                    color: Palette.text-secondary;
+                    font-size: 12px;
+                    horizontal-alignment: TextHorizontalAlignment.center;
+                    vertical-alignment: center;
+                }
+            }
+            FolderButton {
+                width: 140px;
+                label-text: root.pasta-projetos;
+                clicked => { root.pick-folder(); }
+            }
             Rectangle {
                 width: 220px;
                 height: 34px;
@@ -389,7 +457,6 @@ component PageProjetos inherits Rectangle {
                      source: @image-url("../icons/search.svg");
                      width: 18px;
                     height: 18px;
-                
                 }
             }
         }
@@ -430,7 +497,7 @@ component PageProjetos inherits Rectangle {
                     width: 160px;
                     fg: Palette.bg-surface;
                     horizontal-stretch: 0;
-                    clicked => { root.new-project(); }
+                    clicked => { root.show-new-modal = true; }
                 }
             }
         }
@@ -462,7 +529,76 @@ component PageProjetos inherits Rectangle {
                 fg: Palette.bg-surface;
                 label-text: "+ Novo Projeto";
                 width: 160px;
-                clicked => { root.new-project(); }
+                clicked => { root.show-new-modal = true; }
+            }
+        }
+    }
+
+    // New Project Modal Overlay
+    if show-new-modal : Rectangle {
+        background: #00000080;
+        x: 0; y: 0; width: parent.width; height: parent.height;
+        clip: true;
+        VerticalBox {
+            alignment: LayoutAlignment.center;
+            cross-axis-alignment: CrossAxisAlignment.center;
+            Rectangle {
+                width: 320px;
+                background: Palette.bg-card;
+                border-radius: 12px;
+                border-width: 1px;
+                border-color: Palette.border;
+                VerticalBox {
+                    padding: 24px;
+                    spacing: 12px;
+                    Text {
+                        text: "Novo Projeto";
+                        font-family: "poppins";
+                        font-size: 16px;
+                        font-weight: 700;
+                        color: Palette.text-primary;
+                        horizontal-alignment: TextHorizontalAlignment.center;
+                    }
+                    Rectangle { height: 8px; }
+                    Text {
+                        text: "Nome do projeto:";
+                        color: Palette.text-secondary;
+                        font-size: 12px;
+                    }
+                    Rectangle {
+                        background: Palette.bg-surface;
+                        border-radius: 6px;
+                        border-width: 1px;
+                        border-color: Palette.border;
+                        height: 36px;
+                        TextInput {
+                            x: 8px;
+                            y: 4px;
+                            width: parent.width - 16px;
+                            height: parent.height - 8px;
+                            text: root.new-project-name;
+                            edited => { root.new-project-name = self.text; }
+                            color: Palette.text-primary;
+                            font-size: 13px;
+                            horizontal-alignment: TextHorizontalAlignment.start;
+                            vertical-alignment: TextVerticalAlignment.center;
+                        }
+                    }
+                    Rectangle { height: 12px; }
+                    HorizontalBox {
+                        alignment: LayoutAlignment.end;
+                        spacing: 8px;
+                        GhostButton {
+                            label-text: "Cancelar";
+                            clicked => { root.close-new-modal(); }
+                        }
+                        PrimaryButton {
+                            label-text: "Criar";
+                            fg: Palette.bg-surface;
+                            clicked => { root.create-named-project(root.new-project-name); root.close-new-modal(); }
+                        }
+                    }
+                }
             }
         }
     }
@@ -625,6 +761,9 @@ export component AppWindow inherits Window {
     in-out property <[VersaoInfo]> versoes: [];
     in-out property <string> versao-atual: "";
     in-out property <string> query: "";
+    in-out property <string> pasta-projetos: ".";
+    in-out property <bool> show-new-modal: false;
+    in-out property <string> new-project-name: "";
 
     // Callbacks (connected from Rust)
     callback select-page(int);
@@ -635,6 +774,10 @@ export component AppWindow inherits Window {
     callback set-query(string);
     callback install-version(string);
     callback uninstall-version(string);
+    callback pick-folder();
+    callback open-project-file();
+    callback create-named-project(string);
+    callback close-new-modal();
 
     HorizontalBox {
         padding: 0;
@@ -719,11 +862,18 @@ export component AppWindow inherits Window {
             if current-page == 0 : PageProjetos {
                 projetos: root.projetos;
                 query: root.query;
+                pasta-projetos: root.pasta-projetos;
+                show-new-modal: root.show-new-modal;
+                new-project-name: root.new-project-name;
                 open-project(c) => { root.open-project(c); }
                 delete-project(c) => { root.delete-project(c); }
                 new-project() => { root.new-project(); }
                 refresh() => { root.refresh(); }
                 set-query(q) => { root.set-query(q); root.query = q; }
+                pick-folder() => { root.pick-folder(); }
+                open-project-file() => { root.open-project-file(); }
+                create-named-project(n) => { root.create-named-project(n); }
+                close-new-modal() => { root.close-new-modal(); }
             }
             if current-page == 1 : PageInstalacoes {
                 versoes: root.versoes;
