@@ -138,6 +138,7 @@ component GhostButton inherits Rectangle {
             font-weight: 500;
             horizontal-alignment: center;
             vertical-alignment: center;
+            
         }
     }
 }
@@ -219,10 +220,14 @@ component ProjectCard inherits Rectangle {
                 clicked => { root.open-project(root.projeto.caminho); }
             }
             GhostButton {
-                label-text: "Excluir";
                 fg: Palette.text-danger;
                 width: 68px;
                 clicked => { root.delete-project(root.projeto.caminho); }
+                Image {
+                    source: @image-url("../icons/delete_clean.svg");
+                    width: 18px;
+                }
+               
             }
         }
     }
@@ -328,7 +333,6 @@ component PageProjetos inherits Rectangle {
 
             Text {
                 text: "Projetos";
-                color: Palette.text-primary;
                 font-size: 20px;
                 font-weight: 700;
                 vertical-alignment: center;
@@ -349,15 +353,20 @@ component PageProjetos inherits Rectangle {
                     horizontal-alignment: TextHorizontalAlignment.start;
                     input-type: InputType.text;
                     text: "jbjbj";
+                    color: #dbf9e3;
                     font-size: 13px;
-                    color: Palette.text-primary;
                     edited => { root.set-query(self.text); }
                 }
             }
             GhostButton {
-                label-text: "↻";
                 width: 36px;
                 clicked => { root.refresh(); }
+                Image {
+                     source: @image-url("../icons/search.svg");
+                     width: 24px;
+                    height: 24px;
+                
+                }
             }
         }
 
