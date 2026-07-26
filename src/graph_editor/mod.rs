@@ -1027,9 +1027,14 @@ impl GraphPanel {
             let inner = editor_rect.shrink(12.0);
             let raio_dot = 6.0;
             let mut dots: Vec<(NodeId, Pos2, eframe::egui::Color32)> = Vec::new();
+            let center = editor_rect.center().to_vec2();
+            let e_min = editor_rect.min.to_vec2();
             for idx in self.editor_state.graph.iter_nodes() {
+                if self.is_fixo(idx) {
+                    continue;
+                }
                 if let Some(pos) = self.editor_state.node_positions.get(idx) {
-                    let screen = (pos.to_vec2() + pan + editor_rect.min.to_vec2()).to_pos2();
+                    let screen = ((pos.to_vec2() - center) * zoom + center + pan + e_min).to_pos2();
                     if !inner.contains(screen) {
                         let cx = screen.x.clamp(inner.min.x, inner.max.x);
                         let cy = screen.y.clamp(inner.min.y, inner.max.y);
