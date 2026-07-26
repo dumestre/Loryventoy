@@ -332,7 +332,7 @@ component PageProjetos inherits Rectangle {
                 font-weight: 700;
                 vertical-alignment: center;
             }
-            Rectangle { horizontal-stretch: 1; }
+            Rectangle { horizontal-stretch: 0; }
             Rectangle {
                 width: 220px;
                 height: 34px;
@@ -344,6 +344,7 @@ component PageProjetos inherits Rectangle {
                     x: 10px;
                     width: parent.width - 20px;
                     height: parent.height;
+                    horizontal-alignment: TextHorizontalAlignment.center;
                     text: root.query;
                     font-size: 13px;
                     color: Palette.text-primary;

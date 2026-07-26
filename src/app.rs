@@ -11,7 +11,6 @@ use crate::ui::{
     splitter::VerticalSplitter,
     timeline::TimelinePanel,
     bartool::BarTool,
-    hub::HubPanel,
 };
 
 
@@ -45,9 +44,6 @@ pub struct MovimentoApp {
     salvar_pendente: bool,
     carregar_pendente: bool,
     projeto_aviso: Option<String>,
-
-    hub: HubPanel,
-    no_hub: bool,
 }
 
 
@@ -92,17 +88,12 @@ impl MovimentoApp {
             salvar_pendente: false,
             carregar_pendente: false,
             projeto_aviso: None,
-
-            hub: HubPanel::new(),
-            no_hub: true,
         };
 
         if let Some(path) = start_project {
             if let Ok(raw) = std::fs::read_to_string(&path) {
                 if let Ok(proj) = serde_json::from_str::<ProjetoArquivo>(&raw) {
-                    app.carregar_arquivo_hub(proj);
-                    app.no_hub = false; // Oculta o hub antigo
-                    app.hub.current_project = Some(path);
+                    app.carregar_arquivo(proj);
                 }
             }
         }
@@ -313,8 +304,8 @@ impl MovimentoApp {
         }
     }
 
-    /// Aplica um `ProjetoArquivo` (aberto do hub) ao grafo e ao script.
-    fn carregar_arquivo_hub(&mut self, arquivo: ProjetoArquivo) {
+    /// Aplica um `ProjetoArquivo` ao grafo e ao script.
+    fn carregar_arquivo(&mut self, arquivo: ProjetoArquivo) {
         match arquivo.to_graph() {
             Ok((nos, arestas)) => {
                 self.graph.empurrar_historico();
@@ -328,12 +319,6 @@ impl MovimentoApp {
                 self.projeto_aviso = Some(msg);
             }
         }
-    }
-
-    /// Snapshot do estado atual como `ProjetoArquivo` (para salvar no hub).
-    fn snapshot_arquivo(&self) -> ProjetoArquivo {
-        let (nos, arestas) = self.graph.snapshot();
-        ProjetoArquivo::from_graph(&nos, &arestas, &self.script_text)
     }
 
 }
@@ -350,21 +335,6 @@ impl eframe::App for MovimentoApp {
         _frame: &mut eframe::Frame,
     ) {
 
-        // ---- TELA INICIAL (HUB DE PROJETOS) ----
-        if self.no_hub {
-            ui.ctx().send_viewport_cmd(egui::ViewportCommand::Title("Lory Hub".into()));
-            let aberto = self.hub.show(ui, || {
-                // criador de projeto em branco
-                let (nos, arestas) = GraphPanel::new().snapshot();
-                ProjetoArquivo::from_graph(&nos, &arestas, &String::new())
-            });
-            if let Some(arquivo) = aberto {
-                self.carregar_arquivo_hub(arquivo);
-                self.no_hub = false;
-            }
-            return;
-        }
-
         ui.ctx().send_viewport_cmd(egui::ViewportCommand::Title("Loryventoy".into()));
 
         egui::CentralPanel::default()
@@ -379,20 +349,23 @@ impl eframe::App for MovimentoApp {
                         }
                         let _ = ui.button("Abrir");
                         if ui.button("Salvar").clicked() {
-                            match self.hub.salvar_atual(&self.snapshot_arquivo()) {
-                                Ok(()) => {
-                                    self.projeto_aviso =
-                                        Some(format!("salvo na pasta {}", self.hub.pasta));
-                                }
-                                Err(e) => self.projeto_aviso = Some(e),
-                            }
+                            self.salvar_pendente = true;
                         }
                         if ui.button("Carregar").clicked() {
                             self.carregar_pendente = true;
                         }
                         if ui.button("Hub (projetos)").clicked() {
-                            self.hub.varrer();
-                            self.no_hub = true;
+                            if let Ok(exe) = std::env::current_exe() {
+                                if let Some(dir) = exe.parent() {
+                                    for target in &["target/debug", "target/release"] {
+                                        let hub_exe = dir.parent().and_then(|p| p.parent()).map(|p| p.join(target).join("lory-hub.exe"));
+                                        if let Some(h) = hub_exe.filter(|p| p.exists()) {
+                                            let _ = std::process::Command::new(&h).spawn();
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
                         }
                         if ui.button("Script (DSL)").clicked() {
                             self.script_open = true;

@@ -29,4 +29,3 @@ pub mod bartool;
 pub mod graph_toolbar;
 pub mod node_component;
 pub mod text_raster;
-pub mod hub;
