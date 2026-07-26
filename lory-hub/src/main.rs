@@ -61,6 +61,8 @@ fn sync_ui(window: &AppWindow, state: &HubState) {
     window.set_show_new_modal(state.show_new_modal);
     window.set_new_project_name(state.new_project_name.clone().into());
     window.set_pasta_instalacoes(state.pasta_instalacoes.clone().into());
+    let has_updates = VERSOES.iter().any(|v| !state.installed_versions.contains(&v.numero.to_string()));
+    window.set_has_install_updates(has_updates);
 }
 
 fn main() -> Result<(), slint::PlatformError> {

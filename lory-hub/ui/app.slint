@@ -37,7 +37,7 @@ global Palette {
     out property <color> accent-dim: #FF9F6440;
     out property <color> text-primary: #EBE4EE;
     out property <color> text-secondary: #948490;
-    out property <color> text-danger: #FF6E78;
+    out property <color> text-danger: #6eff8d;
     out property <color> border: #38323A;
 }
 
@@ -46,6 +46,7 @@ global Palette {
 component NavButton inherits Rectangle {
     in property <string> label-text;
     in property <bool> active: false;
+    in property <bool> show-badge: false;
     callback clicked;
 
     height: 38px;
@@ -66,6 +67,14 @@ component NavButton inherits Rectangle {
         vertical-alignment: center;
         x: 12px;
         animate color { duration: 150ms; }
+    }
+    if root.show-badge : Rectangle {
+        width: 10px;
+        height: 10px;
+        border-radius: 5px;
+        background: Palette.text-danger;
+        x: parent.width - 18px;
+        y: parent.height / 2 - 5px;
     }
 }
 
@@ -816,6 +825,7 @@ export component AppWindow inherits Window {
     in-out property <string> pasta-instalacoes: ".";
     in-out property <bool> show-new-modal: false;
     in-out property <string> new-project-name: "";
+    in-out property <bool> has-install-updates: false;
 
     // Callbacks (connected from Rust)
     callback select-page(int);
@@ -875,6 +885,7 @@ export component AppWindow inherits Window {
                 NavButton {
                     label-text: "Instalações";
                     active: current-page == 1;
+                    show-badge: root.has-install-updates;
                     clicked => { root.select-page(1); }
                 }
                 NavButton {
