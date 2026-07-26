@@ -322,7 +322,8 @@ component PageProjetos inherits Rectangle {
         // Header
         HorizontalBox {
             spacing: 12px;
-            alignment: start;
+            alignment: LayoutAlignment.center;
+            cross-axis-alignment: CrossAxisAlignment.center;
             height: 40px;
 
             Text {
@@ -342,10 +343,12 @@ component PageProjetos inherits Rectangle {
                 border-color: Palette.border;
                 TextInput {
                     x: 10px;
+                    vertical-alignment: TextVerticalAlignment.center;
                     width: parent.width - 20px;
                     height: parent.height;
-                    horizontal-alignment: TextHorizontalAlignment.center;
-                    text: root.query;
+                    horizontal-alignment: TextHorizontalAlignment.start;
+                    input-type: InputType.text;
+                    text: "jbjbj";
                     font-size: 13px;
                     color: Palette.text-primary;
                     edited => { root.set-query(self.text); }
