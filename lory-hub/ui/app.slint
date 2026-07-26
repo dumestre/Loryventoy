@@ -27,8 +27,10 @@ global Palette {
     out property <color> bg-deep: #121014;
     out property <color> bg-card: #242028;
     out property <color> bg-surface: #1a171c;
-    out property <color> accent: #F13C77;
-    out property <color> accent-dim: #F13C7740;
+    out property <color> accent-start: #FFBE68;
+    out property <color> accent-end: #F65D70;
+    out property <color> accent: #FF9F64;
+    out property <color> accent-dim: #FF9F6440;
     out property <color> text-primary: #EBE4EE;
     out property <color> text-secondary: #948490;
     out property <color> text-danger: #FF6E78;
@@ -224,6 +226,7 @@ component ProjectCard inherits Rectangle {
             alignment: start;
 
             PrimaryButton {
+                fg: Palette.bg-surface;
                 label-text: "Abrir";
                 width: 68px;
                 clicked => { root.open-project(root.projeto.caminho); }
@@ -312,10 +315,11 @@ component VersionCard inherits Rectangle {
             clicked => { root.uninstall(root.versao.numero); }
         }
         if !versao.is-installed : PrimaryButton {
+            fg: Palette.bg-surface;
             horizontal-stretch: 0;
             label-text: "Instalar";
             width: 120px;
-            icon: @image-url("../icons/arrow_down_clean.svg");
+            icon: @image-url("../icons/arrow_down_clean.svg"); // The icon size is handled by the PrimaryButton itself
             show-icon: true;
             clicked => { root.install(root.versao.numero); }
         }
@@ -422,6 +426,7 @@ component PageProjetos inherits Rectangle {
                 PrimaryButton {
                     label-text: "+ Novo Projeto";
                     width: 160px;
+                    fg: Palette.bg-surface;
                     horizontal-stretch: 0;
                     clicked => { root.new-project(); }
                 }
@@ -452,6 +457,7 @@ component PageProjetos inherits Rectangle {
             alignment: LayoutAlignment.center;
             cross-axis-alignment: CrossAxisAlignment.center;
             PrimaryButton {
+                fg: Palette.bg-surface;
                 label-text: "+ Novo Projeto";
                 width: 160px;
                 clicked => { root.new-project(); }
