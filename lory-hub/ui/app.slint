@@ -356,14 +356,15 @@ component FolderButton inherits Rectangle {
         padding-right: 8px;
         spacing: 6px;
         height: 32px;
-        alignment: center;
-        cross-axis-alignment: CrossAxisAlignment.stretch;
+        alignment: stretch;
+        cross-axis-alignment: CrossAxisAlignment.start;
         Image {
             source: @image-url("../icons/folder.svg");
             vertical-alignment: ImageVerticalAlignment.center;
+            horizontal-alignment: ImageHorizontalAlignment.left;
             width: 16px;
             height: 16px;
-            horizontal-alignment: ImageHorizontalAlignment.left;
+            
         }
         Text {
             text: root.label-text;
@@ -378,7 +379,7 @@ component FolderButton inherits Rectangle {
 component PageProjetos inherits Rectangle {
     in property <[ProjetoInfo]> projetos;
     in property <string> query;
-    in property <string> pasta-projetos: ".";
+    in property <string> pasta-projetos: "Selecione um pasta";
     in-out property <bool> show-new-modal: false;
     in-out property <string> new-project-name: "";
     callback open-project(string);
