@@ -264,7 +264,7 @@ component VersionCard inherits Rectangle {
 
     VerticalBox {
         alignment: LayoutAlignment.stretch;
-        cross-axis-alignment: CrossAxisAlignment.stretch;
+        cross-axis-alignment: CrossAxisAlignment.center;
         padding: 16px;
         spacing: 4px;
 
@@ -274,6 +274,7 @@ component VersionCard inherits Rectangle {
             Text {
                 text: "v" + versao.numero;
                 color: Palette.text-primary;
+                font-family: "Poppins-Bold";
                 font-size: 16px;
                 font-weight: 700;
             }
@@ -335,6 +336,7 @@ component PageProjetos inherits Rectangle {
     background: Palette.bg-surface;
 
     VerticalBox {
+        alignment: LayoutAlignment.stretch;
         padding: 24px;
         spacing: 0px;
 
@@ -350,6 +352,7 @@ component PageProjetos inherits Rectangle {
                 font-family: "poppins";
                 font-size: 20px;
                 font-weight: 700;
+                horizontal-alignment: TextHorizontalAlignment.start;
                 vertical-alignment: center;
             }
             Rectangle { horizontal-stretch: 0; }
@@ -404,6 +407,7 @@ component PageProjetos inherits Rectangle {
                 Text {
                     text: "Nenhum projeto ainda";
                     color: Palette.text-primary;
+                    font-family: "poppins";
                     font-size: 16px;
                     font-weight: 600;
                     horizontal-alignment: center;
@@ -429,7 +433,7 @@ component PageProjetos inherits Rectangle {
             vertical-stretch: 1;
 
             VerticalBox {
-                alignment: LayoutAlignment.start;
+                alignment: LayoutAlignment.space-between;
                 cross-axis-alignment: CrossAxisAlignment.start;
                 spacing: 12px;
 
@@ -505,8 +509,10 @@ component PageSobre inherits Rectangle {
             Text {
                 text: "Sobre";
                 color: Palette.text-primary;
+                font-family: "poppins";
                 font-size: 22px;
                 font-weight: 700;
+                horizontal-alignment: TextHorizontalAlignment.center;
             }
             Rectangle { height: 24px; }
 
@@ -532,6 +538,7 @@ component PageSobre inherits Rectangle {
                     Text {
                         text: "v" + versao-atual;
                         color: Palette.accent;
+                        font-family: "poppins";
                         font-size: 14px;
                         font-weight: 600;
                         horizontal-alignment: center;
@@ -554,6 +561,7 @@ component PageSobre inherits Rectangle {
                 color: Palette.text-primary;
                 font-size: 16px;
                 font-weight: 700;
+                horizontal-alignment: TextHorizontalAlignment.center;
             }
             Rectangle { height: 12px; }
 
@@ -635,14 +643,18 @@ export component AppWindow inherits Window {
                 Text {
                     text: "Loryventoy";
                     color: Palette.text-primary;
+                    font-family: "poppins";
                     font-size: 18px;
                     font-weight: 800;
+                    horizontal-alignment: TextHorizontalAlignment.center;
                 }
                 Text {
                     text: "v" + versao-atual;
                     color: Palette.accent;
+                    font-family: "poppins";
                     font-size: 11px;
                     font-weight: 600;
+                    horizontal-alignment: TextHorizontalAlignment.center;
                 }
 
                 Rectangle { height: 20px; }
@@ -675,7 +687,9 @@ export component AppWindow inherits Window {
                 Text {
                     text: "© 2025 Loryventoy";
                     color: Palette.text-secondary;
+                    font-family: "poppins";
                     font-size: 9px;
+                    horizontal-alignment: TextHorizontalAlignment.center;
                 }
             }
         }
