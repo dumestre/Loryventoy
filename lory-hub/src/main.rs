@@ -4,9 +4,9 @@ mod hub_data;
 
 use hub_data::{HubState, VERSOES, VERSAO_ATUAL};
 use slint::{ModelRc, VecModel};
-use std::rc::Rc;
-use std::cell::RefCell;
-use rfd;
+use std::sync::{Arc, Mutex};
+use std::thread;
+use std::time::Duration;
 
 fn make_projeto_model(state: &HubState) -> ModelRc<ProjetoInfo> {
     let items: Vec<ProjetoInfo> = state.projetos.iter().map(|p| {
@@ -26,6 +26,14 @@ fn make_versao_model(state: &HubState) -> ModelRc<VersaoInfo> {
         let is_installed = state.installed_versions.iter().any(|x| x == v.numero);
         let is_atual = v.numero == VERSAO_ATUAL;
         let itens = v.itens;
+        let install_status = state.install_status.get(v.numero).cloned().unwrap_or_else(|| "idle".to_string());
+        let install_progress = state.install_progress.get(v.numero).cloned().unwrap_or(0.0);
+        let download_size = state.install_size.get(v.numero).cloned().unwrap_or_else(|| "".to_string());
+        let download_percent = if install_status == "downloading" {
+            format!("{:.0}%", install_progress * 100.0)
+        } else {
+            String::new()
+        };
         VersaoInfo {
             numero: v.numero.into(),
             titulo: v.titulo.into(),
@@ -36,6 +44,10 @@ fn make_versao_model(state: &HubState) -> ModelRc<VersaoInfo> {
             extra_count: (itens.len().saturating_sub(4)) as i32,
             is_installed,
             is_atual,
+            install_status: install_status.into(),
+            download_size: download_size.into(),
+            download_percent: download_percent.into(),
+            install_progress,
         }
     }).collect();
     ModelRc::new(VecModel::from(items))
@@ -48,6 +60,7 @@ fn sync_ui(window: &AppWindow, state: &HubState) {
     window.set_pasta_projetos(state.pasta_projetos.clone().into());
     window.set_show_new_modal(state.show_new_modal);
     window.set_new_project_name(state.new_project_name.clone().into());
+    window.set_pasta_instalacoes(state.pasta_instalacoes.clone().into());
 }
 
 fn main() -> Result<(), slint::PlatformError> {
@@ -61,10 +74,10 @@ fn main() -> Result<(), slint::PlatformError> {
         }
     }
 
-    let state = Rc::new(RefCell::new(HubState::new()));
+    let state = Arc::new(Mutex::new(HubState::new()));
 
     // Initial sync
-    sync_ui(&window, &state.borrow());
+    sync_ui(&window, &state.lock().unwrap());
 
     // select-page
     {
@@ -81,9 +94,9 @@ fn main() -> Result<(), slint::PlatformError> {
         let window_weak = window.as_weak();
         let state = state.clone();
         window.on_refresh(move || {
-            state.borrow_mut().refresh_projects();
+            state.lock().unwrap().refresh_projects();
             if let Some(w) = window_weak.upgrade() {
-                sync_ui(&w, &state.borrow());
+                sync_ui(&w, &state.lock().unwrap());
             }
         });
     }
@@ -94,7 +107,7 @@ fn main() -> Result<(), slint::PlatformError> {
         let state = state.clone();
         window.on_set_query(move |q| {
             let q_str = q.to_string();
-            let mut s = state.borrow_mut();
+            let mut s = state.lock().unwrap();
             s.query = q_str;
             let projetos = make_projeto_model(&s);
             drop(s);
@@ -108,7 +121,7 @@ fn main() -> Result<(), slint::PlatformError> {
     {
         let state = state.clone();
         window.on_open_project(move |caminho| {
-            state.borrow_mut().open_project(&caminho.to_string());
+            state.lock().unwrap().open_project(&caminho.to_string());
         });
     }
 
@@ -117,9 +130,9 @@ fn main() -> Result<(), slint::PlatformError> {
         let window_weak = window.as_weak();
         let state = state.clone();
         window.on_delete_project(move |caminho| {
-            state.borrow_mut().delete_project(&caminho.to_string());
+            state.lock().unwrap().delete_project(&caminho.to_string());
             if let Some(w) = window_weak.upgrade() {
-                sync_ui(&w, &state.borrow());
+                sync_ui(&w, &state.lock().unwrap());
             }
         });
     }
@@ -129,9 +142,9 @@ fn main() -> Result<(), slint::PlatformError> {
         let window_weak = window.as_weak();
         let state = state.clone();
         window.on_new_project(move || {
-            state.borrow_mut().create_project("novo_projeto");
+            state.lock().unwrap().create_project("novo_projeto");
             if let Some(w) = window_weak.upgrade() {
-                sync_ui(&w, &state.borrow());
+                sync_ui(&w, &state.lock().unwrap());
             }
         });
     }
@@ -141,10 +154,10 @@ fn main() -> Result<(), slint::PlatformError> {
         let window_weak = window.as_weak();
         let state = state.clone();
         window.on_close_new_modal(move || {
-            state.borrow_mut().show_new_modal = false;
-            state.borrow_mut().new_project_name.clear();
+            state.lock().unwrap().show_new_modal = false;
+            state.lock().unwrap().new_project_name.clear();
             if let Some(w) = window_weak.upgrade() {
-                sync_ui(&w, &state.borrow());
+                sync_ui(&w, &state.lock().unwrap());
             }
         });
     }
@@ -156,10 +169,10 @@ fn main() -> Result<(), slint::PlatformError> {
         window.on_pick_folder(move || {
             if let Some(folder) = rfd::FileDialog::new().pick_folder() {
                 let folder_str = folder.to_string_lossy().to_string();
-                state.borrow_mut().pasta_projetos = folder_str;
-                state.borrow_mut().refresh_projects();
+                state.lock().unwrap().pasta_projetos = folder_str;
+                state.lock().unwrap().refresh_projects();
                 if let Some(w) = window_weak.upgrade() {
-                    sync_ui(&w, &state.borrow());
+                    sync_ui(&w, &state.lock().unwrap());
                 }
             }
         });
@@ -174,7 +187,7 @@ fn main() -> Result<(), slint::PlatformError> {
                 .pick_file()
             {
                 let caminho = file.to_string_lossy().to_string();
-                state.borrow_mut().open_project(&caminho);
+                state.lock().unwrap().open_project(&caminho);
             }
         });
     }
@@ -185,11 +198,11 @@ fn main() -> Result<(), slint::PlatformError> {
         let state = state.clone();
         window.on_create_named_project(move |nome| {
             let nome_str = nome.to_string();
-            state.borrow_mut().create_project(&nome_str);
-            state.borrow_mut().show_new_modal = false;
-            state.borrow_mut().new_project_name.clear();
+            state.lock().unwrap().create_project(&nome_str);
+            state.lock().unwrap().show_new_modal = false;
+            state.lock().unwrap().new_project_name.clear();
             if let Some(w) = window_weak.upgrade() {
-                sync_ui(&w, &state.borrow());
+                sync_ui(&w, &state.lock().unwrap());
             }
         });
     }
@@ -199,10 +212,70 @@ fn main() -> Result<(), slint::PlatformError> {
         let window_weak = window.as_weak();
         let state = state.clone();
         window.on_install_version(move |numero| {
-            state.borrow_mut().install_version(&numero.to_string());
-            if let Some(w) = window_weak.upgrade() {
-                sync_ui(&w, &state.borrow());
+            let numero_str = numero.to_string();
+            let w = window_weak.clone();
+            let s = state.clone();
+            
+            {
+                let mut state_guard = s.lock().unwrap();
+                state_guard.install_status.insert(numero_str.clone(), "downloading".to_string());
+                state_guard.install_progress.insert(numero_str.clone(), 0.0);
+                let base_size = 12.0 + (numero_str.chars().map(|c| c as u32).sum::<u32>() % 40) as f32;
+                state_guard.install_size.insert(numero_str.clone(), format!("{:.0} MB", base_size));
             }
+            
+            if let Some(win) = w.upgrade() {
+                sync_ui(&win, &s.lock().unwrap());
+            }
+            
+            thread::spawn(move || {
+                let steps = 20u32;
+                for i in 1..=steps {
+                    thread::sleep(Duration::from_millis(150));
+                    let progress = i as f32 / steps as f32;
+                    let w2 = w.clone();
+                    let s2 = s.clone();
+                    let n = numero_str.clone();
+                    let _ = slint::invoke_from_event_loop(move || {
+                        let mut state_guard = s2.lock().unwrap();
+                        state_guard.install_progress.insert(n.clone(), progress);
+                        drop(state_guard);
+                        if let Some(win) = w2.upgrade() {
+                            sync_ui(&win, &s2.lock().unwrap());
+                        }
+                    });
+                }
+                
+                let w3 = w.clone();
+                let s3 = s.clone();
+                let n3 = numero_str.clone();
+                let _ = slint::invoke_from_event_loop(move || {
+                    let mut state_guard = s3.lock().unwrap();
+                    state_guard.install_status.insert(n3.clone(), "installing".to_string());
+                    state_guard.install_progress.insert(n3.clone(), 1.0);
+                    drop(state_guard);
+                    if let Some(win) = w3.upgrade() {
+                        sync_ui(&win, &s3.lock().unwrap());
+                    }
+                });
+                
+                thread::sleep(Duration::from_millis(1200));
+                
+                let w4 = w.clone();
+                let s4 = s.clone();
+                let n4 = numero_str.clone();
+                let _ = slint::invoke_from_event_loop(move || {
+                    let mut state_guard = s4.lock().unwrap();
+                    state_guard.install_version(&n4);
+                    state_guard.install_status.remove(&n4);
+                    state_guard.install_progress.remove(&n4);
+                    state_guard.install_size.remove(&n4);
+                    drop(state_guard);
+                    if let Some(win) = w4.upgrade() {
+                        sync_ui(&win, &s4.lock().unwrap());
+                    }
+                });
+            });
         });
     }
 
@@ -211,9 +284,24 @@ fn main() -> Result<(), slint::PlatformError> {
         let window_weak = window.as_weak();
         let state = state.clone();
         window.on_uninstall_version(move |numero| {
-            state.borrow_mut().uninstall_version(&numero.to_string());
+            state.lock().unwrap().uninstall_version(&numero.to_string());
             if let Some(w) = window_weak.upgrade() {
-                sync_ui(&w, &state.borrow());
+                sync_ui(&w, &state.lock().unwrap());
+            }
+        });
+    }
+
+    // pick-install-folder
+    {
+        let window_weak = window.as_weak();
+        let state = state.clone();
+        window.on_pick_install_folder(move || {
+            if let Some(folder) = rfd::FileDialog::new().pick_folder() {
+                let folder_str = folder.to_string_lossy().to_string();
+                state.lock().unwrap().pasta_instalacoes = folder_str;
+                if let Some(w) = window_weak.upgrade() {
+                    sync_ui(&w, &state.lock().unwrap());
+                }
             }
         });
     }

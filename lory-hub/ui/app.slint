@@ -19,6 +19,10 @@ struct VersaoInfo {
     extra_count: int,
     is_installed: bool,
     is_atual: bool,
+    install_status: string,
+    download_size: string,
+    download_percent: string,
+    install_progress: float,
 }
 
 // ─── Palette ───────────────────────────────────────────────────────────────
@@ -316,14 +320,50 @@ component VersionCard inherits Rectangle {
             fg: Palette.text-danger;
             clicked => { root.uninstall(root.versao.numero); }
         }
-        if !versao.is-installed : PrimaryButton {
+        if !versao.is-installed && versao.install_status == "idle" : PrimaryButton {
             fg: Palette.bg-surface;
             horizontal-stretch: 0;
             label-text: "Instalar";
             width: 120px;
-            icon: @image-url("../icons/arrow_down_clean.svg"); // The icon size is handled by the PrimaryButton itself
+            icon: @image-url("../icons/arrow_down_clean.svg");
             show-icon: true;
             clicked => { root.install(root.versao.numero); }
+        }
+        if !versao.is-installed && versao.install_status != "idle" : Rectangle {
+            width: 120px;
+            height: 32px;
+            border-radius: 6px;
+            background: Palette.accent;
+            border-width: 1px;
+            border-color: Palette.accent;
+            clip: true;
+            Rectangle {
+                x: 0; y: 0;
+                width: parent.width * versao.install_progress;
+                height: parent.height;
+                background: Palette.accent;
+                opacity: 0.35;
+            }
+            VerticalBox {
+                alignment: LayoutAlignment.stretch;
+                cross-axis-alignment: CrossAxisAlignment.center;
+                spacing: 0px;
+                Text {
+                    text: versao.install_status == "downloading" ? "Baixando " + versao.download_size : "Instalando...";
+                    color: Palette.bg-surface;
+                    font-size: 10px;
+                    font-weight: 700;
+                    horizontal-alignment: TextHorizontalAlignment.center;
+                    vertical-alignment: TextVerticalAlignment.center;
+                }
+                if versao.install_status == "downloading" : Text {
+                    text: versao.install_progress * 100 + "%";
+                    color: Palette.bg-surface;
+                    font-size: 9px;
+                    horizontal-alignment: TextHorizontalAlignment.center;
+                    vertical-alignment: TextVerticalAlignment.center;
+                }
+            }
         }
     }
 }
@@ -357,7 +397,7 @@ component FolderButton inherits Rectangle {
         spacing: 6px;
         height: 32px;
         alignment: stretch;
-        cross-axis-alignment: CrossAxisAlignment.start;
+        cross-axis-alignment: CrossAxisAlignment.center;
         Image {
             source: @image-url("../icons/folder.svg");
             vertical-alignment: ImageVerticalAlignment.center;
@@ -371,7 +411,7 @@ component FolderButton inherits Rectangle {
             color: Palette.text-secondary;
             font-size: 11px;
             horizontal-alignment: TextHorizontalAlignment.start;
-            vertical-alignment: center;
+            vertical-alignment: TextVerticalAlignment.center;
         }
     }
 }
@@ -604,8 +644,10 @@ component PageProjetos inherits Rectangle {
 
 component PageInstalacoes inherits Rectangle {
     in property <[VersaoInfo]> versoes;
+    in property <string> pasta-instalacoes: ".";
     callback install(string);
     callback uninstall(string);
+    callback pick-install-folder();
 
     background: Palette.bg-surface;
 
@@ -615,13 +657,26 @@ component PageInstalacoes inherits Rectangle {
         padding: 24px;
         spacing: 0px;
 
-        Text {
-            text: "Instalações";
-            color: Palette.text-primary;
-            font-family: "poppins";
-            font-size: 20px;
-            font-weight: 700;
-            horizontal-alignment: TextHorizontalAlignment.center;
+        HorizontalBox {
+            spacing: 12px;
+            alignment: LayoutAlignment.center;
+            cross-axis-alignment: CrossAxisAlignment.center;
+            height: 40px;
+
+            Text {
+                text: "Instalações";
+                font-family: "poppins";
+                font-size: 20px;
+                font-weight: 700;
+                horizontal-alignment: TextHorizontalAlignment.start;
+                vertical-alignment: center;
+            }
+            Rectangle { horizontal-stretch: 0; }
+            FolderButton {
+                width: 140px;
+                label-text: "Local de intalação";
+                clicked => { root.pick-install-folder(); }
+            }
         }
         Rectangle { height: 16px; }
 
@@ -760,6 +815,7 @@ export component AppWindow inherits Window {
     in-out property <string> versao-atual: "";
     in-out property <string> query: "";
     in-out property <string> pasta-projetos: ".";
+    in-out property <string> pasta-instalacoes: ".";
     in-out property <bool> show-new-modal: false;
     in-out property <string> new-project-name: "";
 
@@ -776,6 +832,7 @@ export component AppWindow inherits Window {
     callback open-project-file();
     callback create-named-project(string);
     callback close-new-modal();
+    callback pick-install-folder();
 
     HorizontalBox {
         padding: 0;
@@ -875,8 +932,10 @@ export component AppWindow inherits Window {
             }
             if current-page == 1 : PageInstalacoes {
                 versoes: root.versoes;
+                pasta-instalacoes: root.pasta-instalacoes;
                 install(n) => { root.install-version(n); }
                 uninstall(n) => { root.uninstall-version(n); }
+                pick-install-folder() => { root.pick-install-folder(); }
             }
             if current-page == 2 : PageSobre {
                 versoes: root.versoes;

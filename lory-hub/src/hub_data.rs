@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 
@@ -136,9 +137,13 @@ pub struct HubState {
     pub show_new_modal: bool,
     pub new_project_name: String,
     pub pasta_projetos: String,
+    pub pasta_instalacoes: String,
     pub delete_target: Option<String>,
     pub show_toast: Option<String>,
     pub open_project: Option<ProjetoArquivo>,
+    pub install_status: HashMap<String, String>,
+    pub install_progress: HashMap<String, f32>,
+    pub install_size: HashMap<String, String>,
 }
 
 impl HubState {
@@ -152,9 +157,13 @@ impl HubState {
             show_new_modal: false,
             new_project_name: String::new(),
             pasta_projetos: String::from("."),
+            pasta_instalacoes: String::from("."),
             delete_target: None,
             show_toast: None,
             open_project: None,
+            install_status: HashMap::new(),
+            install_progress: HashMap::new(),
+            install_size: HashMap::new(),
         };
         s.refresh_projects();
         s
