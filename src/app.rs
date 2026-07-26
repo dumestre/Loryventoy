@@ -451,7 +451,9 @@ impl eframe::App for MovimentoApp {
                 // sistema procedural: cenas (formas + textos) vêm do grafo; o
                 // tempo vem da timeline (frame / fps) para a animação acompanhar
                 // o play/pause e o scrub da linha do tempo.
-                self.preview.set_preview(self.graph.formas_para_preview());
+                if let Some(data) = self.graph.formas_para_preview() {
+                    self.preview.set_preview(data);
+                }
                 let tempo = self.timeline.current_frame as f32 / cfg_preview.fps.max(0.01);
                 self.preview.set_tempo(tempo);
 

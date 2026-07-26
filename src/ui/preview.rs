@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use eframe::egui::{
     Color32,
     CornerRadius,
@@ -11,10 +13,12 @@ use eframe::egui::{
     Shape,
     Stroke,
     StrokeKind,
+    TextureHandle,
     Ui,
     Vec2,
 };
 use eframe::egui::epaint::{EllipseShape, PathShape, RectShape, Vertex};
+use eframe::egui::TextureOptions;
 
 use crate::procedural::{PreviewData, GVec2, trim_path_pts};
 use crate::ui::scroll_delta;
@@ -45,6 +49,8 @@ pub struct PreviewPanel {
     raster: TextRaster,
     // erros de eval dos pens no frame atual (exibidos como overlay)
     pen_erros: Vec<String>,
+    // cache de texturas GPU para texto, evitando load_texture a cada frame
+    tex_cache: HashMap<String, TextureHandle>,
 }
 
 
@@ -61,12 +67,14 @@ impl PreviewPanel {
             tempo: 0.0,
             raster: TextRaster::new(),
             pen_erros: Vec::new(),
+            tex_cache: HashMap::new(),
         }
     }
 
     /// Define os dados completos do preview (vindos do grafo).
     pub fn set_preview(&mut self, data: PreviewData) {
         self.data = data;
+        self.tex_cache.clear();
     }
 
     /// Define o instante de animação (segundos) do sistema procedural.
@@ -297,11 +305,16 @@ impl PreviewPanel {
                         Some(r) => r,
                         None => continue,
                     };
-                    let name = format!("preview_text_{}", tex_idx);
-                    tex_idx += 1;
-                    let handle = ui
-                        .ctx()
-                        .load_texture(name, r.imagem, eframe::egui::TextureOptions::LINEAR);
+                    let key = Self::tex_cache_key(&txt.conteudo, txt.tamanho, escala, txt.negrito, txt.italico, txt.cor);
+                    let handle = if let Some(h) = self.tex_cache.get(&key) {
+                        h.clone()
+                    } else {
+                        let name = format!("preview_text_{}", tex_idx);
+                        tex_idx += 1;
+                        let h = ui.ctx().load_texture(name, r.imagem, TextureOptions::LINEAR);
+                        self.tex_cache.insert(key, h.clone());
+                        h
+                    };
                     let anchor = para_tela(Pos2::new(tx, ty));
                     let size = Vec2::new(
                         r.tam_logico[0] * escala.max(0.05) * esx,
@@ -369,11 +382,16 @@ impl PreviewPanel {
                         Some(r) => r,
                         None => continue,
                     };
-                    let name = format!("preview_text_{}", tex_idx);
-                    tex_idx += 1;
-                    let handle = ui
-                        .ctx()
-                        .load_texture(name, r.imagem, eframe::egui::TextureOptions::LINEAR);
+                    let key = Self::tex_cache_key(&pt.conteudo, pt.tamanho, escala, pt.negrito, pt.italico, pt.cor);
+                    let handle = if let Some(h) = self.tex_cache.get(&key) {
+                        h.clone()
+                    } else {
+                        let name = format!("preview_text_{}", tex_idx);
+                        tex_idx += 1;
+                        let h = ui.ctx().load_texture(name, r.imagem, TextureOptions::LINEAR);
+                        self.tex_cache.insert(key, h.clone());
+                        h
+                    };
                     let a = (op_pen.clamp(0.0, 1.0) * 255.0) as u8;
                     // Alinhamento horizontal: desloca o canto de ancoragem.
                     let largura_log = r.tam_logico[0] * pen_escala.0;
@@ -479,6 +497,21 @@ impl PreviewPanel {
     ///
     /// `pos` é o canto superior-esquerdo em coords de projeto; `escala_v` é a
     /// escala de eixo (1,1 na maioria dos casos).
+    fn tex_cache_key(conteudo: &str, tamanho: f32, escala: f32, negrito: bool, italico: bool, cor: Color32) -> String {
+        let px = (tamanho * escala.max(0.05)).round().clamp(1.0, 4096.0) as u32;
+        format!(
+            "{}\x00{}\x00{}\x00{}\x00{:02x}{:02x}{:02x}{:02x}",
+            conteudo,
+            px,
+            if negrito { 1 } else { 0 },
+            if italico { 1 } else { 0 },
+            cor.r(),
+            cor.g(),
+            cor.b(),
+            cor.a(),
+        )
+    }
+
     fn rasterizar_texto(
         &mut self,
         conteudo: &str,

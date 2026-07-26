@@ -63,6 +63,9 @@ pub struct GraphPanel {
     redo_stack: Vec<(Vec<save::SnapshotNo>, Vec<save::SnapshotAresta>)>,
     dsl_ids: HashMap<String, NodeId>,
     renaming_layer: Option<(NodeId, usize)>,
+    dirty_repaint: bool,
+    pen_cache: HashMap<String, crate::dsl::Program>,
+    preview_dirty: bool,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -102,6 +105,9 @@ impl GraphPanel {
             redo_stack: Vec::new(),
             dsl_ids: HashMap::new(),
             renaming_layer: None,
+            dirty_repaint: false,
+            pen_cache: HashMap::new(),
+            preview_dirty: true,
         };
         panel.criar_nos_padrao();
         panel
@@ -687,6 +693,11 @@ impl GraphPanel {
 
 
 
+    fn marcar_sujo(&mut self) {
+        self.dirty_repaint = true;
+        self.preview_dirty = true;
+    }
+
     pub fn show(&mut self, ui: &mut Ui) {
         let editor_rect = ui.max_rect();
 
@@ -698,8 +709,6 @@ impl GraphPanel {
         rendering::desenhar_grade(&ui.painter().with_clip_rect(editor_rect), editor_rect, pan, zoom);
 
         let (_, response) = ui.allocate_exact_size(editor_rect.size(), Sense::hover());
-
-        self.grupos = self.grupos.clone();
 
         self.reafirmar_posicoes();
 
@@ -746,6 +755,13 @@ impl GraphPanel {
         self.params = user_state.params;
         self.renaming_layer = user_state.renaming_layer;
 
+        // If user is actively editing (mouse held or typing), mark preview dirty
+        // so slider drags, text edits, etc. cause preview to rebuild.
+        if ui.ctx().input(|i| i.pointer.any_down() || i.events.iter().any(|e| matches!(e, eframe::egui::Event::Key { .. } | eframe::egui::Event::Text { .. }))) {
+            self.preview_dirty = true;
+            self.dirty_repaint = true;
+        }
+
         // Sync dynamic output ports for Layer nodes
         self.sync_layer_ports();
 
@@ -756,6 +772,7 @@ impl GraphPanel {
                         self.empurrar_historico();
                         self.params.remove(nid);
                         self.liberados.remove(nid);
+                        self.marcar_sujo();
                     }
                 }
                 egui_graph_edit::NodeResponse::DeleteNodeFull { node_id, node: _ } => {
@@ -763,16 +780,20 @@ impl GraphPanel {
                         self.params.remove(node_id);
                         self.liberados.remove(node_id);
                         self.limpar_grupos();
+                        self.marcar_sujo();
                     }
                 }
                 egui_graph_edit::NodeResponse::MoveNode { node, drag_delta: _ } => {
                     self.liberados.insert(*node);
+                    self.dirty_repaint = true;
                 }
                 egui_graph_edit::NodeResponse::ConnectEventEnded { output, input } => {
                     let _ = (output, input);
+                    self.marcar_sujo();
                 }
                 egui_graph_edit::NodeResponse::DisconnectEvent { output, input } => {
                     let _ = (output, input);
+                    self.marcar_sujo();
                 }
                 egui_graph_edit::NodeResponse::CreatedNode(nid) => {
                     let tipo = self.obter_tipo(*nid);
@@ -787,6 +808,7 @@ impl GraphPanel {
                         })
                     });
                     self.normalizar_cena(*nid, &cenas, cena_preferida);
+                    self.marcar_sujo();
                 }
                 _ => {}
             }
@@ -813,6 +835,7 @@ impl GraphPanel {
 
         if ui.ctx().input(|i| i.modifiers.ctrl && i.key_pressed(Key::G)) {
             self.agrupar_selecionados();
+            self.marcar_sujo();
         }
 
         if self.renaming_layer.is_none()
@@ -922,7 +945,10 @@ impl GraphPanel {
                 self.empurrar_historico();
                 self.deletar_selecionados();
             }
-            Some(selection::AcaoMenu::Agrupar) => self.agrupar_selecionados(),
+            Some(selection::AcaoMenu::Agrupar) => {
+                self.agrupar_selecionados();
+                self.marcar_sujo();
+            }
             None => {}
         }
 
@@ -935,19 +961,24 @@ impl GraphPanel {
             }
             node_component::AcaoInspector::CriarLayerEntry => {
                 self.criar_layer_para_cena_atual();
+                self.marcar_sujo();
             }
             node_component::AcaoInspector::RemoverLayerEntry(nid, entry_idx) => {
                 self.remover_layer_entry(nid, entry_idx);
+                self.marcar_sujo();
             }
             node_component::AcaoInspector::SubirLayerEntry(nid, entry_idx) => {
                 self.mover_layer_entry(nid, entry_idx, -1);
+                self.marcar_sujo();
             }
             node_component::AcaoInspector::DescerLayerEntry(nid, entry_idx) => {
                 self.mover_layer_entry(nid, entry_idx, 1);
+                self.marcar_sujo();
             }
             node_component::AcaoInspector::SelecionarLayer(nid, entry_idx) => {
                 if let Some(NodeParams::Layer { selected, .. }) = self.params.get_mut(&nid) {
                     *selected = entry_idx;
+                    self.marcar_sujo();
                 }
             }
             node_component::AcaoInspector::Nenhuma => {}
@@ -956,6 +987,7 @@ impl GraphPanel {
                 if let Some(NodeParams::Layer { layers, .. }) = self.params.get_mut(&nid) {
                     if let Some(_layer) = layers.get_mut(entry_idx) {
                         self.sync_layer_ports();
+                        self.marcar_sujo();
                     }
                 }
             }
@@ -1054,6 +1086,13 @@ impl GraphPanel {
             }
         }
 
-        ui.ctx().request_repaint();
+        let precisa = self.dirty_repaint
+            || ui.ctx().input(|i| i.pointer.any_down())
+            || ui.ctx().input(|i| i.pointer.any_pressed())
+            || ui.ctx().input(|i| i.events.iter().any(|e| matches!(e, eframe::egui::Event::Key { .. } | eframe::egui::Event::Text { .. })));
+        if precisa {
+            ui.ctx().request_repaint();
+        }
+        self.dirty_repaint = false;
     }
 }

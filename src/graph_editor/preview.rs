@@ -11,7 +11,35 @@ use super::types::NodeId;
 use super::GraphPanel;
 
 impl GraphPanel {
-    pub fn formas_para_preview(&self) -> PreviewData {
+    pub fn formas_para_preview(&mut self) -> Option<PreviewData> {
+        if !self.preview_dirty {
+            return None;
+        }
+        self.preview_dirty = false;
+
+        // Pre-popula cache de pen DSL antes de iterar params (evita conflito de
+        // borrow entre &self.params e &mut self.pen_cache dentro dos loops).
+        {
+            let pen_codes: Vec<(NodeId, String)> = self.params.iter()
+                .filter_map(|(&nid, p)| {
+                    if let NodeParams::Pen { codigo, .. } = p {
+                        Some((nid, codigo.clone()))
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+            for (_nid, codigo) in &pen_codes {
+                if !self.pen_cache.contains_key(codigo) {
+                    let program = crate::dsl::Program::parse(codigo).unwrap_or_default();
+                    if self.pen_cache.len() >= 256 {
+                        self.pen_cache.clear();
+                    }
+                    self.pen_cache.insert(codigo.clone(), program);
+                }
+            }
+        }
+
         let mut preview = PreviewData::default();
         let cfg = self.projeto();
         preview.largura = cfg.largura as f32;
@@ -209,7 +237,7 @@ impl GraphPanel {
             preview.cenas.push(cena_preview);
         }
 
-        preview
+        Some(preview)
     }
 
     fn build_shape_generator(&self, _nid: NodeId, params: &NodeParams) -> Option<ShapeGenerator> {
@@ -307,10 +335,9 @@ impl GraphPanel {
             trim_fim,
             ..
         } = params {
-            let program = match crate::dsl::Program::parse(codigo) {
-                Ok(p) => p,
-                Err(_) => crate::dsl::Program::default(),
-            };
+            let program = self.pen_cache.get(codigo)
+                .cloned()
+                .unwrap_or_default();
 
             let ruido = self.find_connected_ruido(_nid);
             let anim = self.find_connected_anim(_nid);

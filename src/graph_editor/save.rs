@@ -71,6 +71,7 @@ impl GraphPanel {
     }
 
     pub fn empurrar_historico(&mut self) {
+        self.marcar_sujo();
         let snap = self.snapshot();
         self.undo_stack.push(snap);
         if self.undo_stack.len() > LIMITE_HISTORICO {
@@ -81,6 +82,7 @@ impl GraphPanel {
 
     pub fn undo(&mut self) -> bool {
         if let Some(snap) = self.undo_stack.pop() {
+            self.marcar_sujo();
             let current = self.snapshot();
             self.redo_stack.push(current);
             self.carregar_snapshot(&snap.0, &snap.1);
@@ -92,6 +94,7 @@ impl GraphPanel {
 
     pub fn redo(&mut self) -> bool {
         if let Some(snap) = self.redo_stack.pop() {
+            self.marcar_sujo();
             let current = self.snapshot();
             self.undo_stack.push(current);
             self.carregar_snapshot(&snap.0, &snap.1);
