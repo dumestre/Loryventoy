@@ -112,7 +112,8 @@ pub fn desenhar_grade(painter: &egui::Painter, rect: Rect, pan: Vec2, zoom: f32)
         return;
     }
     let stroke = Stroke::new(0.5, Color32::from_rgba_unmultiplied(255, 255, 255, 15));
-    let origin_screen = rect.min.to_vec2() + pan;
+    let center = rect.center().to_vec2();
+    let origin_screen = rect.min.to_vec2() + center * (1.0 - zoom) + pan;
 
     let mut x = ((origin_screen.x - rect.left()) % step + step) % step;
     while x < rect.width() {

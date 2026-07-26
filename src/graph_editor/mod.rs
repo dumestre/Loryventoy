@@ -551,8 +551,9 @@ impl GraphPanel {
         (screen.to_vec2() - pan - editor_rect.min.to_vec2()).to_pos2()
     }
 
-    pub fn canvas_para_screen(&self, canvas: Pos2, pan: Vec2, editor_rect: Rect) -> Pos2 {
-        (canvas.to_vec2() + pan + editor_rect.min.to_vec2()).to_pos2()
+    pub fn canvas_para_screen(&self, canvas: Pos2, pan: Vec2, zoom: f32, editor_rect: Rect) -> Pos2 {
+        let center = editor_rect.center().to_vec2();
+        ((canvas.to_vec2() - center) * zoom + center + pan + editor_rect.min.to_vec2()).to_pos2()
     }
 
     #[allow(dead_code)]
@@ -805,7 +806,7 @@ impl GraphPanel {
             let sel: Vec<NodeId> = self.editor_state.selected_nodes.iter().cloned().collect();
             if let Some(idx) = sel.first() {
                 if let Some(pos) = self.editor_state.node_positions.get(*idx) {
-                    self.editor_state.pan_zoom.pan = editor_rect.center().to_vec2() - pos.to_vec2() - editor_rect.min.to_vec2();
+                    self.editor_state.pan_zoom.pan = (editor_rect.center().to_vec2() - pos.to_vec2()) * zoom - editor_rect.min.to_vec2();
                 }
             }
         }
@@ -928,7 +929,7 @@ impl GraphPanel {
         match user_state.acao_inspector {
             node_component::AcaoInspector::FocarCena(ci) => {
                 if let Some(pos) = self.editor_state.node_positions.get(ci) {
-                    self.editor_state.pan_zoom.pan = editor_rect.center().to_vec2() - pos.to_vec2() - editor_rect.min.to_vec2();
+                    self.editor_state.pan_zoom.pan = (editor_rect.center().to_vec2() - pos.to_vec2()) * zoom - editor_rect.min.to_vec2();
                 }
                 self.cena_ativa = Some(ci);
             }
@@ -1048,7 +1049,7 @@ impl GraphPanel {
             }
             if let Some(idx) = click_target {
                 if let Some(pos) = self.editor_state.node_positions.get(idx) {
-                    self.editor_state.pan_zoom.pan = editor_rect.center().to_vec2() - pos.to_vec2() - editor_rect.min.to_vec2();
+                    self.editor_state.pan_zoom.pan = (editor_rect.center().to_vec2() - pos.to_vec2()) * zoom - editor_rect.min.to_vec2();
                 }
             }
         }

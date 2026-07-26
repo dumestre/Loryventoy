@@ -1,0 +1,232 @@
+diff --git a/src/graph_editor/groups.rs b/src/graph_editor/groups.rs
+index c6d6b45..95ac61c 100644
+--- a/src/graph_editor/groups.rs
++++ b/src/graph_editor/groups.rs
+@@ -55,8 +55,8 @@ impl GraphPanel {
+         rect: Rect,
+     ) -> Option<(Rect, f32)> {
+         let bb = self.bounding_grupo_idx(i)?.expand(16.0);
+-        let min_s = self.canvas_para_screen(bb.min, pan, rect);
+-        let max_s = self.canvas_para_screen(bb.max, pan, rect);
++        let min_s = self.canvas_para_screen(bb.min, pan, _zoom, rect);
++        let max_s = self.canvas_para_screen(bb.max, pan, _zoom, rect);
+         let header_h = 22.0;
+         let surf = Rect::from_min_max(Pos2::new(min_s.x, min_s.y - header_h), max_s);
+         Some((surf, header_h))
+diff --git a/src/graph_editor/mod.rs b/src/graph_editor/mod.rs
+index bf6973d..af4cd4e 100644
+--- a/src/graph_editor/mod.rs
++++ b/src/graph_editor/mod.rs
+@@ -551,8 +551,9 @@ impl GraphPanel {
+         (screen.to_vec2() - pan - editor_rect.min.to_vec2()).to_pos2()
+     }
+ 
+-    pub fn canvas_para_screen(&self, canvas: Pos2, pan: Vec2, editor_rect: Rect) -> Pos2 {
+-        (canvas.to_vec2() + pan + editor_rect.min.to_vec2()).to_pos2()
++    pub fn canvas_para_screen(&self, canvas: Pos2, pan: Vec2, zoom: f32, editor_rect: Rect) -> Pos2 {
++        let center = editor_rect.center().to_vec2();
++        ((canvas.to_vec2() - center) * zoom + center + pan + editor_rect.min.to_vec2()).to_pos2()
+     }
+ 
+     #[allow(dead_code)]
+@@ -805,7 +806,7 @@ impl GraphPanel {
+             let sel: Vec<NodeId> = self.editor_state.selected_nodes.iter().cloned().collect();
+             if let Some(idx) = sel.first() {
+                 if let Some(pos) = self.editor_state.node_positions.get(*idx) {
+-                    self.editor_state.pan_zoom.pan = editor_rect.center().to_vec2() - pos.to_vec2() - editor_rect.min.to_vec2();
++                    self.editor_state.pan_zoom.pan = (editor_rect.center().to_vec2() - pos.to_vec2()) * zoom - editor_rect.min.to_vec2();
+                 }
+             }
+         }
+@@ -928,7 +929,7 @@ impl GraphPanel {
+         match user_state.acao_inspector {
+             node_component::AcaoInspector::FocarCena(ci) => {
+                 if let Some(pos) = self.editor_state.node_positions.get(ci) {
+-                    self.editor_state.pan_zoom.pan = editor_rect.center().to_vec2() - pos.to_vec2() - editor_rect.min.to_vec2();
++                    self.editor_state.pan_zoom.pan = (editor_rect.center().to_vec2() - pos.to_vec2()) * zoom - editor_rect.min.to_vec2();
+                 }
+                 self.cena_ativa = Some(ci);
+             }
+@@ -1048,7 +1049,7 @@ impl GraphPanel {
+             }
+             if let Some(idx) = click_target {
+                 if let Some(pos) = self.editor_state.node_positions.get(idx) {
+-                    self.editor_state.pan_zoom.pan = editor_rect.center().to_vec2() - pos.to_vec2() - editor_rect.min.to_vec2();
++                    self.editor_state.pan_zoom.pan = (editor_rect.center().to_vec2() - pos.to_vec2()) * zoom - editor_rect.min.to_vec2();
+                 }
+             }
+         }
+diff --git a/src/graph_editor/rendering.rs b/src/graph_editor/rendering.rs
+index a420fdc..dfa9a33 100644
+--- a/src/graph_editor/rendering.rs
++++ b/src/graph_editor/rendering.rs
+@@ -112,7 +112,8 @@ pub fn desenhar_grade(painter: &egui::Painter, rect: Rect, pan: Vec2, zoom: f32)
+         return;
+     }
+     let stroke = Stroke::new(0.5, Color32::from_rgba_unmultiplied(255, 255, 255, 15));
+-    let origin_screen = rect.min.to_vec2() + pan;
++    let center = rect.center().to_vec2();
++    let origin_screen = rect.min.to_vec2() + center * (1.0 - zoom) + pan;
+ 
+     let mut x = ((origin_screen.x - rect.left()) % step + step) % step;
+     while x < rect.width() {
+
+diff --git a/egui-graph-edit/egui-graph-edit/src/editor_ui.rs b/egui-graph-edit/egui-graph-edit/src/editor_ui.rs
+index 538affd..d89e49a 100644
+--- a/egui-graph-edit/egui-graph-edit/src/editor_ui.rs
++++ b/egui-graph-edit/egui-graph-edit/src/editor_ui.rs
+@@ -109,6 +109,8 @@ pub struct GraphNodeWidget<'a, NodeData, DataType, ValueType> {
+     pub ongoing_drag: Option<(NodeId, AnyParameterId)>,
+     pub selected: bool,
+     pub pan: egui::Vec2,
++    pub zoom: f32,
++    pub viewport_center: egui::Vec2,
+ }
+ 
+ impl<NodeData, DataType, ValueType, NodeTemplate, UserResponse, UserState, CategoryType>
+@@ -161,9 +163,16 @@ where
+     ) -> GraphResponse<UserResponse, NodeData> {
+         ui.set_clip_rect(ui.max_rect());
+         let clip_rect = ui.clip_rect();
+-        // Zoom may have never taken place, so ensure we use parent style
++        // One-time migration: convert zoomed positions to unzoomed canvas space
+         if !self.pan_zoom.started {
+-            self.zoom(ui, 1.0);
++            // Ensure clip_rect and zoomed_style are in sync with current zoom
++            self.pan_zoom.zoom(clip_rect, ui.style(), 1.0);
++            let zoom = self.pan_zoom.zoom;
++            let center = clip_rect.center().to_vec2();
++            for (_id, pos) in self.node_positions.iter_mut() {
++                let p = pos.to_vec2();
++                *pos = (center + (p - center) / zoom).to_pos2();
++            }
+             self.pan_zoom.started = true;
+         }
+ 
+@@ -212,27 +221,7 @@ where
+     /// Zoom within the where you call `draw_graph_editor`. Use values like 1.01, or 0.99 to zoom.
+     /// For example: `let zoom_delta = (scroll_delta * 0.002).exp();`
+     pub fn zoom(&mut self, ui: &Ui, zoom_delta: f32) {
+-        // Update zoom, and styles
+-        let zoom_before = self.pan_zoom.zoom;
+         self.pan_zoom.zoom(ui.clip_rect(), ui.style(), zoom_delta);
+-        if zoom_before != self.pan_zoom.zoom {
+-            let actual_delta = self.pan_zoom.zoom / zoom_before;
+-            self.update_node_positions_after_zoom(actual_delta);
+-        }
+-    }
+-
+-    fn update_node_positions_after_zoom(&mut self, zoom_delta: f32) {
+-        // Update node positions, zoom towards center
+-        let half_size = self.pan_zoom.clip_rect.size() / 2.0;
+-        for (_id, node_pos) in self.node_positions.iter_mut() {
+-            // 1. Get node local position (relative to origo)
+-            let local_pos = node_pos.to_vec2() - half_size + self.pan_zoom.pan;
+-            // 2. Scale local position by zoom delta
+-            let scaled_local_pos = (local_pos * zoom_delta).to_pos2();
+-            // 3. Transform back to global position
+-            *node_pos = scaled_local_pos + half_size - self.pan_zoom.pan;
+-            // This way we can retain pan untouched when zooming :)
+-        }
+     }
+ 
+     fn draw_graph_editor_inside_zoom(
+@@ -292,7 +281,22 @@ where
+         }
+ 
+         /* Draw nodes */
++        let center = editor_rect.center().to_vec2();
++        let zoom = self.pan_zoom.zoom;
++        let pan = self.pan_zoom.pan;
++        let canvas_visible = {
++            let size = editor_rect.size();
++            let tl = (-center - pan) / zoom + center;
++            let br = (size - center - pan) / zoom + center;
++            let margin = 200.0 / zoom;
++            Rect::from_two_pos(tl.to_pos2(), br.to_pos2()).expand(margin)
++        };
+         for node_id in self.node_order.iter().copied() {
++            let node_pos = self.node_positions[node_id];
++            // Viewport culling: skip nodes outside visible canvas area
++            if !canvas_visible.contains(node_pos) {
++                continue;
++            }
+             let responses = GraphNodeWidget {
+                 position: self.node_positions.get_mut(node_id).unwrap(),
+                 orientation: self.node_orientations.get_mut(node_id).unwrap(),
+@@ -302,7 +306,9 @@ where
+                 node_id,
+                 ongoing_drag: self.connection_in_progress,
+                 selected: self.selected_nodes.contains(&node_id),
+-                pan: self.pan_zoom.pan + editor_rect.min.to_vec2(),
++                pan: pan + editor_rect.min.to_vec2(),
++                zoom,
++                viewport_center: center,
+             }
+             .show(&self.pan_zoom, ui, user_state);
+ 
+@@ -329,9 +335,7 @@ where
+                     );
+                     self.node_positions.insert(
+                         new_node,
+-                        node_finder.position.unwrap_or(cursor_pos)
+-                            - self.pan_zoom.pan
+-                            - editor_rect.min.to_vec2(),
++                        (node_finder.position.unwrap_or(cursor_pos) - center - self.pan_zoom.pan - editor_rect.min.to_vec2()) / self.pan_zoom.zoom + center,
+                     );
+                     self.node_orientations
+                         .insert(new_node, NodeOrientation::LeftToRight);
+@@ -460,6 +464,16 @@ where
+         }
+ 
+         for (input, output) in self.graph.iter_connections() {
++            let src_id = self.graph.get_output(output).node;
++            let dst_id = self.graph.get_input(input).node;
++            let src_pos_opt = self.node_positions.get(src_id);
++            let dst_pos_opt = self.node_positions.get(dst_id);
++            // Culling: skip connection if both nodes are off-screen
++            let src_visible = src_pos_opt.map_or(false, |p| canvas_visible.contains(*p));
++            let dst_visible = dst_pos_opt.map_or(false, |p| canvas_visible.contains(*p));
++            if !src_visible && !dst_visible {
++                continue;
++            }
+             let port_type = self
+                 .graph
+                 .any_param_type(AnyParameterId::Output(output))
+@@ -545,12 +559,13 @@ where
+                         self.node_order.push(*node_id);
+                     }
+                     NodeResponse::MoveNode { node, drag_delta } => {
+-                        self.node_positions[*node] += *drag_delta;
++                        let inv_zoom = 1.0 / self.pan_zoom.zoom;
++                        self.node_positions[*node] += *drag_delta * inv_zoom;
+                         // Handle multi-node selection movement
+                         if self.selected_nodes.contains(node) && self.selected_nodes.len() > 1 {
+                             for n in self.selected_nodes.iter().copied() {
+                                 if n != *node {
+-                                    self.node_positions[n] += *drag_delta;
++                                    self.node_positions[n] += *drag_delta * inv_zoom;
+                                 }
+                             }
+                         }
+@@ -712,10 +727,18 @@ where
+         ui: &mut Ui,
+         user_state: &mut UserState,
+     ) -> Vec<NodeResponse<UserResponse, NodeData>> {
++        let screen_pos = pos2(
++            (self.position.x - self.viewport_center.x) * self.zoom
++                + self.viewport_center.x
++                + self.pan.x,
++            (self.position.y - self.viewport_center.y) * self.zoom
++                + self.viewport_center.y
++                + self.pan.y,
++        );
+         let mut child_ui = ui.new_child(
+             UiBuilder::new()
+                 .max_rect(Rect::from_min_size(
+-                    *self.position + self.pan,
++                    screen_pos,
+                     Self::MAX_NODE_SIZE.into(),
+                 ))
+                 .layout(*ui.layout())
+
