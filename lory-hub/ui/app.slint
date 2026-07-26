@@ -65,6 +65,8 @@ component NavButton inherits Rectangle {
 
 component PrimaryButton inherits Rectangle {
     in property <string> label-text;
+    in property <image> icon;
+    in property <bool> show-icon: false;
     in property <color> bg: Palette.accent;
     in property <color> fg: white;
     callback clicked;
@@ -89,6 +91,7 @@ component PrimaryButton inherits Rectangle {
         padding-left: 14px;
         padding-right: 14px;
         height: 32px;
+        spacing: 6px;
         Text {
             text: root.label-text;
             color: root.fg;
@@ -96,6 +99,12 @@ component PrimaryButton inherits Rectangle {
             font-weight: 600;
             horizontal-alignment: center;
             vertical-alignment: center;
+        }
+        if root.show-icon : Image {
+            source: root.icon;
+            image-fit: ImageFit.contain;
+            width: 16px;
+            height: 16px;
         }
     }
 }
@@ -297,11 +306,16 @@ component VersionCard inherits Rectangle {
 
         if versao.is-installed : GhostButton {
             label-text: "Desinstalar";
+            width: 120px;
             fg: Palette.text-danger;
             clicked => { root.uninstall(root.versao.numero); }
         }
         if !versao.is-installed : PrimaryButton {
+            horizontal-stretch: 0;
             label-text: "Instalar";
+            width: 120px;
+            icon: @image-url("../icons/arrow_down_clean.svg");
+            show-icon: true;
             clicked => { root.install(root.versao.numero); }
         }
     }
@@ -352,7 +366,7 @@ component PageProjetos inherits Rectangle {
                     height: parent.height;
                     horizontal-alignment: TextHorizontalAlignment.start;
                     input-type: InputType.text;
-                    text: "jbjbj";
+                    text: "";
                     color: #dbf9e3;
                     font-size: 13px;
                     edited => { root.set-query(self.text); }
@@ -363,8 +377,8 @@ component PageProjetos inherits Rectangle {
                 clicked => { root.refresh(); }
                 Image {
                      source: @image-url("../icons/search.svg");
-                     width: 24px;
-                    height: 24px;
+                     width: 18px;
+                    height: 18px;
                 
                 }
             }
@@ -578,6 +592,7 @@ export component AppWindow inherits Window {
     min-width: 800px;
     min-height: 560px;
     background: Palette.bg-deep;
+    icon: @image-url("../app.png");
 
     // State properties (set from Rust)
     in-out property <int> current-page: 0;
