@@ -128,48 +128,36 @@ fn aplicar_campos(
                 shape.cena = cn;
             }
         }
-        NodeParams::Texto {
-            conteudo,
-            tamanho,
-            negrito,
-            italico,
-            px,
-            py,
-            cor,
-            trim_inicio,
-            trim_fim,
-            cena,
-            ..
-        } => {
+        NodeParams::Texto(texto) => {
             let mut cena_nome: Option<String> = None;
             for (c, v) in &n.campos {
                 match c.as_str() {
                     "scene" => cena_nome = Some(v.as_str()),
-                    "content" => *conteudo = v.as_str(),
-                    "size" => *tamanho = v.as_num(),
+                    "content" => texto.conteudo = v.as_str(),
+                    "size" => texto.tamanho = v.as_num(),
                     "bold" => {
-                        *negrito = v.as_str() == "true" || v.as_str() == "on"
+                        texto.negrito = v.as_str() == "true" || v.as_str() == "on"
                     }
                     "italic" => {
-                        *italico = v.as_str() == "true" || v.as_str() == "on"
+                        texto.italico = v.as_str() == "true" || v.as_str() == "on"
                     }
                     "pos" => {
                         if let Expr::Vec2(a, b) = v {
-                            *px = *a;
-                            *py = *b;
+                            texto.px = *a;
+                            texto.py = *b;
                         }
                     }
                     "color" | "colour" => {
                         let h = v.as_hex();
-                        *cor = crate::domain::Color::from_rgba(h.r(), h.g(), h.b(), h.a());
+                        texto.cor = crate::domain::Color::from_rgba(h.r(), h.g(), h.b(), h.a());
                     }
-                    "trim_start" | "trim_inicio" => *trim_inicio = v.as_num(),
-                    "trim_end" | "trim_fim" => *trim_fim = v.as_num(),
+                    "trim_start" | "trim_inicio" => texto.trim_inicio = v.as_num(),
+                    "trim_end" | "trim_fim" => texto.trim_fim = v.as_num(),
                     _ => {}
                 }
             }
             if let Some(cn) = cena_nome {
-                *cena = cn;
+                texto.cena = cn;
             }
         }
         NodeParams::Pen {
@@ -337,8 +325,8 @@ impl GraphPanel {
         for (_idx, params) in &mut self.params {
             let cena = match params {
                 NodeParams::Layer { cena, .. }
-                | NodeParams::Texto { cena, .. }
                 | NodeParams::Pen { cena, .. } => cena,
+                NodeParams::Texto(texto) => &mut texto.cena,
                 NodeParams::Shape(shape) => &mut shape.cena,
                 _ => continue,
             };

@@ -313,8 +313,8 @@ impl GraphPanel {
         if let Some(params) = self.params.get_mut(&idx) {
             let cena = match params {
                 NodeParams::Layer { cena, .. }
-                | NodeParams::Texto { cena, .. }
                 | NodeParams::Pen { cena, .. } => cena,
+                NodeParams::Texto(texto) => &mut texto.cena,
                 NodeParams::Shape(shape) => &mut shape.cena,
                 _ => return,
             };

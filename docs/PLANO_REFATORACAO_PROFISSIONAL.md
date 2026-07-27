@@ -177,7 +177,27 @@ cargo check       OK
 cargo test --all  OK — 68 testes
 ```
 
-Esta é a sequência que será repetida para `Texto`, `Pen`, `Canvas`, `Layer`, `Cena`, `Transform`, `Ruído`, `Animação` e `Saída`, sempre uma variante por vez.
+### Segunda variante de `NodeParams` separada: Texto
+
+Foi concluída a migração da variante `Texto`:
+
+- criado `src/nodes/text_params.rs`;
+- criada a estrutura `TextParams` com os dados persistentes do nó Texto;
+- `NodeParams::Texto` passou a encapsular `TextParams`;
+- defaults do nó Texto foram adaptados;
+- inspector, DSL, preview, normalização de cena e persistência foram adaptados;
+- o JSON continua com os mesmos campos e o mesmo formato;
+- o comportamento visual e os valores padrão foram preservados;
+- nenhum recurso novo foi adicionado.
+
+Validação:
+
+```text
+cargo check       OK
+cargo test --all  OK — 68 testes
+```
+
+Esta é a sequência que será repetida para `Pen`, `Canvas`, `Layer`, `Cena`, `Transform`, `Ruído`, `Animação` e `Saída`, sempre uma variante por vez.
 
 ---
 

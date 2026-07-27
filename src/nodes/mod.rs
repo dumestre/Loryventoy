@@ -13,10 +13,12 @@ mod transform;
 mod params;
 mod layer_entry;
 mod shape_params;
+mod text_params;
 
 pub use params::NodeParams;
 pub use layer_entry::LayerEntry;
 pub use shape_params::ShapeParams;
+pub use text_params::TextParams;
 
 use eframe::egui::Color32;
 

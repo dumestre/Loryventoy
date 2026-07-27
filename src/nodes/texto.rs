@@ -1,4 +1,4 @@
-use super::{ParametroPorto, PortSpec, NodeParams, P_LAYER, P_POS_XY, P_TAMANHO, P_OPACIDADE, P_ESC_XY};
+use super::{ParametroPorto, PortSpec, NodeParams, TextParams, P_LAYER, P_POS_XY, P_TAMANHO, P_OPACIDADE, P_ESC_XY};
 use crate::domain::Color;
 
 static ENTRADAS: [ParametroPorto; 5] = [P_LAYER, P_POS_XY, P_TAMANHO, P_OPACIDADE, P_ESC_XY];
@@ -9,7 +9,7 @@ pub(crate) fn portos() -> PortSpec {
 }
 
 pub(crate) fn padrao() -> NodeParams {
-    NodeParams::Texto {
+    NodeParams::Texto(TextParams {
         cena: String::new(),
         conteudo: "Texto".to_string(),
         tamanho: 48.0,
@@ -20,5 +20,5 @@ pub(crate) fn padrao() -> NodeParams {
         cor: Color::from_rgba(20, 20, 26, 255),
         trim_inicio: 0.0,
         trim_fim: 1.0,
-    }
+    })
 }

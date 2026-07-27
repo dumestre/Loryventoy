@@ -2,7 +2,7 @@ use eframe::egui::Color32;
 use serde::{Deserialize, Serialize};
 
 use crate::domain::Color;
-use crate::nodes::{NodeParams, LayerEntry, ProjetoConfig, ShapeParams, TipoNo};
+use crate::nodes::{NodeParams, LayerEntry, ProjetoConfig, ShapeParams, TextParams, TipoNo};
 use crate::graph_editor::ArestaInfo;
 
 /// Espelho serializável de um segmento de animação (`AnimSeg`).
@@ -151,7 +151,7 @@ impl From<NodeParams> for NodeParamsJson {
                     selected,
                 }
             }
-            NodeParams::Texto { cena, conteudo, tamanho, negrito, italico, px, py, cor, trim_inicio, trim_fim, .. } => {
+            NodeParams::Texto(TextParams { cena, conteudo, tamanho, negrito, italico, px, py, cor, trim_inicio, trim_fim, .. }) => {
                 NodeParamsJson::Texto {
                     cena, conteudo, tamanho, negrito, italico, px, py,
                     cor: cor.to_rgba(), trim_inicio, trim_fim,
@@ -242,11 +242,11 @@ impl TryFrom<NodeParamsJson> for NodeParams {
                 }
             }
             NodeParamsJson::Texto { cena, conteudo, tamanho, negrito, italico, px, py, cor, trim_inicio, trim_fim } => {
-                NodeParams::Texto {
+                NodeParams::Texto(TextParams {
                     cena, conteudo, tamanho, negrito, italico, px, py,
                     cor: Color::from_rgba(cor[0], cor[1], cor[2], cor[3]),
                     trim_inicio, trim_fim,
-                }
+                })
             }
             NodeParamsJson::Shape {
                 cena, tipo, px, py, largura, altura, rotacao, cor,

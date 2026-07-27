@@ -119,7 +119,7 @@ impl GraphPanel {
                     if let Some(oid) = output_id {
                         for (&nid, params) in &self.params {
                             match params {
-                                NodeParams::Shape(..) | NodeParams::Texto { .. } | NodeParams::Pen { .. } => {
+                                NodeParams::Shape(..) | NodeParams::Texto(..) | NodeParams::Pen { .. } => {
                                     let graph = &self.editor_state.graph;
                                     let node = &graph[nid];
                                     for (_, input_id) in &node.inputs {
@@ -132,7 +132,7 @@ impl GraphPanel {
                                                             layer_preview.formas.push(gen);
                                                         }
                                                     }
-                                                    NodeParams::Texto { .. } => {
+                                                    NodeParams::Texto(..) => {
                                                         if let Some(item) = self.build_texto_item(nid, params) {
                                                             layer_preview.textos.push(item);
                                                         }
@@ -157,10 +157,11 @@ impl GraphPanel {
                     if !has_connections && entries.len() <= 1 {
                         for (&nid, params) in &self.params {
                             match params {
-                                NodeParams::Shape(..) | NodeParams::Texto { .. } | NodeParams::Pen { .. } => {
+                                NodeParams::Shape(..) | NodeParams::Texto(..) | NodeParams::Pen { .. } => {
                                     let node_cena = match params {
                                         NodeParams::Shape(shape) => shape.cena.as_str(),
-                                        NodeParams::Texto { cena, .. } | NodeParams::Pen { cena, .. } => cena.as_str(),
+                                        NodeParams::Texto(texto) => texto.cena.as_str(),
+                                        NodeParams::Pen { cena, .. } => cena.as_str(),
                                         _ => "",
                                     };
                                     if node_cena == nome_cena {
@@ -170,7 +171,7 @@ impl GraphPanel {
                                                     layer_preview.formas.push(gen);
                                                 }
                                             }
-                                            NodeParams::Texto { .. } => {
+                                            NodeParams::Texto(..) => {
                                                 if let Some(item) = self.build_texto_item(nid, params) {
                                                     layer_preview.textos.push(item);
                                                 }
@@ -204,10 +205,11 @@ impl GraphPanel {
                 };
                 for (&nid, params) in &self.params {
                     match params {
-                        NodeParams::Shape(..) | NodeParams::Texto { .. } | NodeParams::Pen { .. } => {
+                        NodeParams::Shape(..) | NodeParams::Texto(..) | NodeParams::Pen { .. } => {
                             let node_cena = match params {
                                 NodeParams::Shape(shape) => shape.cena.as_str(),
-                                NodeParams::Texto { cena, .. } | NodeParams::Pen { cena, .. } => cena.as_str(),
+                                NodeParams::Texto(texto) => texto.cena.as_str(),
+                                NodeParams::Pen { cena, .. } => cena.as_str(),
                                 _ => "",
                             };
                             if node_cena == nome_cena {
@@ -217,7 +219,7 @@ impl GraphPanel {
                                             layer_preview.formas.push(gen);
                                         }
                                     }
-                                    NodeParams::Texto { .. } => {
+                                    NodeParams::Texto(..) => {
                                         if let Some(item) = self.build_texto_item(nid, params) {
                                             layer_preview.textos.push(item);
                                         }
@@ -273,34 +275,24 @@ impl GraphPanel {
     }
 
     fn build_texto_item(&self, _nid: NodeId, params: &NodeParams) -> Option<TextoItem> {
-        if let NodeParams::Texto {
-            px, py,
-            conteudo,
-            tamanho,
-            negrito,
-            italico,
-            cor,
-            trim_inicio,
-            trim_fim,
-            ..
-        } = params {
+        if let NodeParams::Texto(texto) = params {
             let ruido = self.find_connected_ruido(_nid);
             let anim = self.find_connected_anim(_nid);
 
             Some(TextoItem {
-                px: *px,
-                py: *py,
-                conteudo: conteudo.clone(),
-                tamanho: *tamanho,
-                negrito: *negrito,
-                italico: *italico,
-                cor: eframe::egui::Color32::from_rgba_unmultiplied(cor.r, cor.g, cor.b, cor.a),
+                px: texto.px,
+                py: texto.py,
+                conteudo: texto.conteudo.clone(),
+                tamanho: texto.tamanho,
+                negrito: texto.negrito,
+                italico: texto.italico,
+                cor: eframe::egui::Color32::from_rgba_unmultiplied(texto.cor.r, texto.cor.g, texto.cor.b, texto.cor.a),
                 escala_x: 1.0,
                 escala_y: 1.0,
                 ruido,
                 anim,
-                trim_inicio: *trim_inicio,
-                trim_fim: *trim_fim,
+                trim_inicio: texto.trim_inicio,
+                trim_fim: texto.trim_fim,
             })
         } else {
             None
