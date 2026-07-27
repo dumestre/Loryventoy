@@ -694,14 +694,10 @@ Criar uma base segura antes de mover qualquer código.
 ### Tarefas
 
 - preservar alterações locais existentes;
-- criar branch específica de refatoração;
 - registrar o resultado de `cargo check`;
 - registrar o resultado de `cargo test --all`;
 - catalogar arquivos `.lory`, `.json`, exemplos de DSL e imagens usadas no teste;
 - documentar os fluxos manuais atuais;
-- conferir quais diretórios são aplicativos independentes;
-- verificar se `lory-hub` deve continuar separado;
-- verificar se `egui-graph-edit` é dependência local intencional;
 - revisar o `.gitignore`;
 - retirar logs de debug do controle de versão ou movê-los para uma pasta de diagnóstico.
 

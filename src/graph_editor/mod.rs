@@ -2,17 +2,16 @@ use std::collections::{HashMap, HashSet};
 
 use eframe::egui::{
     self, Button, Key,
-    Pos2, Rect, Sense, Stroke, Ui, Vec2,
+    Pos2, Rect, Sense, Stroke, Ui,
 };
 use eframe::egui::epaint::{CircleShape, TextShape};
 use eframe::egui::Popup;
 
-use crate::domain::LayerEntry;
 use crate::nodes::{self, NodeParams, ProjetoConfig, TipoNo, portos};
 use crate::ui::graph_toolbar::{GraphToolbar, AcaoToolbar};
 use crate::ui::node_component;
 
-use types::{GraphNode, MyEditorState, UserState, AllNodeTemplates, cor_tipo_no};
+use types::{MyEditorState, UserState, AllNodeTemplates, cor_tipo_no};
 pub use types::NodeId;
 
 pub mod types;
@@ -23,6 +22,10 @@ pub mod groups;
 pub mod save;
 pub mod preview;
 pub mod dsl;
+pub mod node_factory;
+pub mod layer_ops;
+pub mod layout;
+pub mod search;
 
 #[allow(dead_code)]
 const ZOOM_MIN: f32 = 0.2;
@@ -78,7 +81,6 @@ pub struct ArestaInfo {
     pub entrada_comp: Option<usize>,
 }
 
-
 #[allow(dead_code)]
 pub struct GraphResponse;
 
@@ -112,101 +114,6 @@ impl GraphPanel {
         };
         panel.criar_nos_padrao();
         panel
-    }
-
-    fn criar_nos_padrao(&mut self) {
-        self.editor_state = MyEditorState::default();
-        self.params.clear();
-        self.liberados.clear();
-        self.grupos.clear();
-
-        const ESPACO: f32 = 290.0;
-        self.canvas_loc = Pos2::new(-ESPACO, 0.0);
-        self.cena_loc = Pos2::new(0.0, 0.0);
-        self.master_loc = Pos2::new(ESPACO, 0.0);
-
-        let canvas = self.adicionar_no_em(TipoNo::Canvas, self.canvas_loc);
-        let cena = self.adicionar_no_em(TipoNo::Cena, self.cena_loc);
-        let master = self.adicionar_no_em(TipoNo::Saida, self.master_loc);
-
-        self.conectar_por_idx(canvas, 0, cena, 0);
-        self.conectar_por_idx(cena, 0, master, 0);
-
-        self.canvas = Some(canvas);
-        self.cena = Some(cena);
-        self.master = Some(master);
-
-        let layer_loc = Pos2::new(0.0, 180.0);
-        let layer = self.adicionar_no_em(TipoNo::Layer, layer_loc);
-        let nome_cena = self.obter_params(cena).and_then(|p| {
-            if let NodeParams::Cena(cena) = p {
-                Some(cena.nome_cena.clone())
-            } else {
-                None
-            }
-        });
-        if let Some(nome) = &nome_cena {
-            if let Some(NodeParams::Layer(layer)) = self.params.get_mut(&layer) {
-                layer.cena = nome.clone();
-            }
-        }
-
-        self.dsl_ids.clear();
-        self.dsl_ids.insert("canvas".to_string(), canvas);
-        self.dsl_ids.insert("scene".to_string(), cena);
-        self.dsl_ids.insert("master".to_string(), master);
-    }
-
-    pub fn adicionar_no_em(&mut self, tipo: TipoNo, loc: Pos2) -> NodeId {
-        let user_data = GraphNode {
-            tipo,
-            params: nodes::node_params_padrao(tipo),
-        };
-        let label = tipo.nome().to_string();
-        let nid = self.editor_state.graph.add_node(label, user_data, |_g, _id| {});
-        self.editor_state.node_positions.insert(nid, loc);
-        self.editor_state.node_orientations.insert(nid, egui_graph_edit::NodeOrientation::LeftToRight);
-        if !self.editor_state.node_order.contains(&nid) {
-            self.editor_state.node_order.push(nid);
-        }
-
-        let spec = portos(tipo);
-        for p in spec.entradas.iter() {
-            let (dt, vt) = if p.is_vetor() {
-                (types::GraphDataType::Vec2, types::GraphValueType::Vec2(Vec2::ZERO))
-            } else {
-                (types::GraphDataType::Scalar, types::GraphValueType::Scalar(0.0))
-            };
-            self.editor_state.graph.add_input_param(
-                nid, p.nome.to_string(), dt, vt,
-                egui_graph_edit::InputParamKind::ConnectionOrConstant, true,
-            );
-        }
-        for p in spec.saidas.iter() {
-            let dt = if p.is_vetor() { types::GraphDataType::Vec2 } else { types::GraphDataType::Scalar };
-            self.editor_state.graph.add_output_param(nid, p.nome.to_string(), dt);
-        }
-
-        self.params.insert(nid, nodes::node_params_padrao(tipo));
-        let cenas = self.cenas_disponiveis();
-        let cena_preferida = self.cena_ativa.and_then(|ci| {
-            self.params.get(&ci).and_then(|p| {
-                if let NodeParams::Cena(cena) = p {
-                    if !cena.nome_cena.is_empty() { Some(cena.nome_cena.clone()) } else { None }
-                } else { None }
-            })
-        });
-        self.normalizar_cena(nid, &cenas, cena_preferida);
-        nid
-    }
-
-    fn adicionar_no(&mut self, tipo: TipoNo) {
-        if tipo == TipoNo::Saida && self.master.is_some() { return; }
-        let col = (self.contador % 3) as f32;
-        let lin = (self.contador / 3) as f32;
-        let loc = Pos2::new(40.0 + col * 260.0, 40.0 + lin * 150.0);
-        self.adicionar_no_em(tipo, loc);
-        self.contador += 1;
     }
 
     fn conectar_por_idx(&mut self, src: NodeId, saida: usize, dst: NodeId, entrada: usize) {
@@ -284,244 +191,6 @@ impl GraphPanel {
         self.editor_state.graph.nodes.get(idx).map(|n| n.user_data.tipo.nome().to_string()).unwrap_or_default()
     }
 
-    fn cenas_disponiveis(&self) -> Vec<String> {
-        let mut v: Vec<String> = self.params.iter()
-            .filter_map(|(_, p)| {
-                if let NodeParams::Cena(cena) = p {
-                    if !cena.nome_cena.is_empty() { Some(cena.nome_cena.clone()) } else { None }
-                } else { None }
-            })
-            .collect();
-        v.sort();
-        v.dedup();
-        v
-    }
-
-    fn cenas_disponiveis_com_indice(&self) -> Vec<(String, NodeId)> {
-        let mut v: Vec<(String, NodeId)> = self.params.iter()
-            .filter_map(|(&idx, p)| {
-                if let NodeParams::Cena(cena) = p {
-                    if !cena.nome_cena.is_empty() { Some((cena.nome_cena.clone(), idx)) } else { None }
-                } else { None }
-            })
-            .collect();
-        v.sort_by(|a, b| a.0.cmp(&b.0));
-        v.dedup_by(|a, b| a.0 == b.0);
-        v
-    }
-
-    fn normalizar_cena(&mut self, idx: NodeId, cenas: &[String], preferida: Option<String>) {
-        if let Some(params) = self.params.get_mut(&idx) {
-            let cena = match params {
-                NodeParams::Layer(layer) => &mut layer.cena,
-                NodeParams::Pen(pen) => &mut pen.cena,
-                NodeParams::Texto(texto) => &mut texto.cena,
-                NodeParams::Shape(shape) => &mut shape.cena,
-                _ => return,
-            };
-            if cenas.iter().all(|c| c != cena) {
-                *cena = preferida.or_else(|| cenas.first().cloned()).unwrap_or_default();
-            }
-        }
-    }
-
-    fn sync_layer_ports(&mut self) {
-        let layer_nids: Vec<NodeId> = self.params.iter()
-            .filter(|(_, p)| matches!(p, NodeParams::Layer(..)))
-            .map(|(&nid, _)| nid)
-            .collect();
-
-        for nid in layer_nids {
-            let entries: Vec<(String, f32)> = match self.params.get(&nid) {
-                Some(NodeParams::Layer(layer)) => {
-                    layer.layers.iter().map(|e| (e.nome.clone(), e.opacidade)).collect()
-                }
-                _ => continue,
-            };
-
-            // Build desired port names (reversed so bottom = oldest)
-            let mut desired: Vec<String> = entries.iter().enumerate()
-                .map(|(i, (nome, _))| {
-                    if nome.is_empty() {
-                        format!("Layer {}", i + 1)
-                    } else {
-                        nome.clone()
-                    }
-                })
-                .collect();
-            desired.reverse();
-
-            // Save current order for comparison
-            let current_order: Vec<String> = self.editor_state.graph[nid].outputs.iter()
-                .map(|(name, _)| name.clone())
-                .collect();
-
-            if current_order == desired {
-                continue;
-            }
-
-            // Save connections: output_name -> list of InputIds connected to it
-            let current_outputs: Vec<(String, egui_graph_edit::OutputId)> =
-                self.editor_state.graph[nid].outputs.clone();
-            let mut saved_connections: HashMap<String, Vec<egui_graph_edit::InputId>> = HashMap::new();
-            for (input_id, &output_id) in self.editor_state.graph.connections.iter() {
-                if self.editor_state.graph.outputs[output_id].node == nid {
-                    if let Some((name, _)) = current_outputs.iter().find(|(_, id)| *id == output_id) {
-                        saved_connections.entry(name.clone()).or_default().push(input_id);
-                    }
-                }
-            }
-
-            // Remove ALL output ports (this also removes their connections)
-            for (_, oid) in &current_outputs {
-                self.editor_state.graph.remove_output_param(*oid);
-            }
-
-            // Re-add in desired order and reconnect
-            for name in &desired {
-                let new_oid = self.editor_state.graph.add_output_param(
-                    nid,
-                    name.clone(),
-                    types::GraphDataType::Scalar,
-                );
-                if let Some(inputs) = saved_connections.get(name) {
-                    for &input_id in inputs {
-                        self.editor_state.graph.add_connection(new_oid, input_id);
-                    }
-                }
-            }
-        }
-    }
-
-    pub fn criar_layer_para_cena_atual(&mut self) {
-        self.empurrar_historico();
-        let cenas = self.cenas_disponiveis();
-        let cena_nome = self.cena_ativa.and_then(|ci| {
-            self.params.get(&ci).and_then(|p| {
-                if let NodeParams::Cena(cena) = p {
-                    if !cena.nome_cena.is_empty() { Some(cena.nome_cena.clone()) } else { None }
-                } else { None }
-            })
-        }).or_else(|| cenas.first().cloned()).unwrap_or_default();
-
-        // Find existing Layer node for this scene
-        let existing = self.params.iter().find_map(|(&idx, p)| {
-            if let NodeParams::Layer(layer) = p {
-                if layer.cena == cena_nome { Some(idx) } else { None }
-            } else { None }
-        });
-
-        if let Some(layer_nid) = existing {
-            // Add new entry to existing Layer node (at the top)
-            let count = match self.params.get(&layer_nid) {
-                Some(NodeParams::Layer(layer)) => layer.layers.len(),
-                _ => 0,
-            };
-            if let Some(NodeParams::Layer(layer)) = self.params.get_mut(&layer_nid) {
-                layer.layers.insert(0, LayerEntry {
-                    nome: format!("Layer {}", count + 1),
-                    ordem: 0.0,
-                    opacidade: 1.0,
-                    cor: LayerEntry::cor_por_idx(count),
-                    visivel: true,
-                });
-            }
-        } else {
-            // Create new Layer node for this scene
-            let loc = Pos2::new(
-                (self.contador as f32 % 3.0) * 260.0,
-                200.0 + (self.contador as f32 / 3.0) * 150.0,
-            );
-            let idx = self.adicionar_no_em(TipoNo::Layer, loc);
-            if let Some(NodeParams::Layer(layer)) = self.params.get_mut(&idx) {
-                layer.cena = cena_nome;
-                layer.layers.insert(0, LayerEntry {
-                    nome: "Layer 1".to_string(),
-                    ordem: 0.0,
-                    opacidade: 1.0,
-                    cor: LayerEntry::cor_por_idx(0),
-                    visivel: true,
-                });
-            }
-            self.contador += 1;
-        }
-    }
-
-    pub fn remover_layer_entry(&mut self, layer_idx: NodeId, entry_idx: usize) {
-        let (should_remove_node, should_remove_entry) = match self.params.get(&layer_idx) {
-            Some(NodeParams::Layer(layer)) => {
-                if entry_idx < layer.layers.len() && layer.layers.len() > 1 {
-                    (false, true)
-                } else if layer.layers.len() == 1 {
-                    (true, false)
-                } else {
-                    (false, false)
-                }
-            }
-            _ => (false, false),
-        };
-        if should_remove_node {
-            self.empurrar_historico();
-            self.remover_no(layer_idx);
-            self.limpar_grupos();
-        } else if should_remove_entry {
-            self.empurrar_historico();
-            if let Some(NodeParams::Layer(layer)) = self.params.get_mut(&layer_idx) {
-                layer.layers.remove(entry_idx);
-                if layer.selected >= layer.layers.len() {
-                    layer.selected = layer.layers.len().saturating_sub(1);
-                }
-            }
-        }
-    }
-
-    pub fn mover_layer_entry(&mut self, layer_idx: NodeId, entry_idx: usize, delta: i32) {
-        if let Some(NodeParams::Layer(layer)) = self.params.get_mut(&layer_idx) {
-            let new_idx = (entry_idx as i32 + delta) as usize;
-            if new_idx < layer.layers.len() {
-                layer.layers.swap(entry_idx, new_idx);
-            }
-        }
-    }
-
-    pub fn sincronizar_marcadores_com_cenas(&mut self, markers: &[crate::ui::timeline::Marker]) {
-        self.empurrar_historico();
-        let nomes_marc: Vec<String> = markers.iter().map(|m| m.name.clone()).collect();
-        let mut cenas_por_nome: HashMap<String, NodeId> = HashMap::new();
-        let mut cenas_para_remover: Vec<NodeId> = Vec::new();
-
-        for (&idx, p) in &self.params {
-            if let NodeParams::Cena(cena) = p {
-                if !cena.nome_cena.is_empty() {
-                    if nomes_marc.contains(&cena.nome_cena) {
-                        cenas_por_nome.insert(cena.nome_cena.clone(), idx);
-                    } else {
-                        cenas_para_remover.push(idx);
-                    }
-                }
-            }
-        }
-        for idx in cenas_para_remover {
-            if self.params.get(&idx).map_or(false, |p| matches!(p, NodeParams::Cena(..))) {
-                self.remover_no(idx);
-            }
-        }
-        for nome in &nomes_marc {
-            if !cenas_por_nome.contains_key(nome) {
-                let loc = Pos2::new(
-                    (self.contador as f32 % 3.0) * 260.0,
-                    (self.contador as f32 / 3.0) * 150.0,
-                );
-                let idx = self.adicionar_no_em(TipoNo::Cena, loc);
-                if let Some(NodeParams::Cena(cena)) = self.params.get_mut(&idx) {
-                    cena.nome_cena = nome.clone();
-                }
-                cenas_por_nome.insert(nome.clone(), idx);
-                self.contador += 1;
-            }
-        }
-    }
-
     pub fn projeto(&self) -> ProjetoConfig {
         self.canvas.and_then(|c| self.params.get(&c)).and_then(|p| {
             if let NodeParams::Canvas(cfg) = p { Some(cfg.clone()) } else { None }
@@ -540,126 +209,6 @@ impl GraphPanel {
 
     fn aplicar_modelo_anim_texto(&mut self, _id: u8) {
         self.contador += 2;
-    }
-
-    pub fn buscar(&mut self, termo: &str) {
-        for nid in self.editor_state.graph.iter_nodes() {
-            let node = &self.editor_state.graph[nid];
-            let selected = node.user_data.tipo.nome().to_lowercase().contains(&termo.to_lowercase());
-            if selected {
-                if !self.editor_state.selected_nodes.contains(&nid) {
-                    self.editor_state.selected_nodes.push(nid);
-                }
-            } else {
-                self.editor_state.selected_nodes.retain(|&n| n != nid);
-            }
-        }
-    }
-
-    #[allow(dead_code)]
-    pub fn screen_para_canvas(&self, screen: Pos2, pan: Vec2, editor_rect: Rect) -> Pos2 {
-        (screen.to_vec2() - pan - editor_rect.min.to_vec2()).to_pos2()
-    }
-
-    pub fn canvas_para_screen(&self, canvas: Pos2, pan: Vec2, zoom: f32, editor_rect: Rect) -> Pos2 {
-        let center = editor_rect.center().to_vec2();
-        ((canvas.to_vec2() - center) * zoom + center + pan + editor_rect.min.to_vec2()).to_pos2()
-    }
-
-    #[allow(dead_code)]
-    pub fn node_sob_cursor(&self, p: Pos2, pan: Vec2, _zoom: f32, editor_rect: Rect) -> Option<NodeId> {
-        let canvas_p = self.screen_para_canvas(p, pan, editor_rect);
-        for nid in self.editor_state.graph.iter_nodes() {
-            if let Some(pos) = self.editor_state.node_positions.get(nid) {
-                let label = self.obter_label(nid);
-                let half = ports::tamanho(&label);
-                if (canvas_p.x - pos.x).abs() <= half.x && (canvas_p.y - pos.y).abs() <= half.y {
-                    return Some(nid);
-                }
-            }
-        }
-        None
-    }
-
-    #[allow(dead_code)]
-    pub fn sobre_cabecalho_no(&self, p: Pos2, pan: Vec2, _zoom: f32, editor_rect: Rect) -> Option<NodeId> {
-        let canvas_p = self.screen_para_canvas(p, pan, editor_rect);
-        for nid in self.editor_state.graph.iter_nodes() {
-            if let Some(pos) = self.editor_state.node_positions.get(nid) {
-                let label = self.obter_label(nid);
-                let half = ports::tamanho(&label);
-                let header_h = node_component::CABECALHO_H;
-                if (canvas_p.x - pos.x).abs() <= half.x
-                    && (canvas_p.y - pos.y).abs() <= half.y
-                    && (pos.y - half.y + header_h - canvas_p.y) >= 0.0
-                {
-                    return Some(nid);
-                }
-            }
-        }
-        None
-    }
-
-    #[allow(dead_code)]
-    pub fn portos_offsets(&self, idx: NodeId) -> Option<(Vec<Vec2>, Vec<Vec2>)> {
-        let label = self.obter_label(idx);
-        let half = ports::tamanho(&label);
-        let tipo = self.obter_tipo(idx);
-        Some(ports::port_offsets(tipo, half))
-    }
-
-    #[allow(dead_code)]
-    pub fn porta_saida_mais_proxima(&self, p: Pos2, pan: Vec2, _zoom: f32, editor_rect: Rect) -> Option<(NodeId, usize)> {
-        let canvas_p = self.screen_para_canvas(p, pan, editor_rect);
-        let mut melhor: Option<(NodeId, usize, f32)> = None;
-        for nid in self.editor_state.graph.iter_nodes() {
-            if let Some(pos) = self.editor_state.node_positions.get(nid) {
-                let label = self.obter_label(nid);
-                let half = ports::tamanho(&label);
-                let tipo = self.obter_tipo(nid);
-                let (_, outs) = ports::port_offsets(tipo, half);
-                for (i, off) in outs.iter().enumerate() {
-                    let p_port = *pos + *off;
-                    let d = (canvas_p - p_port).length();
-                    if d < 12.0 && melhor.map_or(true, |(_, _, bd)| d < bd) {
-                        melhor = Some((nid, i, d));
-                    }
-                }
-            }
-        }
-        melhor.map(|(nid, i, _)| (nid, i))
-    }
-
-    #[allow(dead_code)]
-    pub fn porta_entrada_mais_proxima(&self, p: Pos2, max: f32, pan: Vec2, _zoom: f32, editor_rect: Rect) -> Option<(NodeId, usize)> {
-        let canvas_p = self.screen_para_canvas(p, pan, editor_rect);
-        let mut melhor: Option<(NodeId, usize, f32)> = None;
-        for nid in self.editor_state.graph.iter_nodes() {
-            if let Some(pos) = self.editor_state.node_positions.get(nid) {
-                let label = self.obter_label(nid);
-                let half = ports::tamanho(&label);
-                let tipo = self.obter_tipo(nid);
-                let (ins, _) = ports::port_offsets(tipo, half);
-                for (i, off) in ins.iter().enumerate() {
-                    let p_port = *pos + *off;
-                    let d = (canvas_p - p_port).length();
-                    if d < max && melhor.map_or(true, |(_, _, bd)| d < bd) {
-                        melhor = Some((nid, i, d));
-                    }
-                }
-            }
-        }
-        melhor.map(|(nid, i, _)| (nid, i))
-    }
-
-    #[allow(dead_code)]
-    pub fn porta_entrada_canvas(&self, idx: NodeId, porta: usize) -> Option<Pos2> {
-        let pos = self.editor_state.node_positions.get(idx).copied()?;
-        let label = self.obter_label(idx);
-        let half = ports::tamanho(&label);
-        let tipo = self.obter_tipo(idx);
-        let (ins, _) = ports::port_offsets(tipo, half);
-        ins.get(porta).map(|off| pos + *off)
     }
 
     pub fn garantir_master(&mut self) {
@@ -681,21 +230,6 @@ impl GraphPanel {
             self.master = Some(mestres[0]);
         }
     }
-
-    pub fn reafirmar_posicoes(&mut self) {
-        let fixar = |idx: Option<NodeId>, loc: Pos2, liberados: &HashSet<NodeId>, positions: &mut slotmap::SecondaryMap<NodeId, Pos2>| {
-            if let Some(i) = idx {
-                if !liberados.contains(&i) {
-                    positions.insert(i, loc);
-                }
-            }
-        };
-        fixar(self.canvas, self.canvas_loc, &self.liberados, &mut self.editor_state.node_positions);
-        fixar(self.cena, self.cena_loc, &self.liberados, &mut self.editor_state.node_positions);
-        fixar(self.master, self.master_loc, &self.liberados, &mut self.editor_state.node_positions);
-    }
-
-
 
     fn marcar_sujo(&mut self) {
         self.dirty_repaint = true;
@@ -758,14 +292,11 @@ impl GraphPanel {
         self.params = user_state.params;
         self.renaming_layer = user_state.renaming_layer;
 
-        // If user is actively editing (mouse held or typing), mark preview dirty
-        // so slider drags, text edits, etc. cause preview to rebuild.
         if ui.ctx().input(|i| i.pointer.any_down() || i.events.iter().any(|e| matches!(e, eframe::egui::Event::Key { .. } | eframe::egui::Event::Text { .. }))) {
             self.preview_dirty = true;
             self.dirty_repaint = true;
         }
 
-        // Sync dynamic output ports for Layer nodes
         self.sync_layer_ports();
 
         for resp in &responses.node_responses {
