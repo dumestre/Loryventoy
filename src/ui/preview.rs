@@ -14,6 +14,7 @@ use eframe::egui::{
     Stroke,
     StrokeKind,
     TextureHandle,
+    TextureId,
     Ui,
     Vec2,
 };
@@ -51,6 +52,11 @@ pub struct PreviewPanel {
     pen_erros: Vec<String>,
     // cache de texturas GPU para texto, evitando load_texture a cada frame
     tex_cache: HashMap<String, TextureHandle>,
+    // cache de shapes do preview (por frame) — evita lyon tessellation + DSL eval
+    // quando o tempo de animação não mudou entre frames consecutivos
+    ultimo_tempo: f32,
+    cache_shapes: Vec<Shape>,
+    cache_pen_erros: Vec<String>,
 }
 
 
@@ -68,6 +74,9 @@ impl PreviewPanel {
             raster: TextRaster::new(),
             pen_erros: Vec::new(),
             tex_cache: HashMap::new(),
+            ultimo_tempo: -1.0,
+            cache_shapes: Vec::new(),
+            cache_pen_erros: Vec::new(),
         }
     }
 
@@ -257,196 +266,167 @@ impl PreviewPanel {
         // objetos tenham o MESMO tamanho relativo ao canvas que terão no
         // export (sincronização preview ≡ export).
         let proj_w = self.data.largura.max(1.0);
-        // fator px-de-projeto -> px-de-tela (canvas_size normaliza o maior
-        // lado p/ a base; ×zoom aplica o zoom do usuário).
         let proj_scale = (self.canvas_size.x / proj_w).max(1e-6);
         let escala = proj_scale * self.zoom;
-        // canto superior-esquerdo do canvas branco em tela = onde (0,0) cai.
         let canvas_min = canvas_rect.min;
         let para_tela = move |p: Pos2| -> Pos2 {
             canvas_min + p.to_vec2() * escala
         };
         let para_tela_v = move |v: Vec2| -> Vec2 { v * escala };
 
-        // renovamos o cache de texturas a cada quadro
-        let mut tex_idx = 0usize;
-        // Clona a lista de cenas para soltar o empréstimo imutável de `self`
-        // (necessário pois rasterizamos texto com `self.raster` mutavelmente
-        // dentro do loop). Cenas são leves (referências/poucos itens).
-        let cenas = self.data.cenas.clone();
-        for cena in &cenas {
-            if cena.opacidade <= 0.001 {
-                continue;
-            }
-            let opac_cena = cena.opacidade;
-            for layer in &cena.layers {
-                if layer.opacidade <= 0.001 {
-                    continue;
-                }
-                let opac = opac_cena * layer.opacidade;
-                for gen in &layer.formas {
-                    let shape = gen.generate(self.tempo);
-                    let op = opac * gen.opac_em(self.tempo);
-                    let shape = Self::aplicar_opacidade(shape, op);
-                    let tela = Self::translate_shape(shape, &para_tela, &para_tela_v);
-                    painter.add(tela);
-                }
-                for txt in &layer.textos {
-                    let (tx, ty) = txt.pos_em(self.tempo);
-                    let (esx, esy) = txt.escala_em(self.tempo);
-                    let r = match self.rasterizar_texto(
-                        &txt.conteudo,
-                        txt.tamanho,
-                        txt.negrito,
-                        txt.italico,
-                        txt.cor,
-                        escala,
-                    ) {
-                        Some(r) => r,
-                        None => continue,
-                    };
-                    let key = Self::tex_cache_key(&txt.conteudo, txt.tamanho, escala, txt.negrito, txt.italico, txt.cor);
-                    let handle = if let Some(h) = self.tex_cache.get(&key) {
-                        h.clone()
-                    } else {
-                        let name = format!("preview_text_{}", tex_idx);
-                        tex_idx += 1;
-                        let h = ui.ctx().load_texture(name, r.imagem, TextureOptions::LINEAR);
-                        self.tex_cache.insert(key, h.clone());
-                        h
-                    };
-                    let anchor = para_tela(Pos2::new(tx, ty));
-                    let size = Vec2::new(
-                        r.tam_logico[0] * escala.max(0.05) * esx,
-                        r.tam_logico[1] * escala.max(0.05) * esy,
-                    );
-                    let op = opac * txt.opac_em(self.tempo) * txt.trim_em(self.tempo);
-                    let a = (op.clamp(0.0, 1.0) * 255.0) as u8;
-                    painter.image(
-                        handle.id(),
-                        Rect::from_min_size(anchor, size),
-                        Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)),
-                        Color32::from_white_alpha(a),
-                    );
-                }
-                let mut pen_ord: Vec<&crate::procedural::PenPath> = layer.pen.iter().collect();
-                pen_ord.sort_by(|a, b| a.ordem.partial_cmp(&b.ordem).unwrap_or(std::cmp::Ordering::Equal));
-                self.pen_erros.clear();
-                for pen in pen_ord {
-                    let cmds = match pen.program.eval(self.tempo, pen.seed) {
-                        Ok(c) => c,
-                        Err(e) => {
-                            self.pen_erros.push(e.to_string());
-                            continue;
-                        }
-                    };
-                let progress = (self.tempo / pen.duracao.max(0.001)).clamp(0.0, 1.0);
-                let trim_fim_anim = pen.trim_inicio + (pen.trim_fim - pen.trim_inicio) * progress;
-                let shapes = Self::pen_cmds_para_shapes(
-                    &cmds,
-                    pen.pos_em(self.tempo),
-                    pen.cor,
-                    pen.cor_fill,
-                    pen.espessura,
-                    pen.preenchimento,
-                    pen.cantos,
-                    pen.escala_x,
-                    pen.escala_y,
-                    &para_tela,
-                    &para_tela_v,
-                    opac * pen.opac_em(self.tempo),
-                    pen.trim_inicio,
-                    trim_fim_anim,
-                );
-                for s in shapes {
-                    painter.add(s);
-                }
-                // Textos da caneta: rasterizados via cosmic-text (igual nó Texto),
-                // reusando exatamente o mesmo caminho de desenho dos nós Texto.
-                let penpos = pen.pos_em(self.tempo);
-                let pen_escala = (pen.escala_x, pen.escala_y);
-                let op_pen = opac * pen.opac_em(self.tempo) * pen.trim_em(self.tempo);
-                for pt in crate::dsl::extrair_textos(&cmds) {
-                    let pos = (
-                        penpos.x + pt.x * pen_escala.0,
-                        penpos.y + pt.y * pen_escala.1,
-                    );
-                    let r = match self.rasterizar_texto(
-                        &pt.conteudo,
-                        pt.tamanho,
-                        pt.negrito,
-                        pt.italico,
-                        pt.cor,
-                        escala,
-                    ) {
-                        Some(r) => r,
-                        None => continue,
-                    };
-                    let key = Self::tex_cache_key(&pt.conteudo, pt.tamanho, escala, pt.negrito, pt.italico, pt.cor);
-                    let handle = if let Some(h) = self.tex_cache.get(&key) {
-                        h.clone()
-                    } else {
-                        let name = format!("preview_text_{}", tex_idx);
-                        tex_idx += 1;
-                        let h = ui.ctx().load_texture(name, r.imagem, TextureOptions::LINEAR);
-                        self.tex_cache.insert(key, h.clone());
-                        h
-                    };
-                    let a = (op_pen.clamp(0.0, 1.0) * 255.0) as u8;
-                    // Alinhamento horizontal: desloca o canto de ancoragem.
-                    let largura_log = r.tam_logico[0] * pen_escala.0;
-                    let dx = match pt.alinhamento {
-                        crate::dsl::TextoAlinhamento::Left => 0.0,
-                        crate::dsl::TextoAlinhamento::Center => -largura_log / 2.0,
-                        crate::dsl::TextoAlinhamento::Right => -largura_log,
-                    };
-                    let anchor_proj = Pos2::new(pos.0 + dx, pos.1);
-                    let anchor = para_tela(anchor_proj);
-                    let size = Vec2::new(
-                        r.tam_logico[0] * escala.max(0.05) * pen_escala.0,
-                        r.tam_logico[1] * escala.max(0.05) * pen_escala.1,
-                    );
-                    if pt.rotacao.abs() < 0.001 {
-                        painter.image(
-                            handle.id(),
-                            Rect::from_min_size(anchor, size),
-                            Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)),
-                            Color32::from_white_alpha(a),
-                        );
-                    } else {
-                        // Texto rotacionado: desenha como um mesh de 2 triângulos
-                        // com os 4 cantos girados em torno do canto superior-esq.
-                        let rot = pt.rotacao.to_radians();
-                        let (cs, sn) = (rot.cos(), rot.sin());
-                        let giro = |v: Pos2| -> Pos2 {
-                            anchor
-                                + Vec2::new(
-                                    (v.x - anchor.x) * cs - (v.y - anchor.y) * sn,
-                                    (v.x - anchor.x) * sn + (v.y - anchor.y) * cs,
-                                )
+        let precisa_rebuild = self.cache_shapes.is_empty()
+            || (self.tempo - self.ultimo_tempo).abs() > f32::EPSILON;
+
+        if precisa_rebuild {
+            self.ultimo_tempo = self.tempo;
+            self.cache_shapes.clear();
+
+            let mut tex_idx = 0usize;
+            let cenas = self.data.cenas.clone();
+            for cena in &cenas {
+                if cena.opacidade <= 0.001 { continue; }
+                let opac_cena = cena.opacidade;
+                for layer in &cena.layers {
+                    if layer.opacidade <= 0.001 { continue; }
+                    let opac = opac_cena * layer.opacidade;
+                    for gen in &layer.formas {
+                        let shape = gen.generate(self.tempo);
+                        let op = opac * gen.opac_em(self.tempo);
+                        let shape = Self::aplicar_opacidade(shape, op);
+                        let tela = Self::translate_shape(shape, &para_tela, &para_tela_v);
+                        self.cache_shapes.push(tela.clone());
+                        painter.add(tela);
+                    }
+                    for txt in &layer.textos {
+                        let (tx, ty) = txt.pos_em(self.tempo);
+                        let (esx, esy) = txt.escala_em(self.tempo);
+                        let r = match self.rasterizar_texto(
+                            &txt.conteudo, txt.tamanho, txt.negrito, txt.italico, txt.cor, escala,
+                        ) {
+                            Some(r) => r,
+                            None => continue,
                         };
-                        let p0 = giro(anchor);
-                        let p1 = giro(anchor + Vec2::new(size.x, 0.0));
-                        let p2 = giro(anchor + Vec2::new(size.x, size.y));
-                        let p3 = giro(anchor + Vec2::new(0.0, size.y));
-                        let uv = Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0));
+                        let key = Self::tex_cache_key(&txt.conteudo, txt.tamanho, escala, txt.negrito, txt.italico, txt.cor);
+                        let handle = if let Some(h) = self.tex_cache.get(&key) {
+                            h.clone()
+                        } else {
+                            let name = format!("preview_text_{}", tex_idx);
+                            tex_idx += 1;
+                            let h = ui.ctx().load_texture(name, r.imagem, TextureOptions::LINEAR);
+                            self.tex_cache.insert(key, h.clone());
+                            h
+                        };
+                        let anchor = para_tela(Pos2::new(tx, ty));
+                        let size = Vec2::new(r.tam_logico[0] * escala.max(0.05) * esx, r.tam_logico[1] * escala.max(0.05) * esy);
+                        let op = opac * txt.opac_em(self.tempo) * txt.trim_em(self.tempo);
+                        let a = (op.clamp(0.0, 1.0) * 255.0) as u8;
+                        let img_rect = Rect::from_min_size(anchor, size);
+                        let img_uv = Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0));
                         let tint = Color32::from_white_alpha(a);
-                        let meshy = Mesh {
-                            texture_id: handle.id(),
-                            indices: vec![0, 1, 2, 0, 2, 3],
-                            vertices: vec![
-                                Vertex { pos: p0, uv: uv.min, color: tint },
-                                Vertex { pos: p1, uv: Pos2::new(uv.max.x, uv.min.y), color: tint },
-                                Vertex { pos: p2, uv: uv.max, color: tint },
-                                Vertex { pos: p3, uv: Pos2::new(uv.min.x, uv.max.y), color: tint },
-                            ],
+                        let shape = Self::make_image_shape(handle.id(), img_rect, img_uv, tint);
+                        self.cache_shapes.push(shape.clone());
+                        painter.add(shape);
+                    }
+                    let mut pen_ord: Vec<&crate::procedural::PenPath> = layer.pen.iter().collect();
+                    pen_ord.sort_by(|a, b| a.ordem.partial_cmp(&b.ordem).unwrap_or(std::cmp::Ordering::Equal));
+                    self.pen_erros.clear();
+                    for pen in pen_ord {
+                        let cmds = match pen.program.eval(self.tempo, pen.seed) {
+                            Ok(c) => c,
+                            Err(e) => {
+                                self.pen_erros.push(e.to_string());
+                                continue;
+                            }
                         };
-                        painter.add(Shape::Mesh(meshy.into()));
+                        let progress = (self.tempo / pen.duracao.max(0.001)).clamp(0.0, 1.0);
+                        let trim_fim_anim = pen.trim_inicio + (pen.trim_fim - pen.trim_inicio) * progress;
+                        let shapes = Self::pen_cmds_para_shapes(
+                            &cmds, pen.pos_em(self.tempo), pen.cor, pen.cor_fill,
+                            pen.espessura, pen.preenchimento, pen.cantos, pen.escala_x, pen.escala_y,
+                            &para_tela, &para_tela_v, opac * pen.opac_em(self.tempo), pen.trim_inicio, trim_fim_anim,
+                        );
+                        for s in shapes {
+                            self.cache_shapes.push(s.clone());
+                            painter.add(s);
+                        }
+                        let penpos = pen.pos_em(self.tempo);
+                        let pen_escala = (pen.escala_x, pen.escala_y);
+                        let op_pen = opac * pen.opac_em(self.tempo) * pen.trim_em(self.tempo);
+                        for pt in crate::dsl::extrair_textos(&cmds) {
+                            let pos = (penpos.x + pt.x * pen_escala.0, penpos.y + pt.y * pen_escala.1);
+                            let r = match self.rasterizar_texto(
+                                &pt.conteudo, pt.tamanho, pt.negrito, pt.italico, pt.cor, escala,
+                            ) {
+                                Some(r) => r,
+                                None => continue,
+                            };
+                            let key = Self::tex_cache_key(&pt.conteudo, pt.tamanho, escala, pt.negrito, pt.italico, pt.cor);
+                            let handle = if let Some(h) = self.tex_cache.get(&key) {
+                                h.clone()
+                            } else {
+                                let name = format!("preview_text_{}", tex_idx);
+                                tex_idx += 1;
+                                let h = ui.ctx().load_texture(name, r.imagem, TextureOptions::LINEAR);
+                                self.tex_cache.insert(key, h.clone());
+                                h
+                            };
+                            let a = (op_pen.clamp(0.0, 1.0) * 255.0) as u8;
+                            let largura_log = r.tam_logico[0] * pen_escala.0;
+                            let dx = match pt.alinhamento {
+                                crate::dsl::TextoAlinhamento::Left => 0.0,
+                                crate::dsl::TextoAlinhamento::Center => -largura_log / 2.0,
+                                crate::dsl::TextoAlinhamento::Right => -largura_log,
+                            };
+                            let anchor_proj = Pos2::new(pos.0 + dx, pos.1);
+                            let anchor = para_tela(anchor_proj);
+                            let size = Vec2::new(r.tam_logico[0] * escala.max(0.05) * pen_escala.0, r.tam_logico[1] * escala.max(0.05) * pen_escala.1);
+                            if pt.rotacao.abs() < 0.001 {
+                                let img_rect = Rect::from_min_size(anchor, size);
+                                let img_uv = Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0));
+                                let tint = Color32::from_white_alpha(a);
+                                let shape = Self::make_image_shape(handle.id(), img_rect, img_uv, tint);
+                                self.cache_shapes.push(shape.clone());
+                                painter.add(shape);
+                            } else {
+                                let rot = pt.rotacao.to_radians();
+                                let (cs, sn) = (rot.cos(), rot.sin());
+                                let giro = |v: Pos2| -> Pos2 {
+                                    anchor + Vec2::new(
+                                        (v.x - anchor.x) * cs - (v.y - anchor.y) * sn,
+                                        (v.x - anchor.x) * sn + (v.y - anchor.y) * cs,
+                                    )
+                                };
+                                let p0 = giro(anchor);
+                                let p1 = giro(anchor + Vec2::new(size.x, 0.0));
+                                let p2 = giro(anchor + Vec2::new(size.x, size.y));
+                                let p3 = giro(anchor + Vec2::new(0.0, size.y));
+                                let uv = Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0));
+                                let tint = Color32::from_white_alpha(a);
+                                let meshy: egui::Mesh = Mesh {
+                                    texture_id: handle.id(),
+                                    indices: vec![0, 1, 2, 0, 2, 3],
+                                    vertices: vec![
+                                        Vertex { pos: p0, uv: uv.min, color: tint },
+                                        Vertex { pos: p1, uv: Pos2::new(uv.max.x, uv.min.y), color: tint },
+                                        Vertex { pos: p2, uv: uv.max, color: tint },
+                                        Vertex { pos: p3, uv: Pos2::new(uv.min.x, uv.max.y), color: tint },
+                                    ],
+                                };
+                                let shape = Shape::Mesh(meshy.into());
+                                self.cache_shapes.push(shape.clone());
+                                painter.add(shape);
+                            }
+                        }
                     }
                 }
             }
+            self.cache_pen_erros = self.pen_erros.clone();
+        } else {
+            for s in &self.cache_shapes {
+                painter.add(s.clone());
+            }
+            self.pen_erros = self.cache_pen_erros.clone();
         }
-    }
 
     // Overlay de erros de eval dos pens
         if !self.pen_erros.is_empty() {
@@ -497,6 +477,20 @@ impl PreviewPanel {
     ///
     /// `pos` é o canto superior-esquerdo em coords de projeto; `escala_v` é a
     /// escala de eixo (1,1 na maioria dos casos).
+    fn make_image_shape(texture_id: TextureId, rect: Rect, uv: Rect, tint: Color32) -> Shape {
+        let mesh: egui::Mesh = Mesh {
+            texture_id,
+            indices: vec![0, 1, 2, 0, 2, 3],
+            vertices: vec![
+                Vertex { pos: rect.min, uv: uv.min, color: tint },
+                Vertex { pos: Pos2::new(rect.max.x, rect.min.y), uv: Pos2::new(uv.max.x, uv.min.y), color: tint },
+                Vertex { pos: rect.max, uv: uv.max, color: tint },
+                Vertex { pos: Pos2::new(rect.min.x, rect.max.y), uv: Pos2::new(uv.min.x, uv.max.y), color: tint },
+            ],
+        };
+        Shape::Mesh(mesh.into())
+    }
+
     fn tex_cache_key(conteudo: &str, tamanho: f32, escala: f32, negrito: bool, italico: bool, cor: Color32) -> String {
         let px = (tamanho * escala.max(0.05)).round().clamp(1.0, 4096.0) as u32;
         format!(
