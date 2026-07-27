@@ -10,6 +10,9 @@ mod saida;
 mod shape;
 mod texto;
 mod transform;
+mod params;
+
+pub use params::NodeParams;
 
 use eframe::egui::Color32;
 
@@ -168,8 +171,9 @@ impl TipoNo {
 
 // ── NodeParams ──────────────────────────────────────────────────
 
+/*
 #[derive(Clone, Debug)]
-pub enum NodeParams {
+pub enum LegacyNodeParams {
     Transform {
         px: f32, py: f32, pz: f32,
         rx: f32, ry: f32, rz: f32,
@@ -246,23 +250,8 @@ pub enum NodeParams {
     Saida { brilho: f32, contraste: f32, saturacao: f32 },
     Canvas(ProjetoConfig),
 }
+*/
 
-impl NodeParams {
-    pub fn padrao(tipo: TipoNo) -> NodeParams {
-        match tipo {
-            TipoNo::Saida => saida::padrao(),
-            TipoNo::Transform => transform::padrao(),
-            TipoNo::Canvas => canvas::padrao(),
-            TipoNo::Cena => cena::padrao(),
-            TipoNo::Layer => layer::padrao(),
-            TipoNo::Shape => shape::padrao(),
-            TipoNo::Texto => texto::padrao(),
-            TipoNo::Pen => pen::padrao(),
-            TipoNo::Ruido => ruido::padrao(),
-            TipoNo::Anim => anim::padrao(),
-        }
-    }
-}
 
 // ── Structs auxiliares ──────────────────────────────────────────
 

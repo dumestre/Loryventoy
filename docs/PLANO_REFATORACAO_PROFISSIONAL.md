@@ -72,6 +72,25 @@ Observação: `cargo fmt --check` ainda acusa diferenças de formatação preexi
 
 Próximo passo seguro: migrar os tipos básicos de parâmetros de nó e `LayerEntry` para o domínio, mantendo adaptadores temporários na UI e sem alterar o comportamento do editor.
 
+Em seguida, foi concluída a extração estrutural de `NodeParams`:
+
+- criado `src/nodes/params.rs`;
+- `NodeParams` e seu construtor de valores padrão foram retirados do módulo principal de nós;
+- `src/nodes/mod.rs` passou a reexportar `NodeParams` para preservar as chamadas existentes;
+- os módulos de cada nó continuam funcionando através do mesmo contrato público;
+- nenhuma variante, campo ou valor padrão foi alterado;
+- a definição antiga foi mantida apenas como bloco temporário de compatibilidade durante a migração e deve ser removida na limpeza da próxima etapa;
+- nenhum formato de arquivo ou comportamento visual foi alterado.
+
+Validação adicional:
+
+```text
+cargo check       OK
+cargo test --all  OK — 68 testes
+```
+
+O próximo trabalho deve remover definitivamente o bloco legado e migrar `LayerEntry` para uma estrutura de domínio sem o campo visual `renomeando`. Esse campo deverá viver no estado da apresentação, não nos dados persistentes do projeto.
+
 ---
 
 ## 3. Regras obrigatórias da refatoração
