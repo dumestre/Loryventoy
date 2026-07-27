@@ -14,11 +14,13 @@ mod params;
 mod layer_entry;
 mod shape_params;
 mod text_params;
+mod pen_params;
 
 pub use params::NodeParams;
 pub use layer_entry::LayerEntry;
 pub use shape_params::ShapeParams;
 pub use text_params::TextParams;
+pub use pen_params::PenParams;
 
 use eframe::egui::Color32;
 

@@ -160,62 +160,45 @@ fn aplicar_campos(
                 texto.cena = cn;
             }
         }
-        NodeParams::Pen {
-            codigo,
-            cor,
-            cor_fill,
-            pos_x,
-            pos_y,
-            espessura,
-            preenchimento,
-            seed,
-            cantos,
-            ordem,
-            escala_x,
-            escala_y,
-            trim_inicio,
-            trim_fim,
-            cena,
-            ..
-        } => {
+        NodeParams::Pen(pen) => {
             let mut cena_nome: Option<String> = None;
             for (c, v) in &n.campos {
                 match c.as_str() {
                     "scene" => cena_nome = Some(v.as_str()),
                     "pos" => {
                         if let Expr::Vec2(a, b) = v {
-                            *pos_x = *a;
-                            *pos_y = *b;
+                            pen.pos_x = *a;
+                            pen.pos_y = *b;
                         }
                     }
-                    "stroke" => *espessura = v.as_num(),
+                    "stroke" => pen.espessura = v.as_num(),
                     "fill" => {
-                        *preenchimento =
+                        pen.preenchimento =
                             v.as_str() != "off" && v.as_str() != "false"
                     }
                     "color" | "colour" => {
                         let h = v.as_hex();
                         let h = crate::domain::Color::from_rgba(h.r(), h.g(), h.b(), h.a());
-                        *cor = h;
-                        *cor_fill = h;
+                        pen.cor = h;
+                        pen.cor_fill = h;
                     }
-                    "stroke_color" | "strokecolor" => { let h = v.as_hex(); *cor = crate::domain::Color::from_rgba(h.r(), h.g(), h.b(), h.a()); },
-                    "fill_color" | "fillcolor" => { let h = v.as_hex(); *cor_fill = crate::domain::Color::from_rgba(h.r(), h.g(), h.b(), h.a()); },
-                    "seed" => *seed = v.as_num(),
-                    "corners" => *cantos = v.as_num(),
-                    "order" => *ordem = v.as_num(),
-                    "scalex" => *escala_x = v.as_num(),
-                    "scaley" => *escala_y = v.as_num(),
-                    "trim_start" | "trim_inicio" => *trim_inicio = v.as_num(),
-                    "trim_end" | "trim_fim" => *trim_fim = v.as_num(),
+                    "stroke_color" | "strokecolor" => { let h = v.as_hex(); pen.cor = crate::domain::Color::from_rgba(h.r(), h.g(), h.b(), h.a()); },
+                    "fill_color" | "fillcolor" => { let h = v.as_hex(); pen.cor_fill = crate::domain::Color::from_rgba(h.r(), h.g(), h.b(), h.a()); },
+                    "seed" => pen.seed = v.as_num(),
+                    "corners" => pen.cantos = v.as_num(),
+                    "order" => pen.ordem = v.as_num(),
+                    "scalex" => pen.escala_x = v.as_num(),
+                    "scaley" => pen.escala_y = v.as_num(),
+                    "trim_start" | "trim_inicio" => pen.trim_inicio = v.as_num(),
+                    "trim_end" | "trim_fim" => pen.trim_fim = v.as_num(),
                     _ => {}
                 }
             }
             if let Some(cn) = cena_nome {
-                *cena = cn;
+                pen.cena = cn;
             }
             if n.codigo.is_some() {
-                *codigo = n.codigo.clone().unwrap_or_default();
+                pen.codigo = n.codigo.clone().unwrap_or_default();
             }
         }
         NodeParams::Ruido {
@@ -324,8 +307,8 @@ impl GraphPanel {
         }
         for (_idx, params) in &mut self.params {
             let cena = match params {
-                NodeParams::Layer { cena, .. }
-                | NodeParams::Pen { cena, .. } => cena,
+                NodeParams::Layer { cena, .. } => cena,
+                NodeParams::Pen(pen) => &mut pen.cena,
                 NodeParams::Texto(texto) => &mut texto.cena,
                 NodeParams::Shape(shape) => &mut shape.cena,
                 _ => continue,

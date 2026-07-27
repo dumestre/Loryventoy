@@ -1,4 +1,4 @@
-use super::{ParametroPorto, PortSpec, NodeParams, P_LAYER, P_POS_XY, P_PEN};
+use super::{ParametroPorto, PortSpec, NodeParams, PenParams, P_LAYER, P_POS_XY, P_PEN};
 use crate::domain::Color;
 
 pub(crate) const PEN_EXEMPLO: &str = "\
@@ -25,7 +25,7 @@ pub(crate) fn portos() -> PortSpec {
 }
 
 pub(crate) fn padrao() -> NodeParams {
-    NodeParams::Pen {
+    NodeParams::Pen(PenParams {
         cena: String::new(),
         codigo: PEN_EXEMPLO.to_string(),
         erro: None,
@@ -42,5 +42,5 @@ pub(crate) fn padrao() -> NodeParams {
         escala_y: 1.0,
         trim_inicio: 0.0,
         trim_fim: 1.0,
-    }
+    })
 }

@@ -4,6 +4,7 @@ use super::{
 };
 pub use super::shape_params::ShapeParams;
 pub use super::text_params::TextParams;
+pub use super::pen_params::PenParams;
 
 /// Parâmetros editáveis de cada tipo de nó.
 ///
@@ -16,7 +17,7 @@ pub enum NodeParams {
     Layer { cena: String, layers: Vec<LayerEntry>, selected: usize },
     Texto(TextParams),
     Shape(ShapeParams),
-    Pen { cena: String, codigo: String, erro: Option<String>, cor: crate::domain::Color, cor_fill: crate::domain::Color, pos_x: f32, pos_y: f32, espessura: f32, preenchimento: bool, seed: f32, cantos: f32, ordem: f32, escala_x: f32, escala_y: f32, trim_inicio: f32, trim_fim: f32 },
+    Pen(PenParams),
     Ruido { seed: f32, freq: f32, amp: f32, veloc: f32, alvo: u8 },
     Anim { alvo: u8, loop_mode: u8, segmentos: Vec<crate::procedural::AnimSeg> },
     Saida { brilho: f32, contraste: f32, saturacao: f32 },

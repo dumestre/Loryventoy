@@ -580,53 +580,35 @@ pub fn show_content(
             }
         }
         TipoNo::Pen => {
-            if let NodeParams::Pen {
-                cena,
-                codigo,
-                erro,
-                cor,
-                cor_fill,
-                pos_x,
-                pos_y,
-                espessura,
-                preenchimento,
-                seed,
-                cantos,
-                ordem,
-                escala_x,
-                escala_y,
-                trim_inicio,
-                trim_fim,
-                ..
-            } = params
+            if let NodeParams::Pen(pen) = params
             {
-                grid_combo_cena(ui, "Cena", cena, cenas);
-                grid_xyz(ui, "Posição", pos_x, pos_y, &mut 0.0);
-                grid_2(ui, "Espessura", espessura, 0.0..=100.0, "px", 1);
+                grid_combo_cena(ui, "Cena", &mut pen.cena, cenas);
+                grid_xyz(ui, "Posição", &mut pen.pos_x, &mut pen.pos_y, &mut 0.0);
+                grid_2(ui, "Espessura", &mut pen.espessura, 0.0..=100.0, "px", 1);
                 Grid::new("pen_preench")
                     .num_columns(2)
                     .spacing([8.0, 3.0])
                     .show(ui, |ui| {
                         ui.label("Preencher");
-                        ui.checkbox(preenchimento, "");
+                        ui.checkbox(&mut pen.preenchimento, "");
                         ui.end_row();
                     });
-                grid_2(ui, "Cantos", cantos, 0.0..=1.0, "", 2);
-                grid_2(ui, "Ordem", ordem, -100.0..=100.0, "", 1);
-                grid_escala(ui, escala_x, escala_y);
-                grid_2(ui, "Seed", seed, 0.0..=9999.0, "", 0);
+                grid_2(ui, "Cantos", &mut pen.cantos, 0.0..=1.0, "", 2);
+                grid_2(ui, "Ordem", &mut pen.ordem, -100.0..=100.0, "", 1);
+                grid_escala(ui, &mut pen.escala_x, &mut pen.escala_y);
+                grid_2(ui, "Seed", &mut pen.seed, 0.0..=9999.0, "", 0);
                 Grid::new("pen_cor")
                     .num_columns(2)
                     .spacing([8.0, 3.0])
                     .show(ui, |ui| {
                         ui.label("Cor traço");
                         ui.horizontal(|ui| {
-                            editar_cor(ui, cor);
+                            editar_cor(ui, &mut pen.cor);
                         });
                         ui.end_row();
                         ui.label("Cor preench.");
                         ui.horizontal(|ui| {
-                            editar_cor(ui, cor_fill);
+                            editar_cor(ui, &mut pen.cor_fill);
                         });
                         ui.end_row();
                     });
@@ -643,7 +625,7 @@ pub fn show_content(
                             .max_height(140.0)
                             .show(ui, |ui| {
                                 ui.add(
-                                    egui::TextEdit::multiline(codigo)
+                                    egui::TextEdit::multiline(&mut pen.codigo)
                                         .code_editor()
                                         .font(egui::TextStyle::Monospace)
                                         .desired_rows(6)
@@ -661,17 +643,17 @@ pub fn show_content(
                     ];
                     for c in cmds {
                         if ui.small_button(c).clicked() {
-                            let sep = if codigo.is_empty() || codigo.ends_with('\n') {
+                            let sep = if pen.codigo.is_empty() || pen.codigo.ends_with('\n') {
                                 ""
                             } else {
                                 "\n"
                             };
-                            codigo.push_str(&format!("{sep}{c} "));
+                            pen.codigo.push_str(&format!("{sep}{c} "));
                         }
                     }
                 });
                 // re-parseia ao editar e reporta erro
-                *erro = match crate::dsl::Program::parse(codigo) {
+                pen.erro = match crate::dsl::Program::parse(&pen.codigo) {
                     Ok(_) => None,
                     Err(e) => Some(e.to_string()),
                 };
@@ -679,7 +661,7 @@ pub fn show_content(
                 ui.add_space(6.0);
                 ui.separator();
                 // Painel de log do Pen: status do parse + botão de copiar.
-                let log_txt = match erro.as_deref() {
+                let log_txt = match pen.erro.as_deref() {
                     Some(e) => format!("ERRO: {e}"),
                     None => "OK: código válido.".to_string(),
                 };
@@ -694,7 +676,7 @@ pub fn show_content(
                     .max_height(70.0)
                     .auto_shrink([false, false])
                     .show(ui, |ui| {
-                        let cor = if erro.is_some() {
+                        let cor = if pen.erro.is_some() {
                             Color32::from_rgb(230, 120, 120)
                         } else {
                             Color32::from_rgb(150, 200, 150)
@@ -707,9 +689,9 @@ pub fn show_content(
                     let r = Grid::new("pen_trim_inicio")
                         .num_columns(2).spacing([6.0, 2.0]).show(ui, |ui| {
                             ui.label("Trim início");
-                            let mut v = *trim_inicio * 100.0;
+                            let mut v = pen.trim_inicio * 100.0;
                             if draggable_value(ui, &mut v, 0.0..=100.0, 1.0, "%", 1).changed() {
-                                *trim_inicio = (v / 100.0).clamp(0.0, 1.0);
+                                pen.trim_inicio = (v / 100.0).clamp(0.0, 1.0);
                             }
                             ui.end_row();
                         });
@@ -719,9 +701,9 @@ pub fn show_content(
                     let r = Grid::new("pen_trim_fim")
                         .num_columns(2).spacing([6.0, 2.0]).show(ui, |ui| {
                             ui.label("Trim fim");
-                            let mut v = *trim_fim * 100.0;
+                            let mut v = pen.trim_fim * 100.0;
                             if draggable_value(ui, &mut v, 0.0..=100.0, 1.0, "%", 1).changed() {
-                                *trim_fim = (v / 100.0).clamp(0.0, 1.0);
+                                pen.trim_fim = (v / 100.0).clamp(0.0, 1.0);
                             }
                             ui.end_row();
                         });

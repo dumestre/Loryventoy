@@ -197,7 +197,27 @@ cargo check       OK
 cargo test --all  OK — 68 testes
 ```
 
-Esta é a sequência que será repetida para `Pen`, `Canvas`, `Layer`, `Cena`, `Transform`, `Ruído`, `Animação` e `Saída`, sempre uma variante por vez.
+### Terceira variante de `NodeParams` separada: Pen
+
+Foi concluída a migração da variante `Pen`:
+
+- criado `src/nodes/pen_params.rs`;
+- criada a estrutura `PenParams` com os dados persistentes do nó Pen;
+- `NodeParams::Pen` passou a encapsular `PenParams`;
+- defaults do nó Pen foram adaptados;
+- inspector, DSL, preview, normalização de cena e persistência foram adaptados;
+- o JSON continua com os mesmos campos e o mesmo formato;
+- o comportamento visual e os valores padrão foram preservados;
+- nenhum recurso novo foi adicionado.
+
+Validação:
+
+```text
+cargo check       OK
+cargo test --all  OK — 68 testes
+```
+
+Esta é a sequência que será repetida para `Canvas`, `Layer`, `Cena`, `Transform`, `Ruído`, `Animação` e `Saída`, sempre uma variante por vez.
 
 ---
 

@@ -22,8 +22,8 @@ impl GraphPanel {
         {
             let pen_codes: Vec<(NodeId, String)> = self.params.iter()
                 .filter_map(|(&nid, p)| {
-                    if let NodeParams::Pen { codigo, .. } = p {
-                        Some((nid, codigo.clone()))
+                    if let NodeParams::Pen(pen) = p {
+                        Some((nid, pen.codigo.clone()))
                     } else {
                         None
                     }
@@ -119,7 +119,7 @@ impl GraphPanel {
                     if let Some(oid) = output_id {
                         for (&nid, params) in &self.params {
                             match params {
-                                NodeParams::Shape(..) | NodeParams::Texto(..) | NodeParams::Pen { .. } => {
+                                NodeParams::Shape(..) | NodeParams::Texto(..) | NodeParams::Pen(..) => {
                                     let graph = &self.editor_state.graph;
                                     let node = &graph[nid];
                                     for (_, input_id) in &node.inputs {
@@ -137,7 +137,7 @@ impl GraphPanel {
                                                             layer_preview.textos.push(item);
                                                         }
                                                     }
-                                                    NodeParams::Pen { .. } => {
+                                                    NodeParams::Pen(..) => {
                                                         if let Some(pp) = self.build_pen_path(nid, params) {
                                                             layer_preview.pen.push(pp);
                                                         }
@@ -157,11 +157,11 @@ impl GraphPanel {
                     if !has_connections && entries.len() <= 1 {
                         for (&nid, params) in &self.params {
                             match params {
-                                NodeParams::Shape(..) | NodeParams::Texto(..) | NodeParams::Pen { .. } => {
+                                NodeParams::Shape(..) | NodeParams::Texto(..) | NodeParams::Pen(..) => {
                                     let node_cena = match params {
                                         NodeParams::Shape(shape) => shape.cena.as_str(),
                                         NodeParams::Texto(texto) => texto.cena.as_str(),
-                                        NodeParams::Pen { cena, .. } => cena.as_str(),
+                                        NodeParams::Pen(pen) => pen.cena.as_str(),
                                         _ => "",
                                     };
                                     if node_cena == nome_cena {
@@ -176,7 +176,7 @@ impl GraphPanel {
                                                     layer_preview.textos.push(item);
                                                 }
                                             }
-                                            NodeParams::Pen { .. } => {
+                                            NodeParams::Pen(..) => {
                                                 if let Some(pp) = self.build_pen_path(nid, params) {
                                                     layer_preview.pen.push(pp);
                                                 }
@@ -205,11 +205,11 @@ impl GraphPanel {
                 };
                 for (&nid, params) in &self.params {
                     match params {
-                        NodeParams::Shape(..) | NodeParams::Texto(..) | NodeParams::Pen { .. } => {
+                        NodeParams::Shape(..) | NodeParams::Texto(..) | NodeParams::Pen(..) => {
                             let node_cena = match params {
                                 NodeParams::Shape(shape) => shape.cena.as_str(),
                                 NodeParams::Texto(texto) => texto.cena.as_str(),
-                                NodeParams::Pen { cena, .. } => cena.as_str(),
+                                NodeParams::Pen(pen) => pen.cena.as_str(),
                                 _ => "",
                             };
                             if node_cena == nome_cena {
@@ -224,7 +224,7 @@ impl GraphPanel {
                                             layer_preview.textos.push(item);
                                         }
                                     }
-                                    NodeParams::Pen { .. } => {
+                                    NodeParams::Pen(..) => {
                                         if let Some(pp) = self.build_pen_path(nid, params) {
                                             layer_preview.pen.push(pp);
                                         }
@@ -300,24 +300,8 @@ impl GraphPanel {
     }
 
     fn build_pen_path(&self, _nid: NodeId, params: &NodeParams) -> Option<PenPath> {
-        if let NodeParams::Pen {
-            codigo,
-            cor,
-            cor_fill,
-            pos_x,
-            pos_y,
-            espessura,
-            preenchimento,
-            seed,
-            cantos,
-            ordem,
-            escala_x,
-            escala_y,
-            trim_inicio,
-            trim_fim,
-            ..
-        } = params {
-            let program = self.pen_cache.get(codigo)
+        if let NodeParams::Pen(pen) = params {
+            let program = self.pen_cache.get(&pen.codigo)
                 .cloned()
                 .unwrap_or_default();
 
@@ -326,21 +310,21 @@ impl GraphPanel {
 
             Some(PenPath {
                 program,
-                pos: GVec2::new(*pos_x, *pos_y),
-                cor: eframe::egui::Color32::from_rgba_unmultiplied(cor.r, cor.g, cor.b, cor.a),
-                cor_fill: eframe::egui::Color32::from_rgba_unmultiplied(cor_fill.r, cor_fill.g, cor_fill.b, cor_fill.a),
-                espessura: *espessura,
-                preenchimento: *preenchimento,
-                seed: *seed as u32,
-                cantos: *cantos,
-                ordem: *ordem,
-                escala_x: *escala_x,
-                escala_y: *escala_y,
+                pos: GVec2::new(pen.pos_x, pen.pos_y),
+                cor: eframe::egui::Color32::from_rgba_unmultiplied(pen.cor.r, pen.cor.g, pen.cor.b, pen.cor.a),
+                cor_fill: eframe::egui::Color32::from_rgba_unmultiplied(pen.cor_fill.r, pen.cor_fill.g, pen.cor_fill.b, pen.cor_fill.a),
+                espessura: pen.espessura,
+                preenchimento: pen.preenchimento,
+                seed: pen.seed as u32,
+                cantos: pen.cantos,
+                ordem: pen.ordem,
+                escala_x: pen.escala_x,
+                escala_y: pen.escala_y,
                 ruido,
                 anim,
                 erro_eval: None,
-                trim_inicio: *trim_inicio,
-                trim_fim: *trim_fim,
+                trim_inicio: pen.trim_inicio,
+                trim_fim: pen.trim_fim,
                 duracao: self.projeto().duracao_seg,
             })
         } else {

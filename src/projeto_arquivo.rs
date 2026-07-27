@@ -2,7 +2,7 @@ use eframe::egui::Color32;
 use serde::{Deserialize, Serialize};
 
 use crate::domain::Color;
-use crate::nodes::{NodeParams, LayerEntry, ProjetoConfig, ShapeParams, TextParams, TipoNo};
+use crate::nodes::{NodeParams, LayerEntry, ProjetoConfig, ShapeParams, TextParams, PenParams, TipoNo};
 use crate::graph_editor::ArestaInfo;
 
 /// Espelho serializável de um segmento de animação (`AnimSeg`).
@@ -167,10 +167,10 @@ impl From<NodeParams> for NodeParamsJson {
                     trim_inicio, trim_fim,
                 }
             }
-            NodeParams::Pen {
+            NodeParams::Pen(PenParams {
                 cena, codigo, cor, cor_fill, pos_x, pos_y, espessura, preenchimento,
                 seed, cantos, ordem, escala_x, escala_y, trim_inicio, trim_fim, ..
-            } => {
+            }) => {
                 NodeParamsJson::Pen {
                     cena, codigo,
                     cor: cor.to_rgba(),
@@ -266,14 +266,14 @@ impl TryFrom<NodeParamsJson> for NodeParams {
                 let cor_fill = cor_fill
                     .map(|c| Color::from_rgba(c[0], c[1], c[2], c[3]))
                     .unwrap_or(cor);
-                NodeParams::Pen {
+                NodeParams::Pen(PenParams {
                     cena, codigo,
                     cor, cor_fill,
                     pos_x, pos_y, espessura, preenchimento,
                     seed, cantos, ordem, escala_x, escala_y,
                     erro: None,
                     trim_inicio, trim_fim,
-                }
+                })
             }
             NodeParamsJson::Ruido { seed, freq, amp, veloc, alvo } => {
                 NodeParams::Ruido { seed, freq, amp, veloc, alvo }
