@@ -1,9 +1,8 @@
-use eframe::egui::Color32;
 use serde::{Deserialize, Serialize};
 
-use crate::domain::Color;
+use crate::domain::{Color, LayerEntry};
 use crate::nodes::{
-    NodeParams, LayerEntry, ProjetoConfig,
+    NodeParams, ProjetoConfig,
     ShapeParams, TextParams, PenParams,
     TransformParams, CenaParams, LayerParams,
     RuidoParams, AnimParams, SaidaParams, TipoNo,
@@ -36,7 +35,7 @@ fn default_true() -> bool {
     true
 }
 
-/// Espelho serializável do `NodeParams` (que contém `Color32` e campos
+/// Espelho serializável do `NodeParams`
 /// não-serializáveis direto). Cada variante espelha os campos relevantes.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
@@ -150,7 +149,7 @@ impl From<NodeParams> for NodeParamsJson {
                         nome: l.nome,
                         ordem: l.ordem,
                         opacidade: l.opacidade,
-                        cor: Some(l.cor.to_array()),
+                        cor: Some(l.cor.to_rgba()),
                         visivel: l.visivel,
                     }).collect(),
                     selected,
@@ -239,7 +238,7 @@ impl TryFrom<NodeParamsJson> for NodeParams {
                         ordem: l.ordem,
                         opacidade: l.opacidade,
                         cor: l.cor
-                            .map(|c| Color32::from_rgba_unmultiplied(c[0], c[1], c[2], c[3]))
+                            .map(|c| Color::from_rgba(c[0], c[1], c[2], c[3]))
                             .unwrap_or_else(|| LayerEntry::cor_por_idx(i)),
                         visivel: l.visivel,
                     }).collect(),

@@ -1,4 +1,4 @@
-use super::LayerEntry;
+use crate::domain::LayerEntry;
 
 #[derive(Clone, Debug)]
 pub struct LayerParams {

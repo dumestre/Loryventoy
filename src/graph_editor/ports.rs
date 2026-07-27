@@ -5,6 +5,7 @@ use eframe::egui::epaint::CircleShape;
 
 use crate::nodes::{portos, TipoNo};
 use crate::ui::node_component;
+use super::types::cor_tipo_no;
 
 pub fn port_offsets(tipo: TipoNo, half: Vec2) -> (Vec<Vec2>, Vec<Vec2>) {
     let spec = portos(tipo);
@@ -48,7 +49,7 @@ pub fn desenhar_portos(
     zoom: f32,
 ) {
     let fill = Color32::from_rgb(30, 30, 40);
-    let accent = tipo.cor();
+    let accent = cor_tipo_no(tipo);
     let port_r = (4.5 * zoom).clamp(2.5, 7.0);
     let (ins, outs) = port_offsets(tipo, half);
 

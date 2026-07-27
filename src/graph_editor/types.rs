@@ -13,6 +13,21 @@ pub use egui_graph_edit::id_type::NodeId;
 use crate::nodes::{NodeParams, TipoNo, portos};
 use crate::ui::node_component::AcaoInspector;
 
+pub fn cor_tipo_no(tipo: TipoNo) -> eframe::egui::Color32 {
+    match tipo {
+        TipoNo::Saida => eframe::egui::Color32::from_rgb(120, 220, 140),
+        TipoNo::Transform => eframe::egui::Color32::from_rgb(235, 185, 95),
+        TipoNo::Canvas => eframe::egui::Color32::from_rgb(170, 120, 235),
+        TipoNo::Cena => eframe::egui::Color32::from_rgb(90, 190, 190),
+        TipoNo::Layer => eframe::egui::Color32::from_rgb(120, 170, 235),
+        TipoNo::Shape => eframe::egui::Color32::from_rgb(235, 150, 120),
+        TipoNo::Texto => eframe::egui::Color32::from_rgb(150, 200, 120),
+        TipoNo::Pen => eframe::egui::Color32::from_rgb(200, 120, 220),
+        TipoNo::Ruido => eframe::egui::Color32::from_rgb(120, 200, 220),
+        TipoNo::Anim => eframe::egui::Color32::from_rgb(230, 130, 170),
+    }
+}
+
 #[derive(Default)]
 pub struct UserState {
     pub params: HashMap<NodeId, NodeParams>,
@@ -201,11 +216,11 @@ impl NodeDataTrait for GraphNode {
     }
 
     fn titlebar_color(&self, _ui: &Ui, _node_id: NodeId, _graph: &egui_graph_edit::Graph<Self, Self::DataType, Self::ValueType>, _user_state: &mut Self::UserState) -> Option<Color32> {
-        Some(self.tipo.cor())
+        Some(cor_tipo_no(self.tipo))
     }
 
     fn border_color(&self, _ui: &Ui, _node_id: NodeId, _graph: &egui_graph_edit::Graph<Self, Self::DataType, Self::ValueType>, _user_state: &mut Self::UserState) -> Option<Color32> {
-        Some(self.tipo.cor())
+        Some(cor_tipo_no(self.tipo))
     }
 
     fn border_width(&self, _ui: &Ui, _node_id: NodeId, _graph: &egui_graph_edit::Graph<Self, Self::DataType, Self::ValueType>, _user_state: &mut Self::UserState) -> f32 {
@@ -276,7 +291,7 @@ impl NodeTemplateTrait for NodeTemplate {
         let tipo = self.tipo();
         GraphNode {
             tipo,
-            params: NodeParams::padrao(tipo),
+            params: crate::nodes::node_params_padrao(tipo),
         }
     }
 

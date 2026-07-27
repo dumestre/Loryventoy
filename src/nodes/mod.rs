@@ -10,33 +10,30 @@ mod saida;
 mod shape;
 mod texto;
 mod transform;
-mod params;
-mod layer_entry;
-mod shape_params;
-mod text_params;
-mod pen_params;
-mod saida_params;
-mod ruido_params;
-mod transform_params;
-mod cena_params;
-mod layer_params;
-mod anim_params;
 
-pub use params::NodeParams;
-pub use layer_entry::LayerEntry;
-pub use shape_params::ShapeParams;
-pub use text_params::TextParams;
-pub use pen_params::PenParams;
-pub use saida_params::SaidaParams;
-pub use ruido_params::RuidoParams;
-pub use transform_params::TransformParams;
-pub use cena_params::CenaParams;
-pub use layer_params::LayerParams;
-pub use anim_params::AnimParams;
+pub use crate::domain::{
+    TipoNo,
+    NodeParams,
+    ProjectConfig as ProjetoConfig,
+    TransformParams, CenaParams, LayerParams,
+    TextParams, ShapeParams, PenParams,
+    RuidoParams, AnimParams, SaidaParams,
+};
 
-use eframe::egui::Color32;
-
-pub use crate::domain::ProjectConfig as ProjetoConfig;
+pub fn node_params_padrao(tipo: TipoNo) -> NodeParams {
+    match tipo {
+        TipoNo::Saida => saida::padrao(),
+        TipoNo::Transform => transform::padrao(),
+        TipoNo::Canvas => canvas::padrao(),
+        TipoNo::Cena => cena::padrao(),
+        TipoNo::Layer => layer::padrao(),
+        TipoNo::Shape => shape::padrao(),
+        TipoNo::Texto => texto::padrao(),
+        TipoNo::Pen => pen::padrao(),
+        TipoNo::Ruido => ruido::padrao(),
+        TipoNo::Anim => anim::padrao(),
+    }
+}
 
 // ── Tipos de porto ──────────────────────────────────────────────
 
@@ -94,100 +91,6 @@ pub(crate) static P_RUIDO_OUT: ParametroPorto = ParametroPorto { nome: "Ruído",
 pub(crate) static P_ANIM_OUT: ParametroPorto = ParametroPorto { nome: "Animação", tipo: TipoPorto::Vetor(COMP_XY) };
 pub(crate) static P_OPACIDADE: ParametroPorto = ParametroPorto { nome: "Opacidade", tipo: TipoPorto::Escalar };
 pub(crate) static P_ESC_XY: ParametroPorto = ParametroPorto { nome: "Escala", tipo: TipoPorto::Vetor(COMP_XY) };
-
-// ── TipoNo ──────────────────────────────────────────────────────
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum TipoNo {
-    Saida,
-    Transform,
-    Canvas,
-    Cena,
-    Layer,
-    Shape,
-    Texto,
-    Pen,
-    Ruido,
-    Anim,
-}
-
-impl TipoNo {
-    pub fn nome(&self) -> &'static str {
-        match self {
-            TipoNo::Saida => "Master",
-            TipoNo::Transform => "Transform",
-            TipoNo::Canvas => "Canvas",
-            TipoNo::Cena => "Cena",
-            TipoNo::Layer => "Layers",
-            TipoNo::Shape => "Shape",
-            TipoNo::Texto => "Texto",
-            TipoNo::Pen => "Pen",
-            TipoNo::Ruido => "Ruído",
-            TipoNo::Anim => "Animação",
-        }
-    }
-
-    pub fn cor(&self) -> Color32 {
-        match self {
-            TipoNo::Saida => Color32::from_rgb(120, 220, 140),
-            TipoNo::Transform => Color32::from_rgb(235, 185, 95),
-            TipoNo::Canvas => Color32::from_rgb(170, 120, 235),
-            TipoNo::Cena => Color32::from_rgb(90, 190, 190),
-            TipoNo::Layer => Color32::from_rgb(120, 170, 235),
-            TipoNo::Shape => Color32::from_rgb(235, 150, 120),
-            TipoNo::Texto => Color32::from_rgb(150, 200, 120),
-            TipoNo::Pen => Color32::from_rgb(200, 120, 220),
-            TipoNo::Ruido => Color32::from_rgb(120, 200, 220),
-            TipoNo::Anim => Color32::from_rgb(230, 130, 170),
-        }
-    }
-
-    pub fn from_label(label: &str) -> Option<TipoNo> {
-        match label {
-            "Master" => Some(TipoNo::Saida),
-            "Transform" => Some(TipoNo::Transform),
-            "Canvas" => Some(TipoNo::Canvas),
-            "Cena" => Some(TipoNo::Cena),
-            "Layers" => Some(TipoNo::Layer),
-            "Shape" => Some(TipoNo::Shape),
-            "Texto" => Some(TipoNo::Texto),
-            "Pen" => Some(TipoNo::Pen),
-            "Ruído" | "Ruido" => Some(TipoNo::Ruido),
-            "Animação" | "Animacao" => Some(TipoNo::Anim),
-            _ => None,
-        }
-    }
-
-    pub fn instancia(&self) -> TipoNo {
-        *self
-    }
-
-    pub fn pode_conectar(origem: TipoNo, destino: TipoNo) -> bool {
-        match (origem, destino) {
-            (TipoNo::Saida, _) => false,
-            (_, TipoNo::Saida) => true,
-            (TipoNo::Canvas, TipoNo::Cena) => true,
-            (TipoNo::Cena, TipoNo::Cena) => true,
-            (TipoNo::Layer, TipoNo::Shape | TipoNo::Texto | TipoNo::Pen) => true,
-            (TipoNo::Shape, TipoNo::Cena) => true,
-            (TipoNo::Texto, TipoNo::Cena) => true,
-            (TipoNo::Pen, TipoNo::Cena) => true,
-            (
-                TipoNo::Ruido,
-                TipoNo::Transform | TipoNo::Shape | TipoNo::Texto | TipoNo::Pen,
-            ) => true,
-            (
-                TipoNo::Anim,
-                TipoNo::Transform | TipoNo::Shape | TipoNo::Texto | TipoNo::Pen,
-            ) => true,
-            (
-                o @ (TipoNo::Transform | TipoNo::Shape | TipoNo::Texto | TipoNo::Pen),
-                TipoNo::Transform | TipoNo::Shape | TipoNo::Texto | TipoNo::Pen,
-            ) if o != TipoNo::Saida => true,
-            _ => false,
-        }
-    }
-}
 
 // ── NodeParams ──────────────────────────────────────────────────
 

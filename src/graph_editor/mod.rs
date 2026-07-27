@@ -7,11 +7,12 @@ use eframe::egui::{
 use eframe::egui::epaint::{CircleShape, TextShape};
 use eframe::egui::Popup;
 
-use crate::nodes::{NodeParams, LayerEntry, ProjetoConfig, TipoNo, portos};
+use crate::domain::LayerEntry;
+use crate::nodes::{self, NodeParams, ProjetoConfig, TipoNo, portos};
 use crate::ui::graph_toolbar::{GraphToolbar, AcaoToolbar};
 use crate::ui::node_component;
 
-use types::{GraphNode, MyEditorState, UserState, AllNodeTemplates};
+use types::{GraphNode, MyEditorState, UserState, AllNodeTemplates, cor_tipo_no};
 pub use types::NodeId;
 
 pub mod types;
@@ -159,7 +160,7 @@ impl GraphPanel {
     pub fn adicionar_no_em(&mut self, tipo: TipoNo, loc: Pos2) -> NodeId {
         let user_data = GraphNode {
             tipo,
-            params: NodeParams::padrao(tipo),
+            params: nodes::node_params_padrao(tipo),
         };
         let label = tipo.nome().to_string();
         let nid = self.editor_state.graph.add_node(label, user_data, |_g, _id| {});
@@ -186,7 +187,7 @@ impl GraphPanel {
             self.editor_state.graph.add_output_param(nid, p.nome.to_string(), dt);
         }
 
-        self.params.insert(nid, NodeParams::padrao(tipo));
+        self.params.insert(nid, nodes::node_params_padrao(tipo));
         let cenas = self.cenas_disponiveis();
         let cena_preferida = self.cena_ativa.and_then(|ci| {
             self.params.get(&ci).and_then(|p| {
@@ -799,7 +800,7 @@ impl GraphPanel {
                 }
                 egui_graph_edit::NodeResponse::CreatedNode(nid) => {
                     let tipo = self.obter_tipo(*nid);
-                    self.params.insert(*nid, NodeParams::padrao(tipo));
+                    self.params.insert(*nid, nodes::node_params_padrao(tipo));
                     self.liberados.insert(*nid);
                     let cenas = self.cenas_disponiveis();
                     let cena_preferida = self.cena_ativa.and_then(|ci| {
@@ -1040,7 +1041,7 @@ impl GraphPanel {
                     if !inner.contains(screen) {
                         let cx = screen.x.clamp(inner.min.x, inner.max.x);
                         let cy = screen.y.clamp(inner.min.y, inner.max.y);
-                        let cor = self.obter_tipo(idx).cor();
+                        let cor = cor_tipo_no(self.obter_tipo(idx));
                         dots.push((idx, Pos2::new(cx, cy), cor));
                     }
                 }

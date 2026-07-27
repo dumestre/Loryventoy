@@ -10,6 +10,10 @@ pub struct Color {
 impl Color {
     pub const WHITE: Self = Self::from_rgba(255, 255, 255, 255);
 
+    pub const fn from_rgb(r: u8, g: u8, b: u8) -> Self {
+        Self { r, g, b, a: 255 }
+    }
+
     pub const fn from_rgba(r: u8, g: u8, b: u8, a: u8) -> Self {
         Self { r, g, b, a }
     }

@@ -8,6 +8,7 @@ use eframe::egui::epaint::{CubicBezierShape, RectShape, TextShape};
 
 use crate::nodes::TipoNo;
 use crate::ui::node_component;
+use super::types::cor_tipo_no;
 
 const NODE_RADIUS: u8 = 8;
 
@@ -21,7 +22,7 @@ pub fn desenhar_card(
     zoom: f32,
 ) {
     let fill = Color32::from_rgb(30, 30, 40);
-    let accent = tipo.cor();
+    let accent = cor_tipo_no(tipo);
     let stroke_w = if selected {
         2.5
     } else if hovered {

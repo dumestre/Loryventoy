@@ -9,8 +9,8 @@ use eframe::egui::{
     Sense, Stroke, TextStyle, Ui, Vec2,
 };
 use crate::graph_editor::NodeId;
-use crate::domain::Color as DomainColor;
-use crate::nodes::{LayerEntry, NodeParams, ProjetoConfig, ShapeParams, TipoNo};
+use crate::domain::{Color as DomainColor, LayerEntry};
+use crate::nodes::{NodeParams, ProjetoConfig, ShapeParams, TipoNo};
 
 /// Ações que podem ser solicitadas pelo inspector de um nó.
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
@@ -253,9 +253,9 @@ pub fn render_layer_row(
     let is_selected = selected == i;
     ui.horizontal(|ui| {
         let (rect, _) = ui.allocate_exact_size(Vec2::new(14.0, 14.0), Sense::hover());
-        let cor = layers[i].cor;
+        let cor32 = eframe::egui::Color32::from_rgba_unmultiplied(layers[i].cor.r, layers[i].cor.g, layers[i].cor.b, layers[i].cor.a);
         let alpha = if layers[i].visivel { 1.0 } else { 0.35 };
-        ui.painter().circle_filled(rect.center(), 5.0, cor.gamma_multiply(alpha));
+        ui.painter().circle_filled(rect.center(), 5.0, cor32.gamma_multiply(alpha));
         if !layers[i].visivel {
             ui.painter().circle_stroke(rect.center(), 5.0, Stroke::new(1.0, Color32::from_rgb(80, 80, 90)));
         }

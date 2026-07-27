@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use eframe::egui::Pos2;
 
-use crate::nodes::{NodeParams, TipoNo};
+use crate::nodes::{self, NodeParams, TipoNo};
 
 use super::GraphPanel;
 use super::types::NodeId;
@@ -97,7 +97,7 @@ impl GraphPanel {
             }
             let params = self.obter_params(idx)
                 .cloned()
-                .unwrap_or_else(|| NodeParams::padrao(tipo));
+                .unwrap_or_else(|| nodes::node_params_padrao(tipo));
             let loc = self.editor_state.node_positions.get(idx).copied().unwrap_or(Pos2::ZERO);
             itens.push(NoCopia {
                 tipo,
