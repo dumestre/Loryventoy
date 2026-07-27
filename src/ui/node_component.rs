@@ -10,7 +10,7 @@ use eframe::egui::{
 };
 use crate::graph_editor::NodeId;
 use crate::domain::Color as DomainColor;
-use crate::nodes::{LayerEntry, NodeParams, ProjetoConfig, TipoNo};
+use crate::nodes::{LayerEntry, NodeParams, ProjetoConfig, ShapeParams, TipoNo};
 
 /// Ações que podem ser solicitadas pelo inspector de um nó.
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
@@ -450,7 +450,8 @@ pub fn show_content(
             }
         }
         TipoNo::Shape => {
-            if let NodeParams::Shape {
+            if let NodeParams::Shape(shape) = params {
+                let ShapeParams {
                 cena,
                 tipo,
                 px,
@@ -465,9 +466,7 @@ pub fn show_content(
                 veloc,
                 trim_inicio,
                 trim_fim,
-                ..
-            } = params
-            {
+                } = shape;
                 grid_combo_cena(ui, "Cena", cena, cenas);
                 grid_combo_tipo(ui, "Tipo", tipo);
                 grid_xyz(ui, "Posição", px, py, &mut 0.0);

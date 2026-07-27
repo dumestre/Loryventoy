@@ -157,6 +157,28 @@ cargo test --all  OK — 68 testes
 
 Neste ponto, as cores persistentes de Canvas, Layer, Shape, Texto e Pen já possuem representação de domínio. A próxima etapa recomendada é separar os demais parâmetros de `NodeParams` em estruturas específicas (`CanvasParams`, `ShapeParams`, `TextParams`, `PenParams` etc.), preservando as variantes públicas durante a transição.
 
+### Primeira variante de `NodeParams` separada: Shape
+
+Foi concluída a primeira migração de variante estruturada:
+
+- criado `src/nodes/shape_params.rs`;
+- criada a estrutura `ShapeParams` com os dados persistentes do nó Shape;
+- `NodeParams::Shape` passou a encapsular `ShapeParams`;
+- defaults do nó Shape foram adaptados;
+- inspector, DSL, preview, normalização de cena e persistência foram adaptados;
+- o JSON continua com os mesmos campos e o mesmo formato;
+- o comportamento visual e os valores padrão foram preservados;
+- nenhum recurso novo foi adicionado.
+
+Validação:
+
+```text
+cargo check       OK
+cargo test --all  OK — 68 testes
+```
+
+Esta é a sequência que será repetida para `Texto`, `Pen`, `Canvas`, `Layer`, `Cena`, `Transform`, `Ruído`, `Animação` e `Saída`, sempre uma variante por vez.
+
 ---
 
 ## 3. Regras obrigatórias da refatoração

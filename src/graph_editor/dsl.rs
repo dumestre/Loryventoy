@@ -84,29 +84,13 @@ fn aplicar_campos(
                 }
             }
         }
-        NodeParams::Shape {
-            tipo,
-            px,
-            py,
-            largura,
-            altura,
-            rotacao,
-            cor,
-            seed,
-            noise_scale,
-            amp,
-            veloc,
-            trim_inicio,
-            trim_fim,
-            cena,
-            ..
-        } => {
+        NodeParams::Shape(shape) => {
             let mut cena_nome: Option<String> = None;
             for (c, v) in &n.campos {
                 match c.as_str() {
                     "scene" => cena_nome = Some(v.as_str()),
                     "type" => {
-                        *tipo = match v.as_str().as_str() {
+                        shape.tipo = match v.as_str().as_str() {
                             "rect" | "rectangle" => 0,
                             "ellipse" => 1,
                             "triangle" => 2,
@@ -119,29 +103,29 @@ fn aplicar_campos(
                     }
                     "pos" => {
                         if let Expr::Vec2(a, b) = v {
-                            *px = *a;
-                            *py = *b;
+                            shape.px = *a;
+                            shape.py = *b;
                         }
                     }
                     "size" => {
                         if let Expr::Vec2(a, b) = v {
-                            *largura = *a;
-                            *altura = *b;
+                            shape.largura = *a;
+                            shape.altura = *b;
                         }
                     }
-                    "rotation" | "rot" => *rotacao = v.as_num(),
-                    "color" | "colour" => *cor = crate::domain::Color::from_rgba(v.as_hex().r(), v.as_hex().g(), v.as_hex().b(), v.as_hex().a()),
-                    "seed" => *seed = v.as_num(),
-                    "noise" => *noise_scale = v.as_num(),
-                    "amp" => *amp = v.as_num(),
-                    "speed" => *veloc = v.as_num(),
-                    "trim_start" | "trim_inicio" => *trim_inicio = v.as_num(),
-                    "trim_end" | "trim_fim" => *trim_fim = v.as_num(),
+                    "rotation" | "rot" => shape.rotacao = v.as_num(),
+                    "color" | "colour" => { let h = v.as_hex(); shape.cor = crate::domain::Color::from_rgba(h.r(), h.g(), h.b(), h.a()); },
+                    "seed" => shape.seed = v.as_num(),
+                    "noise" => shape.noise_scale = v.as_num(),
+                    "amp" => shape.amp = v.as_num(),
+                    "speed" => shape.veloc = v.as_num(),
+                    "trim_start" | "trim_inicio" => shape.trim_inicio = v.as_num(),
+                    "trim_end" | "trim_fim" => shape.trim_fim = v.as_num(),
                     _ => {}
                 }
             }
             if let Some(cn) = cena_nome {
-                *cena = cn;
+                shape.cena = cn;
             }
         }
         NodeParams::Texto {
@@ -351,16 +335,15 @@ impl GraphPanel {
             }
         }
         for (_idx, params) in &mut self.params {
-            match params {
+            let cena = match params {
                 NodeParams::Layer { cena, .. }
-                | NodeParams::Shape { cena, .. }
                 | NodeParams::Texto { cena, .. }
-                | NodeParams::Pen { cena, .. } => {
-                    if let Some(scene_name) = id_to_scene_name.get(cena.as_str()) {
-                        *cena = scene_name.clone();
-                    }
-                }
-                _ => {}
+                | NodeParams::Pen { cena, .. } => cena,
+                NodeParams::Shape(shape) => &mut shape.cena,
+                _ => continue,
+            };
+            if let Some(scene_name) = id_to_scene_name.get(cena.as_str()) {
+                *cena = scene_name.clone();
             }
         }
 

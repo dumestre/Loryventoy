@@ -119,7 +119,7 @@ impl GraphPanel {
                     if let Some(oid) = output_id {
                         for (&nid, params) in &self.params {
                             match params {
-                                NodeParams::Shape { .. } | NodeParams::Texto { .. } | NodeParams::Pen { .. } => {
+                                NodeParams::Shape(..) | NodeParams::Texto { .. } | NodeParams::Pen { .. } => {
                                     let graph = &self.editor_state.graph;
                                     let node = &graph[nid];
                                     for (_, input_id) in &node.inputs {
@@ -127,7 +127,7 @@ impl GraphPanel {
                                             if connected_out == oid {
                                                 has_connections = true;
                                                 match params {
-                                                    NodeParams::Shape { .. } => {
+                                                    NodeParams::Shape(..) => {
                                                         if let Some(gen) = self.build_shape_generator(nid, params) {
                                                             layer_preview.formas.push(gen);
                                                         }
@@ -157,16 +157,15 @@ impl GraphPanel {
                     if !has_connections && entries.len() <= 1 {
                         for (&nid, params) in &self.params {
                             match params {
-                                NodeParams::Shape { .. } | NodeParams::Texto { .. } | NodeParams::Pen { .. } => {
+                                NodeParams::Shape(..) | NodeParams::Texto { .. } | NodeParams::Pen { .. } => {
                                     let node_cena = match params {
-                                        NodeParams::Shape { cena, .. }
-                                        | NodeParams::Texto { cena, .. }
-                                        | NodeParams::Pen { cena, .. } => cena.as_str(),
+                                        NodeParams::Shape(shape) => shape.cena.as_str(),
+                                        NodeParams::Texto { cena, .. } | NodeParams::Pen { cena, .. } => cena.as_str(),
                                         _ => "",
                                     };
                                     if node_cena == nome_cena {
                                         match params {
-                                            NodeParams::Shape { .. } => {
+                                            NodeParams::Shape(..) => {
                                                 if let Some(gen) = self.build_shape_generator(nid, params) {
                                                     layer_preview.formas.push(gen);
                                                 }
@@ -205,16 +204,15 @@ impl GraphPanel {
                 };
                 for (&nid, params) in &self.params {
                     match params {
-                        NodeParams::Shape { .. } | NodeParams::Texto { .. } | NodeParams::Pen { .. } => {
+                        NodeParams::Shape(..) | NodeParams::Texto { .. } | NodeParams::Pen { .. } => {
                             let node_cena = match params {
-                                NodeParams::Shape { cena, .. }
-                                | NodeParams::Texto { cena, .. }
-                                | NodeParams::Pen { cena, .. } => cena.as_str(),
+                                NodeParams::Shape(shape) => shape.cena.as_str(),
+                                NodeParams::Texto { cena, .. } | NodeParams::Pen { cena, .. } => cena.as_str(),
                                 _ => "",
                             };
                             if node_cena == nome_cena {
                                 match params {
-                                    NodeParams::Shape { .. } => {
+                                    NodeParams::Shape(..) => {
                                         if let Some(gen) = self.build_shape_generator(nid, params) {
                                             layer_preview.formas.push(gen);
                                         }
@@ -246,21 +244,8 @@ impl GraphPanel {
     }
 
     fn build_shape_generator(&self, _nid: NodeId, params: &NodeParams) -> Option<ShapeGenerator> {
-        if let NodeParams::Shape {
-            tipo,
-            px, py,
-            largura, altura,
-            rotacao,
-            cor,
-            seed,
-            noise_scale,
-            amp,
-            veloc,
-            trim_inicio,
-            trim_fim,
-            ..
-        } = params {
-            let kind = ShapeKind::from_u8(*tipo);
+        if let NodeParams::Shape(shape) = params {
+            let kind = ShapeKind::from_u8(shape.tipo);
 
             // Check for connected Ruido/Anim nodes
             let ruido = self.find_connected_ruido(_nid);
@@ -268,18 +253,18 @@ impl GraphPanel {
 
             Some(ShapeGenerator {
                 kind,
-                pos: GVec2::new(*px, *py),
-                tam: GVec2::new(*largura, *altura),
-                rot: *rotacao,
-                cor: eframe::egui::Color32::from_rgba_unmultiplied(cor.r, cor.g, cor.b, cor.a),
-                seed: *seed,
-                noise_scale: *noise_scale,
-                amp: *amp,
-                veloc: *veloc,
+                pos: GVec2::new(shape.px, shape.py),
+                tam: GVec2::new(shape.largura, shape.altura),
+                rot: shape.rotacao,
+                cor: eframe::egui::Color32::from_rgba_unmultiplied(shape.cor.r, shape.cor.g, shape.cor.b, shape.cor.a),
+                seed: shape.seed,
+                noise_scale: shape.noise_scale,
+                amp: shape.amp,
+                veloc: shape.veloc,
                 ruido,
                 anim,
-                trim_inicio: *trim_inicio,
-                trim_fim: *trim_fim,
+                trim_inicio: shape.trim_inicio,
+                trim_fim: shape.trim_fim,
                 duracao: self.projeto().duracao_seg,
             })
         } else {

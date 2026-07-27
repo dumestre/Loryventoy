@@ -1,4 +1,4 @@
-use super::{ParametroPorto, TipoPorto, PortSpec, NodeParams, P_LAYER, P_POS_XY, P_LARGURA, P_ALTURA};
+use super::{ParametroPorto, TipoPorto, PortSpec, NodeParams, ShapeParams, P_LAYER, P_POS_XY, P_LARGURA, P_ALTURA};
 use crate::domain::Color;
 
 static P_ROT: ParametroPorto = ParametroPorto { nome: "Rotação", tipo: TipoPorto::Escalar };
@@ -10,7 +10,7 @@ pub(crate) fn portos() -> PortSpec {
 }
 
 pub(crate) fn padrao() -> NodeParams {
-    NodeParams::Shape {
+    NodeParams::Shape(ShapeParams {
         cena: String::new(),
         tipo: 0,
         px: 960.0,
@@ -25,5 +25,5 @@ pub(crate) fn padrao() -> NodeParams {
         veloc: 0.0,
         trim_inicio: 0.0,
         trim_fim: 1.0,
-    }
+    })
 }

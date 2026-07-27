@@ -310,9 +310,14 @@ impl GraphPanel {
     }
 
     fn normalizar_cena(&mut self, idx: NodeId, cenas: &[String], preferida: Option<String>) {
-        if let Some(NodeParams::Layer { cena, .. } | NodeParams::Shape { cena, .. } | NodeParams::Texto { cena, .. } | NodeParams::Pen { cena, .. }) =
-            self.params.get_mut(&idx)
-        {
+        if let Some(params) = self.params.get_mut(&idx) {
+            let cena = match params {
+                NodeParams::Layer { cena, .. }
+                | NodeParams::Texto { cena, .. }
+                | NodeParams::Pen { cena, .. } => cena,
+                NodeParams::Shape(shape) => &mut shape.cena,
+                _ => return,
+            };
             if cenas.iter().all(|c| c != cena) {
                 *cena = preferida.or_else(|| cenas.first().cloned()).unwrap_or_default();
             }

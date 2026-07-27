@@ -12,9 +12,11 @@ mod texto;
 mod transform;
 mod params;
 mod layer_entry;
+mod shape_params;
 
 pub use params::NodeParams;
 pub use layer_entry::LayerEntry;
+pub use shape_params::ShapeParams;
 
 use eframe::egui::Color32;
 
