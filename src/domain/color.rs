@@ -18,7 +18,27 @@ impl Color {
         Self { r, g, b, a }
     }
 
+    pub const fn from_rgba_unmultiplied(r: u8, g: u8, b: u8, a: u8) -> Self {
+        Self { r, g, b, a }
+    }
+
+    pub const fn from_rgba_premultiplied(r: u8, g: u8, b: u8, a: u8) -> Self {
+        Self { r, g, b, a }
+    }
+
     pub const fn to_rgba(self) -> [u8; 4] {
         [self.r, self.g, self.b, self.a]
     }
+
+    // Métodos compatíveis com Color32
+    pub fn r(self) -> u8 { self.r }
+    pub fn g(self) -> u8 { self.g }
+    pub fn b(self) -> u8 { self.b }
+    pub fn a(self) -> u8 { self.a }
 }
+
+/// Re-export glam::Vec2 para uso no domínio (biblioteca matemática pura).
+pub use glam::Vec2;
+
+/// Alias para clareza semântica.
+pub type Pos2 = Vec2;

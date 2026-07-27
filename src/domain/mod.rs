@@ -1,6 +1,7 @@
 //! Tipos centrais do domínio, independentes da camada visual.
 
 mod color;
+mod math;
 mod project_config;
 mod animation;
 mod node_type;
@@ -21,7 +22,8 @@ mod params;
 // ── Projeto ──────────────────────────────────────────────────────
 mod project;
 
-pub use color::Color;
+pub use color::{Color, Pos2, Vec2};
+pub use math::*;
 pub use project_config::ProjectConfig;
 pub use animation::{Easing, LoopMode, AnimSeg};
 pub use node_type::TipoNo;

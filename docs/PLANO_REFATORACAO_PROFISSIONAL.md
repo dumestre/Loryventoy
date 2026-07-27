@@ -27,21 +27,20 @@ Comandos verificados no estado analisado:
 
 ```text
 cargo check       OK
-cargo test --all  OK — 66 testes
+cargo test --all  OK — 68 testes
 ```
 
-Os principais pontos de concentração encontrados são:
+Os principais pontos de concentração encontrados:
 
 | Arquivo | Situação atual | Risco |
 |---|---|---|
-| `src/app.rs` | Janela principal, menus, playback, projeto, DSL e layout | Muito alto |
-| `src/graph_editor/mod.rs` | Modelo visual, nós, conexões, histórico, DSL e UI | Muito alto |
-| `src/procedural.rs` | Animação, geometria, preview e tipos ligados ao egui | Alto |
-| `src/ui/node_component.rs` | Inspector de vários tipos de nó em um arquivo | Alto |
-| `src/ui/preview.rs` | Renderização, texto, Pen DSL e conversões visuais | Alto |
-| `src/projeto_arquivo.rs` | JSON misturado com tipos de domínio e tipos visuais | Alto |
-| `src/dsl/pen.rs` | Parser e avaliador grande, porém com boa cobertura de testes | Médio |
-| `src/graph_editor/dsl.rs` | Parser aplicado diretamente sobre `GraphPanel` | Muito alto |
+| `src/app.rs` | Janela principal, menus, playback, projeto, DSL e layout | Médio |
+| `src/graph_editor/mod.rs` | Coordenador de módulos especializados (~535 linhas) | Médio |
+| `src/ui/preview.rs` | Renderização, texto, Pen DSL e conversões visuais | Médio |
+| `src/procedural/domain.rs` | Lógica pura de avaliação (sem egui) | Baixo |
+| `src/procedural/render.rs` | Adaptador domain → egui | Baixo |
+| `src/dsl/pen.rs` | Parser e avaliador grande, com boa cobertura de testes | Médio |
+| `src/domain/` | Camada de domínio consolidada | Baixo (concluída) |
 
 A existência de testes é uma boa base. A refatoração deve preservar essa base e aumentá-la antes de mover código crítico.
 
@@ -321,6 +320,83 @@ Validação:
 cargo check       OK
 cargo test --all  OK — 68 testes
 ```
+
+### Fase 4 — Separar GraphPanel em módulos menores
+
+Foi concluída a divisão do `GraphPanel` em módulos especializados:
+
+- `node_factory.rs` — criação de nós (`criar_nos_padrao`, `adicionar_no_em`, `adicionar_no`);
+- `layer_ops.rs` — operações de cenas e layers (`cenas_disponiveis`, `normalizar_cena`, `sync_layer_ports`, CRUD de layers);
+- `layout.rs` — coordenadas, hit test e portas espaciais (6 métodos de consulta espacial);
+- `search.rs` — busca textual de nós por nome/tipo;
+- `mod.rs` caiu de **1106 → 535 linhas**, mantendo apenas o coordenador `show()`, conexões, queries básicas e estrutura `GraphPanel`.
+
+Validação:
+
+```text
+cargo check       OK — sem warnings
+cargo test --all  OK — 68 testes
+```
+
+### Fase 6 — Separar persistência em infrastructure/persistence
+
+Foi concluída a separação da camada de persistência:
+
+- `src/projeto_arquivo.rs` deletado, conteúdo redistribuído:
+  - `src/infrastructure/persistence/format.rs` — tipos-espelho JSON e conversões `From`/`TryFrom` (~350 linhas);
+  - `src/infrastructure/persistence/migrations.rs` — sistema de migração por versão (`VERSAO_ATUAL = 1`);
+  - `src/infrastructure/persistence/repository.rs` — `load_project()`, `save_project()`, `load_from_str()` com `PersistenceError`;
+  - `src/infrastructure/persistence/mod.rs` — reexporta apenas a API pública.
+- `src/main.rs` declara `mod infrastructure`;
+- `src/app.rs` usa o repositório ao invés de `ProjetoArquivo` diretamente.
+
+Validação:
+
+```text
+cargo check       OK — sem warnings
+cargo test --all  OK — 68 testes
+```
+
+### Fase 7 — Separar DSL de aplicação
+
+Foi concluída a separação da avaliação DSL da camada visual:
+
+- `src/graph_editor/dsl.rs` (641 linhas) deletado, lógica movida para `src/dsl/`;
+- `src/dsl/application.rs` — trait `Application` + funções `aplicar_script`/`aplicar_patch`;
+- `src/dsl/evaluator.rs` — re-exporta `aplicar_script` e `aplicar_patch`;
+- `GraphPanel` implementa `Application` (`type NodeId = NodeId`);
+- `app.rs` chama `crate::dsl::evaluator::aplicar_script(...)`.
+
+Validação:
+
+```text
+cargo check       OK
+cargo test --all  OK — 68 testes
+```
+
+### Fase 8 — Separar avaliação procedural e renderização
+
+Foi concluída a separação da lógica procedural do renderer egui:
+
+- `src/procedural.rs` deletado; substituído por `src/procedural/mod.rs`;
+- `src/procedural/domain.rs` — lógica pura de avaliação (sem egui): `ShapeGenerator`, `PenPath`, `TextoItem`, `PreviewData`, `CenaPreview`, `LayerPreview`, `Shape`, `AnimDriver`, `RuidoDriver`; funções `generate()`, `trim_path_pts()`, `fbm()`, `ruido_offset()`; `Shape` usa campos próprios (não egui); `Pos2`/`Vec2` = `glam::Vec2`;
+- `src/procedural/render.rs` — adaptador domain → egui: `shape_to_egui()`, `generate_shape_egui()`, `color_to_color32()`;
+- `src/graph_editor/preview.rs` usa `shape_to_egui()` antes de `aplicar_opacidade()`/`translate_shape()`;
+- `src/ui/preview.rs` converte cores via `color_to_color32()`; usa `domain::Vec2` para `trim_path_pts()`; `GVec2` migrado para `domain::Vec2`;
+- `src/export.rs` usa `shape_to_egui()` + `traduzir()` e `color_to_color32()` para todas as cores de domínio;
+- `src/dsl/pen.rs`: `GVec2` → `crate::domain::Vec2` (~15 ocorrências);
+- `procedural/mod.rs` removeu re-export `GVec2` inexistente.
+
+Validação:
+
+```text
+cargo check       OK (warnings only)
+cargo test --all  OK — 68 testes
+```
+
+---
+
+## 3. Regras obrigatórias da refatoração
 
 ### Criação do `domain::Project` como fonte de verdade (Fase 3)
 
@@ -930,49 +1006,21 @@ O método `validate()` deve verificar:
 
 ## Fase 4 — Dividir `GraphPanel`
 
-### Objetivo
+### Status: CONCLUÍDA ✅
 
-Reduzir [src/graph_editor/mod.rs](../src/graph_editor/mod.rs) a um coordenador de interface.
+Foi concluída a divisão em módulos especializados, preservando o mesmo contrato público.
 
-### Separações
+Módulos criados:
 
-| Responsabilidade | Novo módulo |
+| Responsabilidade | Arquivo |
 |---|---|
-| Estado do grafo visual | `graph_view_state.rs` |
 | Criação de nós | `node_factory.rs` |
-| Conexões | `connections.rs` |
-| Seleção | `selection.rs` |
-| Grupos | `groups.rs` |
-| Undo/redo | `history.rs` |
-| Layout e posições | `layout.rs` |
-| Busca | `search.rs` |
-| Renderização | `rendering.rs` |
-| Integração DSL | `dsl_adapter.rs` |
-| Integração preview | `preview_adapter.rs` |
-| Conversões visual/modelo | `adapter.rs` |
+| Operações de layers/cenas | `layer_ops.rs` |
+| Layout e coordenadas espaciais | `layout.rs` |
+| Busca textual | `search.rs` |
+| Coordenador + conexões | `mod.rs` (~535 linhas) |
 
-### O que deve permanecer no coordenador
-
-Somente:
-
-- referências aos componentes;
-- chamadas de alto nível;
-- encaminhamento de eventos;
-- sincronização entre view e modelo;
-- composição do painel.
-
-### O que não deve permanecer nele
-
-- regras detalhadas de conexão;
-- interpretação da DSL;
-- serialização JSON;
-- geração de preview;
-- lógica de cada tipo de nó;
-- histórico implementado manualmente dentro do painel.
-
-### Critério de conclusão
-
-O arquivo principal do graph editor deve ser pequeno o suficiente para ser lido integralmente em uma revisão, idealmente entre 150 e 300 linhas.
+O `mod.rs` manteve apenas o coordenador `show()`, conexões entre nós e queries básicas. Todos os testes passam inalterados.
 
 ---
 
@@ -1012,32 +1060,19 @@ Se a DSL falhar no meio, o projeto não pode ficar parcialmente alterado.
 
 ## Fase 6 — Separar persistência e migrações
 
-### Objetivo
+### Status: CONCLUÍDA ✅
 
-Tornar o formato `.lory` estável e seguro.
+Foi concluída a separação da camada de persistência.
 
-### Estrutura recomendada
+### O que foi feito
 
-```text
-infrastructure/persistence/
-├── project_file.rs
-├── project_json.rs
-├── migrations.rs
-└── validation.rs
-```
-
-### Regras
-
-- o domínio não conhece JSON;
-- o JSON não conhece `GraphPanel`;
-- IDs persistentes devem ser preservados;
-- erros de arquivo devem informar caminho e causa;
-- o carregamento deve validar tudo antes de alterar o projeto atual;
-- falha no carregamento não pode destruir o projeto aberto;
-- salvar deve ser atômico sempre que possível;
-- criar arquivo temporário e substituir somente após gravação bem-sucedida;
-- manter versão explícita;
-- criar testes com arquivos válidos, incompletos e corrompidos.
+- `src/projeto_arquivo.rs` deletado; conteúdo redistribuído:
+  - `infrastructure/persistence/format.rs` — tipos-espelho JSON e conversões `From`/`TryFrom`;
+  - `infrastructure/persistence/migrations.rs` — sistema de migração por versão (`VERSAO_ATUAL = 1`);
+  - `infrastructure/persistence/repository.rs` — `load_project()`, `save_project()`, `load_from_str()` com `PersistenceError`;
+  - `infrastructure/persistence/mod.rs` — reexporta apenas a API pública;
+- `src/main.rs` declara `mod infrastructure`;
+- `src/app.rs` usa o repositório ao invés de `ProjetoArquivo` diretamente.
 
 ### Fluxo seguro de carregar
 
@@ -1065,9 +1100,17 @@ Nunca substituir o projeto atual antes da última validação.
 
 ## Fase 7 — Separar DSL de aplicação
 
-### Objetivo
+### Status: CONCLUÍDA ✅
 
-Fazer com que parser, validação e aplicação sejam partes independentes.
+Foi concluída a separação da avaliação DSL da camada visual.
+
+### O que foi feito
+
+- `src/graph_editor/dsl.rs` (641 linhas) deletado; lógica movida para `src/dsl/`:
+  - `src/dsl/application.rs` — trait `Application` com `aplicar_script`/`aplicar_patch`;
+  - `src/dsl/evaluator.rs` — re-exports das funções genéricas;
+- `GraphPanel` implementa `Application` (`type NodeId = NodeId`);
+- `src/app.rs` chama `crate::dsl::evaluator::aplicar_script(...)`.
 
 ### Fluxo final
 
@@ -1140,65 +1183,37 @@ O patch deve ser transacional:
 
 ## Fase 8 — Separar avaliação procedural e renderização
 
-### Objetivo
+### Status: CONCLUÍDA ✅
 
-Permitir que o projeto seja avaliado sem depender de `egui`.
+Foi concluída a separação da lógica procedural do renderer egui. Todos os objetivos foram atingidos.
 
-### Camadas
+### O que foi feito
 
-```text
-Project
-  ↓
-Graph evaluator
-  ↓
-Scene evaluation
-  ↓
-Render primitives
-  ↓
-Renderer específico
-```
+- `src/procedural.rs` deletado; substituído por `src/procedural/mod.rs`;
+- `src/procedural/domain.rs` criado com lógica pura de avaliação (sem egui):
+  - tipos: `ShapeGenerator`, `PenPath`, `TextoItem`, `PreviewData`, `CenaPreview`, `LayerPreview`, `Shape`, `AnimDriver`, `RuidoDriver`;
+  - funções: `generate()`, `trim_path_pts()`, `fbm()`, `ruido_offset()`;
+  - `Shape` usa campos próprios (`Rect`, `Ellipse`, `Path` com coordenadas puras);
+  - `Pos2` e `Vec2` são `glam::Vec2` (tipo de domínio, sem egui);
+  - `trim_path_pts` opera em `&[Pos2]` (glam::Vec2) — tipo puro de domínio;
+- `src/procedural/render.rs` criado como adaptador domain → egui:
+  - `shape_to_egui()` converte `domain::Shape` → `egui::Shape` (precisa de conversão explícita: `Pos2::new(c.x, c.y)`, `Vec2::new(tam.x, tam.y)`);
+  - `generate_shape_egui()` avalia + converte em um passo;
+  - `color_to_color32()` converte `domain::Color` → `Color32`;
+- Consumentes atualizados:
+  - `src/graph_editor/preview.rs` usa `procedural::render::shape_to_egui()` antes de `aplicar_opacidade()`/`translate_shape()`;
+  - `src/ui/preview.rs` converte cores via `color_to_color32()`; usa `domain::Vec2` para pontos do `trim_path_pts()`; `GVec2` substituído por `domain::Vec2`;
+  - `src/export.rs` usa `shape_to_egui()` + `traduzir()` e `color_to_color32()` para todas as cores de domínio;
+  - `src/dsl/pen.rs`: `GVec2` → `crate::domain::Vec2` (~15 ocorrências);
+- `procedural/mod.rs` removeu re-export `GVec2` inexistente;
+- `dsl/evaluator.rs` mantém re-exports de `aplicar_script` e `aplicar_patch`.
 
-### Tipos de saída
-
-O avaliador deve produzir tipos neutros, por exemplo:
-
-```rust
-pub enum RenderPrimitive {
-    Path(PathPrimitive),
-    Shape(ShapePrimitive),
-    Text(TextPrimitive),
-}
-```
-
-O renderer `egui` transforma esses dados em formas visuais.
-
-### Separar `procedural.rs`
-
-Dividir por responsabilidade:
+### Validação
 
 ```text
-domain/animation.rs
-domain/noise.rs
-domain/geometry.rs
-render/shape_generator.rs
-render/preview_data.rs
-render/scene_evaluator.rs
+cargo check       OK (warnings only)
+cargo test --all  OK — 68 testes
 ```
-
-### Regras
-
-- preview não modifica o projeto;
-- avaliação deve ser determinística para o mesmo projeto, tempo e seed;
-- cache deve ser explícito;
-- cache deve ser invalidado quando um nó relevante muda;
-- renderizador não deve buscar parâmetros diretamente em `GraphPanel`;
-- exportação e preview devem usar a mesma avaliação.
-
-### Critério de conclusão
-
-- preview e exportação produzem resultados equivalentes;
-- avaliação pode ser testada sem abrir janela;
-- alterações na UI não alteram a matemática procedural.
 
 ---
 

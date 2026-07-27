@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 
-use glam::Vec2 as GVec2;
-
+use crate::domain::{Color, LoopMode};
 use crate::nodes::NodeParams;
-use crate::procedural::{
-    CenaPreview, LayerPreview, PreviewData, ShapeGenerator, ShapeKind, TextoItem, PenPath,
+use crate::procedural::domain::{
+    AnimDriver, CenaPreview, LayerPreview, PenPath, PreviewData, RuidoDriver, ShapeGenerator,
+    ShapeKind, TextoItem,
 };
 
 use super::types::NodeId;
@@ -17,8 +17,7 @@ impl GraphPanel {
         }
         self.preview_dirty = false;
 
-        // Pre-popula cache de pen DSL antes de iterar params (evita conflito de
-        // borrow entre &self.params e &mut self.pen_cache dentro dos loops).
+        // Pre-popula cache de pen DSL
         {
             let pen_codes: Vec<(NodeId, String)> = self.params.iter()
                 .filter_map(|(&nid, p)| {
@@ -44,12 +43,12 @@ impl GraphPanel {
         let cfg = self.projeto();
         preview.largura = cfg.largura as f32;
         preview.altura = cfg.altura as f32;
-        preview.fundo = eframe::egui::Color32::from_rgba_unmultiplied(
-            cfg.fundo.r,
-            cfg.fundo.g,
-            cfg.fundo.b,
-            cfg.fundo.a,
-        );
+        preview.fundo = Color {
+            r: cfg.fundo.r,
+            g: cfg.fundo.g,
+            b: cfg.fundo.b,
+            a: cfg.fundo.a,
+        };
 
         // Map Layer NodeId -> cena name
         let mut layer_to_cena: HashMap<NodeId, String> = HashMap::new();
@@ -96,7 +95,7 @@ impl GraphPanel {
                     _ => continue,
                 };
 
-                for (_entry_idx, nome, _ordem, opac, visivel) in &entries {
+for (_entry_idx, nome, _ordem, opac, visivel) in &entries {
                     if !visivel {
                         continue;
                     }
@@ -249,16 +248,20 @@ impl GraphPanel {
         if let NodeParams::Shape(shape) = params {
             let kind = ShapeKind::from_u8(shape.tipo);
 
-            // Check for connected Ruido/Anim nodes
             let ruido = self.find_connected_ruido(_nid);
             let anim = self.find_connected_anim(_nid);
 
             Some(ShapeGenerator {
                 kind,
-                pos: GVec2::new(shape.px, shape.py),
-                tam: GVec2::new(shape.largura, shape.altura),
+                pos: crate::domain::Vec2::new(shape.px, shape.py),
+                tam: crate::domain::Vec2::new(shape.largura, shape.altura),
                 rot: shape.rotacao,
-                cor: eframe::egui::Color32::from_rgba_unmultiplied(shape.cor.r, shape.cor.g, shape.cor.b, shape.cor.a),
+                cor: Color {
+                    r: shape.cor.r,
+                    g: shape.cor.g,
+                    b: shape.cor.b,
+                    a: shape.cor.a,
+                },
                 seed: shape.seed,
                 noise_scale: shape.noise_scale,
                 amp: shape.amp,
@@ -286,7 +289,12 @@ impl GraphPanel {
                 tamanho: texto.tamanho,
                 negrito: texto.negrito,
                 italico: texto.italico,
-                cor: eframe::egui::Color32::from_rgba_unmultiplied(texto.cor.r, texto.cor.g, texto.cor.b, texto.cor.a),
+                cor: Color {
+                    r: texto.cor.r,
+                    g: texto.cor.g,
+                    b: texto.cor.b,
+                    a: texto.cor.a,
+                },
                 escala_x: 1.0,
                 escala_y: 1.0,
                 ruido,
@@ -310,9 +318,19 @@ impl GraphPanel {
 
             Some(PenPath {
                 program,
-                pos: GVec2::new(pen.pos_x, pen.pos_y),
-                cor: eframe::egui::Color32::from_rgba_unmultiplied(pen.cor.r, pen.cor.g, pen.cor.b, pen.cor.a),
-                cor_fill: eframe::egui::Color32::from_rgba_unmultiplied(pen.cor_fill.r, pen.cor_fill.g, pen.cor_fill.b, pen.cor_fill.a),
+                pos: crate::domain::Vec2::new(pen.pos_x, pen.pos_y),
+                cor: Color {
+                    r: pen.cor.r,
+                    g: pen.cor.g,
+                    b: pen.cor.b,
+                    a: pen.cor.a,
+                },
+                cor_fill: Color {
+                    r: pen.cor_fill.r,
+                    g: pen.cor_fill.g,
+                    b: pen.cor_fill.b,
+                    a: pen.cor_fill.a,
+                },
                 espessura: pen.espessura,
                 preenchimento: pen.preenchimento,
                 seed: pen.seed as u32,
@@ -332,7 +350,7 @@ impl GraphPanel {
         }
     }
 
-    fn find_connected_ruido(&self, nid: NodeId) -> Option<crate::procedural::RuidoDriver> {
+    fn find_connected_ruido(&self, nid: NodeId) -> Option<RuidoDriver> {
         let graph = &self.editor_state.graph;
         let node = &graph[nid];
 
@@ -340,7 +358,7 @@ impl GraphPanel {
             if let Some(output_id) = graph.connection(*input_id) {
                 let src_nid = graph.outputs[output_id].node;
                 if let Some(NodeParams::Ruido(ruido)) = self.params.get(&src_nid) {
-                    return Some(crate::procedural::RuidoDriver {
+                    return Some(RuidoDriver {
                         seed: ruido.seed,
                         freq: ruido.freq,
                         amp: ruido.amp,
@@ -354,7 +372,7 @@ impl GraphPanel {
         None
     }
 
-    fn find_connected_anim(&self, nid: NodeId) -> Option<crate::procedural::AnimDriver> {
+    fn find_connected_anim(&self, nid: NodeId) -> Option<AnimDriver> {
         let graph = &self.editor_state.graph;
         let node = &graph[nid];
 
@@ -362,9 +380,9 @@ impl GraphPanel {
             if let Some(output_id) = graph.connection(*input_id) {
                 let src_nid = graph.outputs[output_id].node;
                 if let Some(NodeParams::Anim(anim)) = self.params.get(&src_nid) {
-                    return Some(crate::procedural::AnimDriver {
+                    return Some(AnimDriver {
                         segmentos: anim.segmentos.clone(),
-                        loop_mode: crate::domain::LoopMode::from_u8(anim.loop_mode),
+                        loop_mode: LoopMode::from_u8(anim.loop_mode),
                         alvo: anim.alvo,
                         comp: None,
                     });

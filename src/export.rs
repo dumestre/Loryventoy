@@ -17,6 +17,7 @@ use eframe::egui::epaint::{
 use eframe::egui::{Color32, ColorImage, Pos2, Rect, Shape, Vec2};
 
 use crate::procedural::{CenaPreview, PenPath, PreviewData, TextoItem};
+use crate::procedural::render::{color_to_color32, shape_to_egui};
 use crate::ui::preview::PreviewPanel;
 use crate::ui::text_raster::TextRaster;
 
@@ -186,7 +187,7 @@ fn renderizar_cena(img: &mut ColorImage, cena: &CenaPreview, t: f32, off: Vec2) 
 
         // ---- Formas procedurais ----
         for gen in &layer.formas {
-            let s = traduzir(gen.generate(t), off);
+            let s = traduzir(shape_to_egui(gen.generate(t)), off);
             let op = opac * gen.opac_em(t);
             for m in &tessalar(vec![s]) {
                 rasterizar_mesh(img, m, op);
@@ -244,8 +245,8 @@ fn pen_para_shapes(pen: &PenPath, t: f32, off: Vec2) -> Vec<Shape> {
     PreviewPanel::pen_cmds_para_shapes(
         &cmds,
         pen.pos_em(t),
-        pen.cor,
-        pen.cor_fill,
+        color_to_color32(pen.cor),
+        color_to_color32(pen.cor_fill),
         pen.espessura,
         pen.preenchimento,
         pen.cantos,
@@ -268,7 +269,7 @@ fn desenhar_texto(img: &mut ColorImage, raster: &mut TextRaster, txt: &TextoItem
         1.0,
         txt.negrito,
         txt.italico,
-        txt.cor,
+        color_to_color32(txt.cor),
     ) {
         Some(i) => i,
         None => return,
@@ -380,7 +381,7 @@ pub fn exportar_png(data: &PreviewData, t: f32, caminho: &Path) -> Result<(), St
     let h = data.altura.max(1.0) as u32;
     let mut img = ColorImage::new(
         [w as usize, h as usize],
-        vec![data.fundo; (w as usize) * (h as usize)],
+        vec![color_to_color32(data.fundo); (w as usize) * (h as usize)],
     );
     let off = deslocamento(data);
 
@@ -427,7 +428,7 @@ pub fn exportar_frames(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::procedural::{CenaPreview, LayerPreview, GVec2, PenPath, PreviewData};
+    use crate::procedural::{CenaPreview, LayerPreview, PenPath, PreviewData};
     use crate::dsl::Program;
     use eframe::egui::Color32;
 
@@ -451,7 +452,7 @@ mod tests {
         let mut data = PreviewData::default();
         data.largura = 400.0;
         data.altura = 400.0;
-        data.fundo = Color32::BLACK;
+        data.fundo = crate::domain::Color::from_rgb(0, 0, 0);
 
         let mut cena = CenaPreview::default();
         cena.opacidade = 1.0;
@@ -460,9 +461,9 @@ mod tests {
         layer.opacidade = 1.0;
         layer.pen.push(PenPath {
             program,
-            pos: GVec2::new(0.0, 0.0),
-            cor: Color32::YELLOW,
-            cor_fill: Color32::YELLOW,
+            pos: crate::domain::Vec2::new(0.0, 0.0),
+            cor: crate::domain::Color::from_rgb(255, 255, 0),
+            cor_fill: crate::domain::Color::from_rgb(255, 255, 0),
             espessura: 2.0,
             preenchimento: false,
             seed: 1,

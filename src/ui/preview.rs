@@ -21,7 +21,9 @@ use eframe::egui::{
 use eframe::egui::epaint::{EllipseShape, PathShape, RectShape, Vertex};
 use eframe::egui::TextureOptions;
 
-use crate::procedural::{PreviewData, GVec2, trim_path_pts};
+use crate::procedural::{PreviewData, trim_path_pts};
+use crate::procedural::render::{color_to_color32, shape_to_egui};
+
 use crate::ui::scroll_delta;
 use crate::ui::text_raster::TextRaster;
 
@@ -289,10 +291,10 @@ impl PreviewPanel {
                 for layer in &cena.layers {
                     if layer.opacidade <= 0.001 { continue; }
                     let opac = opac_cena * layer.opacidade;
-                    for gen in &layer.formas {
-                        let shape = gen.generate(self.tempo);
-                        let op = opac * gen.opac_em(self.tempo);
-                        let shape = Self::aplicar_opacidade(shape, op);
+for gen in &layer.formas {
+                         let shape = shape_to_egui(gen.generate(self.tempo));
+                         let op = opac * gen.opac_em(self.tempo);
+                         let shape = Self::aplicar_opacidade(shape, op);
                         let tela = Self::translate_shape(shape, &para_tela, &para_tela_v);
                         self.cache_shapes.push(tela.clone());
                         painter.add(tela);
@@ -301,12 +303,12 @@ impl PreviewPanel {
                         let (tx, ty) = txt.pos_em(self.tempo);
                         let (esx, esy) = txt.escala_em(self.tempo);
                         let r = match self.rasterizar_texto(
-                            &txt.conteudo, txt.tamanho, txt.negrito, txt.italico, txt.cor, escala,
+                            &txt.conteudo, txt.tamanho, txt.negrito, txt.italico, color_to_color32(txt.cor), escala,
                         ) {
                             Some(r) => r,
                             None => continue,
                         };
-                        let key = Self::tex_cache_key(&txt.conteudo, txt.tamanho, escala, txt.negrito, txt.italico, txt.cor);
+                        let key = Self::tex_cache_key(&txt.conteudo, txt.tamanho, escala, txt.negrito, txt.italico, color_to_color32(txt.cor));
                         let handle = if let Some(h) = self.tex_cache.get(&key) {
                             h.clone()
                         } else {
@@ -341,7 +343,7 @@ impl PreviewPanel {
                         let progress = (self.tempo / pen.duracao.max(0.001)).clamp(0.0, 1.0);
                         let trim_fim_anim = pen.trim_inicio + (pen.trim_fim - pen.trim_inicio) * progress;
                         let shapes = Self::pen_cmds_para_shapes(
-                            &cmds, pen.pos_em(self.tempo), pen.cor, pen.cor_fill,
+                            &cmds, pen.pos_em(self.tempo), color_to_color32(pen.cor), color_to_color32(pen.cor_fill),
                             pen.espessura, pen.preenchimento, pen.cantos, pen.escala_x, pen.escala_y,
                             &para_tela, &para_tela_v, opac * pen.opac_em(self.tempo), pen.trim_inicio, trim_fim_anim,
                         );
@@ -572,9 +574,9 @@ impl PreviewPanel {
     /// Pública para ser reutilizada pela exportação off-screen (PNG), que
     /// passa `para_tela`/`para_tela_v` mapeando coords de projeto direto para
     /// o buffer de imagem.
-    fn cubic_bezier_point(p0: Pos2, p1: Pos2, p2: Pos2, p3: Pos2, t: f32) -> Pos2 {
+    fn cubic_bezier_point(p0: crate::domain::Pos2, p1: crate::domain::Pos2, p2: crate::domain::Pos2, p3: crate::domain::Pos2, t: f32) -> crate::domain::Pos2 {
         let mt = 1.0 - t;
-        Pos2::new(
+        crate::domain::Pos2::new(
             mt * mt * mt * p0.x + 3.0 * mt * mt * t * p1.x + 3.0 * mt * t * t * p2.x + t * t * t * p3.x,
             mt * mt * mt * p0.y + 3.0 * mt * mt * t * p1.y + 3.0 * mt * t * t * p2.y + t * t * t * p3.y,
         )
@@ -582,7 +584,7 @@ impl PreviewPanel {
 
     pub fn pen_cmds_para_shapes<F, G>(
         cmds: &[crate::dsl::PathCmd],
-        desloc: GVec2,
+        desloc: crate::domain::Vec2,
         cor_padrao: Color32,
         cor_fill_padrao: Color32,
         espessura_padrao: f32,
@@ -623,7 +625,7 @@ impl PreviewPanel {
 
         let mut st = St { cor: cor_padrao, cor_fill: cor_fill_padrao, esp: espessura_padrao, preenche: preenche_padrao };
 
-        let to_scr = |p: &GVec2| -> LPoint {
+        let to_scr = |p: &crate::domain::Vec2| -> LPoint {
             let sp = para_tela(Pos2::new(desloc.x + p.x * sx, desloc.y + p.y * sy));
             LPoint::new(sp.x, sp.y)
         };
@@ -758,16 +760,16 @@ impl PreviewPanel {
 
             let use_trim = trim_inicio > 0.0 || trim_fim < 1.0;
             let (path, trimmed) = if use_trim {
-                let mut pts = vec![Pos2::new(sp.start.x, sp.start.y)];
+                let mut pts = vec![crate::domain::Pos2::new(sp.start.x, sp.start.y)];
                 for op in &sp.ops {
                     match op {
-                        SubPathOp::Line(p) => { pts.push(Pos2::new(p.x, p.y)); }
+                        SubPathOp::Line(p) => { pts.push(crate::domain::Pos2::new(p.x, p.y)); }
                         SubPathOp::Cubic(c1, c2, p) => {
                             let p0 = *pts.last().unwrap();
                             let n = 12;
                             for i in 1..=n {
                                 let t = i as f32 / n as f32;
-                                pts.push(Self::cubic_bezier_point(p0, Pos2::new(c1.x, c1.y), Pos2::new(c2.x, c2.y), Pos2::new(p.x, p.y), t));
+                                pts.push(Self::cubic_bezier_point(p0, crate::domain::Pos2::new(c1.x, c1.y), crate::domain::Pos2::new(c2.x, c2.y), crate::domain::Pos2::new(p.x, p.y), t));
                             }
                         }
                     }
@@ -872,7 +874,7 @@ mod tests {
         let cmds = p.eval(0.0, 1).unwrap();
         let shapes = PreviewPanel::pen_cmds_para_shapes(
             &cmds,
-            crate::procedural::GVec2::new(0.0, 0.0),
+            crate::domain::Vec2::new(0.0, 0.0),
             Color32::WHITE,
             Color32::WHITE,
             2.0,

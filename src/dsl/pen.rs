@@ -37,15 +37,15 @@
 
 use std::collections::HashMap;
 
-use crate::procedural::GVec2;
+use crate::domain::Vec2;
 use eframe::egui::Color32;
 
 /// Comandos de path emitidos pela avaliação (geometria crua).
 #[derive(Debug, Clone, PartialEq)]
 pub enum PathCmd {
-    Move(GVec2),
-    Line(GVec2),
-    Bezier(GVec2, GVec2, GVec2),
+    Move(Vec2),
+    Line(Vec2),
+    Bezier(Vec2, Vec2, Vec2),
     Close,
     Fill(bool),
     Stroke(f32),
@@ -200,7 +200,7 @@ pub struct Stmt {
 #[derive(Debug, Clone, Copy)]
 pub enum Valor {
     Num(f32),
-    Vec(GVec2),
+    Vec(crate::domain::Vec2),
 }
 
 impl Valor {
@@ -216,7 +216,7 @@ impl Valor {
     }
     /// Extrai o vetor. Erro se for um escalar usado em contexto de vetor.
     #[allow(dead_code)]
-    fn vec(&self, linha: usize) -> Result<GVec2, DslError> {
+    fn vec(&self, linha: usize) -> Result<crate::domain::Vec2, DslError> {
         match self {
             Valor::Vec(v) => Ok(*v),
             Valor::Num(_) => Err(DslError::Eval {
@@ -1392,9 +1392,9 @@ impl Eval {
     }
 
     /// Aplica a transformação afim atual a um ponto.
-    fn xf(&self, p: GVec2) -> GVec2 {
+    fn xf(&self, p: crate::domain::Vec2) -> crate::domain::Vec2 {
         let m = &self.transform;
-        GVec2::new(
+        crate::domain::Vec2::new(
             m[0] * p.x + m[1] * p.y + m[2],
             m[3] * p.x + m[4] * p.y + m[5],
         )
@@ -1402,18 +1402,18 @@ impl Eval {
 
     /// Empurra um `Move`, aplicando a transformação atual.
     fn push_move(&mut self, x: f32, y: f32) {
-        self.cmds.push(PathCmd::Move(self.xf(GVec2::new(x, y))));
+        self.cmds.push(PathCmd::Move(self.xf(crate::domain::Vec2::new(x, y))));
     }
     /// Empurra um `Line`, aplicando a transformação atual.
     fn push_line(&mut self, x: f32, y: f32) {
-        self.cmds.push(PathCmd::Line(self.xf(GVec2::new(x, y))));
+        self.cmds.push(PathCmd::Line(self.xf(crate::domain::Vec2::new(x, y))));
     }
     /// Empurra um `Bezier`, aplicando a transformação atual.
     fn push_bezier(&mut self, c1x: f32, c1y: f32, c2x: f32, c2y: f32, x: f32, y: f32) {
         self.cmds.push(PathCmd::Bezier(
-            self.xf(GVec2::new(c1x, c1y)),
-            self.xf(GVec2::new(c2x, c2y)),
-            self.xf(GVec2::new(x, y)),
+            self.xf(crate::domain::Vec2::new(c1x, c1y)),
+            self.xf(crate::domain::Vec2::new(c2x, c2y)),
+            self.xf(crate::domain::Vec2::new(x, y)),
         ));
     }
 
@@ -2034,7 +2034,7 @@ impl Eval {
                                 linha,
                             ));
                         }
-                        Ok(Valor::Vec(GVec2::new(
+                        Ok(Valor::Vec(crate::domain::Vec2::new(
                             vals[0].num(linha)?,
                             vals[1].num(linha)?,
                         )))
@@ -2624,14 +2624,14 @@ color 0.78 0.47 0.08
         let cmds = p.eval(0.0, 1).expect("avaliacao");
         match &cmds[0] {
             PathCmd::Move(g) => {
-                assert_eq!(*g, GVec2::new(0.0, -10.0), "y deve ser -10");
+                assert_eq!(*g, crate::domain::Vec2::new(0.0, -10.0), "y deve ser -10");
             }
             _ => panic!("esperado Move"),
         }
         // move -5 -10 também funciona
         let p = Program::parse("move -5 -10").unwrap();
         let cmds = p.eval(0.0, 1).unwrap();
-        assert!(matches!(cmds[0], PathCmd::Move(GVec2 { x: -5.0, y: -10.0 })));
+        assert!(matches!(cmds[0], PathCmd::Move(crate::domain::Vec2 { x: -5.0, y: -10.0 })));
     }
 
     #[test]
