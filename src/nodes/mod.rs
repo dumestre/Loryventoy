@@ -11,8 +11,10 @@ mod shape;
 mod texto;
 mod transform;
 mod params;
+mod layer_entry;
 
 pub use params::NodeParams;
+pub use layer_entry::LayerEntry;
 
 use eframe::egui::Color32;
 
@@ -171,116 +173,7 @@ impl TipoNo {
 
 // ── NodeParams ──────────────────────────────────────────────────
 
-/*
-#[derive(Clone, Debug)]
-pub enum LegacyNodeParams {
-    Transform {
-        px: f32, py: f32, pz: f32,
-        rx: f32, ry: f32, rz: f32,
-        sx: f32, sy: f32, sz: f32,
-    },
-    Cena {
-        nome_cena: String,
-        ativa: bool,
-        zoom: f32,
-        angulo: f32,
-        opacidade: f32,
-    },
-    Layer {
-        cena: String,
-        layers: Vec<LayerEntry>,
-        selected: usize,
-    },
-    Texto {
-        cena: String,
-        conteudo: String,
-        tamanho: f32,
-        negrito: bool,
-        italico: bool,
-        px: f32,
-        py: f32,
-        cor: Color32,
-        trim_inicio: f32,
-        trim_fim: f32,
-    },
-    Shape {
-        cena: String,
-        tipo: u8,
-        px: f32, py: f32,
-        largura: f32, altura: f32,
-        rotacao: f32,
-        cor: Color32,
-        seed: f32,
-        noise_scale: f32,
-        amp: f32,
-        veloc: f32,
-        trim_inicio: f32,
-        trim_fim: f32,
-    },
-    Pen {
-        cena: String,
-        codigo: String,
-        erro: Option<String>,
-        cor: Color32,
-        cor_fill: Color32,
-        pos_x: f32,
-        pos_y: f32,
-        espessura: f32,
-        preenchimento: bool,
-        seed: f32,
-        cantos: f32,
-        ordem: f32,
-        escala_x: f32,
-        escala_y: f32,
-        trim_inicio: f32,
-        trim_fim: f32,
-    },
-    Ruido {
-        seed: f32,
-        freq: f32,
-        amp: f32,
-        veloc: f32,
-        alvo: u8,
-    },
-    Anim {
-        alvo: u8,
-        loop_mode: u8,
-        segmentos: Vec<crate::procedural::AnimSeg>,
-    },
-    Saida { brilho: f32, contraste: f32, saturacao: f32 },
-    Canvas(ProjetoConfig),
-}
-*/
-
-
 // ── Structs auxiliares ──────────────────────────────────────────
-
-#[derive(Clone, Debug)]
-pub struct LayerEntry {
-    pub nome: String,
-    pub ordem: f32,
-    pub opacidade: f32,
-    pub cor: Color32,
-    pub visivel: bool,
-    pub renomeando: bool,
-}
-
-impl LayerEntry {
-    const PALETTE: [Color32; 8] = [
-        Color32::from_rgb(90, 170, 235),
-        Color32::from_rgb(235, 150, 120),
-        Color32::from_rgb(150, 200, 120),
-        Color32::from_rgb(200, 120, 220),
-        Color32::from_rgb(235, 185, 95),
-        Color32::from_rgb(120, 200, 220),
-        Color32::from_rgb(230, 130, 170),
-        Color32::from_rgb(170, 120, 235),
-    ];
-
-    pub fn cor_por_idx(idx: usize) -> Color32 {
-        Self::PALETTE[idx % Self::PALETTE.len()]
-    }
-}
 
 // ── Funções de porto ────────────────────────────────────────────
 

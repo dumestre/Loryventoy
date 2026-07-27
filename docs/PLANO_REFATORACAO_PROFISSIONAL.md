@@ -91,6 +91,27 @@ cargo test --all  OK — 68 testes
 
 O próximo trabalho deve remover definitivamente o bloco legado e migrar `LayerEntry` para uma estrutura de domínio sem o campo visual `renomeando`. Esse campo deverá viver no estado da apresentação, não nos dados persistentes do projeto.
 
+### Extração de `LayerEntry`
+
+Também foi concluída a extração estrutural de `LayerEntry` para `src/nodes/layer_entry.rs`.
+
+Nesta etapa:
+
+- `LayerEntry` deixou de ficar definido em `src/nodes/mod.rs`;
+- `src/nodes/mod.rs` passou a reexportar o tipo para preservar os imports atuais;
+- criação padrão de layers, criação de layers pelo graph editor e persistência continuam usando o mesmo tipo público;
+- nenhum campo persistido foi removido;
+- o campo `renomeando` ainda permanece temporariamente no tipo para não alterar o fluxo atual da UI;
+- a próxima subetapa deve mover `renomeando` para o estado de apresentação;
+- a definição antiga duplicada foi removida.
+
+Validação após a extração:
+
+```text
+cargo check       OK
+cargo test --all  OK — 68 testes
+```
+
 ---
 
 ## 3. Regras obrigatórias da refatoração
