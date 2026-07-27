@@ -2,9 +2,11 @@
 
 mod color;
 mod project_config;
+mod animation;
 
 pub use color::Color;
 pub use project_config::ProjectConfig;
+pub use animation::{Easing, LoopMode, AnimSeg};
 
 #[cfg(test)]
 mod tests {

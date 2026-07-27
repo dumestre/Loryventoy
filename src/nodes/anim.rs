@@ -10,12 +10,12 @@ pub(crate) fn padrao() -> NodeParams {
     NodeParams::Anim(AnimParams {
         alvo: 0,
         loop_mode: 0,
-        segmentos: vec![crate::procedural::AnimSeg {
+        segmentos: vec![crate::domain::AnimSeg {
             t_ini: 0.0,
             t_fim: 1.0,
             v_ini: [960.0, 540.0],
             v_fim: [960.0, 540.0],
-            easing: crate::procedural::Easing::EaseInOut,
+            easing: crate::domain::Easing::EaseInOut,
         }],
     })
 }

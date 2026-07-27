@@ -266,6 +266,24 @@ pub enum NodeParams {
 }
 ```
 
+### Migração de AnimSeg, Easing e LoopMode para o domínio
+
+Foi concluída a migração dos tipos de animação para o domínio:
+
+- criado `src/domain/animation.rs`;
+- criados os tipos `Easing`, `LoopMode` e `AnimSeg` no domínio;
+- `src/procedural.rs` passou a reexportar esses tipos do domínio para compatibilidade;
+- `anim_params.rs` agora usa `crate::domain::AnimSeg` em vez de `crate::procedural::AnimSeg`;
+- todos os consumidores foram atualizados para referenciar os tipos do domínio;
+- nenhum formato de arquivo ou comportamento foi alterado.
+
+Validação:
+
+```text
+cargo check       OK
+cargo test --all  OK — 68 testes
+```
+
 O próximo passo arquitetural é criar o `Project` como fonte de verdade (Fase 3 do plano geral).
 
 ---

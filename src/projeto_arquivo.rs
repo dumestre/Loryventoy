@@ -289,12 +289,12 @@ impl TryFrom<NodeParamsJson> for NodeParams {
                     loop_mode,
                     segmentos: segmentos
                         .into_iter()
-                        .map(|s| crate::procedural::AnimSeg {
+                        .map(|s| crate::domain::AnimSeg {
                             t_ini: s.t_ini,
                             t_fim: s.t_fim,
                             v_ini: s.v_ini,
                             v_fim: s.v_fim,
-                            easing: crate::procedural::Easing::from_u8(s.easing),
+                            easing: crate::domain::Easing::from_u8(s.easing),
                         })
                         .collect(),
                 })

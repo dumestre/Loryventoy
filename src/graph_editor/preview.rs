@@ -364,7 +364,7 @@ impl GraphPanel {
                 if let Some(NodeParams::Anim(anim)) = self.params.get(&src_nid) {
                     return Some(crate::procedural::AnimDriver {
                         segmentos: anim.segmentos.clone(),
-                        loop_mode: crate::procedural::LoopMode::from_u8(anim.loop_mode),
+                        loop_mode: crate::domain::LoopMode::from_u8(anim.loop_mode),
                         alvo: anim.alvo,
                         comp: None,
                     });

@@ -1,4 +1,5 @@
 #![allow(dead_code)]
+#![allow(unused_imports)]
 
 use eframe::egui::{Color32, Pos2, Rect, Shape, Stroke, Vec2};
 use eframe::egui::epaint::{EllipseShape, PathShape, RectShape};
@@ -31,92 +32,7 @@ pub struct RuidoDriver {
     pub comp: Option<usize>,
 }
 
-/// Curva de easing de um segmento de animação.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Easing {
-    Linear,
-    EaseIn,
-    EaseOut,
-    EaseInOut,
-    Step,
-}
-
-impl Easing {
-    pub fn from_u8(v: u8) -> Easing {
-        match v {
-            1 => Easing::EaseIn,
-            2 => Easing::EaseOut,
-            3 => Easing::EaseInOut,
-            4 => Easing::Step,
-            _ => Easing::Linear,
-        }
-    }
-    pub fn to_u8(self) -> u8 {
-        match self {
-            Easing::Linear => 0,
-            Easing::EaseIn => 1,
-            Easing::EaseOut => 2,
-            Easing::EaseInOut => 3,
-            Easing::Step => 4,
-        }
-    }
-    /// Aplica a curva a `x` em [0,1] → retorna o fator interpolado em [0,1].
-    pub fn aplicar(self, x: f32) -> f32 {
-        let x = x.clamp(0.0, 1.0);
-        match self {
-            Easing::Linear => x,
-            Easing::EaseIn => x * x,
-            Easing::EaseOut => 1.0 - (1.0 - x) * (1.0 - x),
-            Easing::EaseInOut => {
-                if x < 0.5 {
-                    2.0 * x * x
-                } else {
-                    1.0 - (-2.0 * x + 2.0).powi(2) / 2.0
-                }
-            }
-            Easing::Step => {
-                if x >= 1.0 {
-                    1.0
-                } else {
-                    0.0
-                }
-            }
-        }
-    }
-}
-
-/// Modo de repetição da animação quando `t` passa do último segmento.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum LoopMode {
-    /// Segura o último valor (padrão).
-    Nenhum,
-    /// Reinicia do começo (t módulo duração total).
-    Repetir,
-    /// Vai e volta (ping-pong).
-    PingPong,
-}
-
-impl LoopMode {
-    pub fn from_u8(v: u8) -> LoopMode {
-        match v {
-            1 => LoopMode::Repetir,
-            2 => LoopMode::PingPong,
-            _ => LoopMode::Nenhum,
-        }
-    }
-}
-
-/// Um trecho da função de animação: de `t_ini` a `t_fim` (segundos), o valor
-/// (vetorial X/Y) vai de `v_ini` a `v_fim` com a curva `easing`. Para alvos
-/// escalares (Rotação/Opacidade) usa-se apenas o componente X.
-#[derive(Debug, Clone, Copy)]
-pub struct AnimSeg {
-    pub t_ini: f32,
-    pub t_fim: f32,
-    pub v_ini: [f32; 2],
-    pub v_fim: [f32; 2],
-    pub easing: Easing,
-}
+pub use crate::domain::{Easing, LoopMode, AnimSeg};
 
 /// Driver de animação conectado a um parâmetro de um item. Avaliado no
 /// instante `t` como uma função por partes que SUBSTITUI o valor do alvo.

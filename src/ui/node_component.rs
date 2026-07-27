@@ -883,8 +883,8 @@ fn grid_combo_loop(ui: &mut Ui, label: &str, modo: &mut u8) {
 /// Editor da lista de segmentos (trechos) de animação: uma linha por trecho
 /// com tempos, valores inicial/final e curva de easing, além de botões para
 /// adicionar/remover trechos.
-fn editor_segmentos(ui: &mut Ui, segs: &mut Vec<crate::procedural::AnimSeg>) {
-    use crate::procedural::{AnimSeg, Easing};
+fn editor_segmentos(ui: &mut Ui, segs: &mut Vec<crate::domain::AnimSeg>) {
+    use crate::domain::{AnimSeg, Easing};
     let easings = ["Linear", "Ease-in", "Ease-out", "Ease-in-out", "Step"];
     ui.label(egui::RichText::new("Trechos").strong());
     let mut remover: Option<usize> = None;
