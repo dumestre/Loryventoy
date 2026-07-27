@@ -1,5 +1,6 @@
 use eframe::egui;
 use egui::Vec2;
+use std::time::Instant;
 
 use crate::theme;
 
@@ -38,6 +39,10 @@ pub struct MovimentoApp {
     script_logs: Vec<String>,
     script_mostrar_exemplos: bool,
     script_rect: Option<egui::Rect>,
+    perf_frame: u64,
+    perf_preview_ms: f64,
+    perf_graph_ms: f64,
+    perf_timeline_ms: f64,
     script_primeira_vez: bool,
 
     salvar_pendente: bool,
@@ -79,6 +84,10 @@ impl MovimentoApp {
             splitter_size: 2.0,
 
             script_open: false,
+            perf_frame: 0,
+            perf_preview_ms: 0.0,
+            perf_graph_ms: 0.0,
+            perf_timeline_ms: 0.0,
             script_text: SCRIPT_EXEMPLO.to_string(),
             script_erro: None,
             script_logs: Vec::new(),
@@ -457,6 +466,7 @@ impl eframe::App for MovimentoApp {
                 let tempo = self.timeline.current_frame as f32 / cfg_preview.fps.max(0.01);
                 self.preview.set_tempo(tempo);
 
+                let _t0 = Instant::now();
                 let preview_response = ui.allocate_ui(
                     Vec2::new(
                         available.x,
@@ -468,6 +478,8 @@ impl eframe::App for MovimentoApp {
 
                     },
                 );
+                let dt = _t0.elapsed().as_secs_f64() * 1000.0;
+                self.perf_preview_ms = self.perf_preview_ms * 0.9 + dt * 0.1;
 
                 // BARTOOL (flutuante na base do preview)
                 self.bartool.show(ui, preview_response.response.rect);
@@ -506,6 +518,7 @@ impl eframe::App for MovimentoApp {
 
                 // TIMELINE
 
+                let _t2 = Instant::now();
                 let _timeline_response = ui.allocate_ui(
                     Vec2::new(
                         available.x,
@@ -517,6 +530,8 @@ impl eframe::App for MovimentoApp {
 
                     },
                 );
+                let dt = _t2.elapsed().as_secs_f64() * 1000.0;
+                self.perf_timeline_ms = self.perf_timeline_ms * 0.9 + dt * 0.1;
 
                 if self.timeline.markers_modificados {
                     self.graph.sincronizar_marcadores_com_cenas(&self.timeline.markers);
@@ -546,6 +561,7 @@ impl eframe::App for MovimentoApp {
 
                 // GRAPH
 
+                let _t1 = Instant::now();
                 let _graph_response = ui.allocate_ui(
                     Vec2::new(
                         available.x,
@@ -571,6 +587,8 @@ impl eframe::App for MovimentoApp {
 
                     },
                 );
+                let dt = _t1.elapsed().as_secs_f64() * 1000.0;
+                self.perf_graph_ms = self.perf_graph_ms * 0.9 + dt * 0.1;
 
 
                 // ---- INPUT (play/pause e navegação de keyframes) ----
@@ -655,6 +673,15 @@ impl eframe::App for MovimentoApp {
                     ctx.request_repaint();
                 }
 
+                self.perf_frame += 1;
+                if self.perf_frame % 60 == 0 {
+                    eprintln!(
+                        "[perf] preview={preview:.1}ms  graph={graph:.1}ms  timeline={tl:.1}ms",
+                        preview = self.perf_preview_ms,
+                        graph = self.perf_graph_ms,
+                        tl = self.perf_timeline_ms,
+                    );
+                }
 
             });
 

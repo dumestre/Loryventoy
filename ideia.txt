@@ -1,0 +1,240 @@
+1. Criar um crate core
+
+ 
+
+Hoje tudo está junto.
+
+Eu faria:
+
+
+
+Loryventoy
+
+├── lory-core
+│
+├── lory-editor
+│
+├── lory-render
+│
+├── lory-ui
+│
+└── lory-cli
+
+lory-core
+
+Sem egui.
+
+Nada de:
+
+
+
+use egui::*;
+
+Aqui fica:
+
+
+
+Node
+NodeGraph
+Connection
+Port
+Timeline
+Animation
+Project
+
+2. Mover nodes
+
+Hoje:
+
+
+
+src/nodes
+
+Eu transformaria:
+
+
+
+core/
+ └── nodes/
+       node.rs
+       registry.rs
+       ports.rs
+       params.rs
+
+Cada nó implementa:
+
+
+
+trait Node {
+
+ fn id();
+
+ fn inputs();
+
+ fn outputs();
+
+ fn evaluate();
+
+}
+
+Exemplo:
+
+
+
+ShapeNode
+
+input:
+ Transform
+
+output:
+ Geometry
+
+3. Criar um Node Registry
+
+Hoje adicionar nó novo provavelmente exige mexer em vários lugares.
+
+Eu faria:
+
+
+
+NodeRegistry
+
+Exemplo:
+
+
+
+registry.register(
+    "Shape",
+    ShapeNode::create
+);
+
+4. Separar Graph Editor 
+
+Hoje:
+
+
+
+graph_editor
+
+vira:
+
+
+
+editor/
+ ├── canvas
+ ├── interaction
+ ├── tools
+ ├── renderer
+ └── commands
+
+5. Criar sistema de comandos
+
+Você já tem snapshot de undo.
+
+Eu mudaria.
+
+Hoje:
+
+
+
+salvar estado inteiro
+
+Funciona, mas fica pesado.
+
+Faria:
+
+
+
+trait Command {
+
+ execute();
+
+ undo();
+
+}
+
+Exemplo:
+
+
+
+MoveNodeCommand
+
+CreateNodeCommand
+
+ConnectCommand
+
+Igual Blender.
+
+6. Preview
+
+Aqui é onde eu mais mudaria.
+
+Hoje o preview está dentro do graph editor. 
+
+Eu faria:
+
+
+
+Graph
+
+↓
+
+Evaluator
+
+↓
+
+RenderScene
+
+↓
+
+Renderer
+
+↓
+
+Preview
+
+Porque futuramente:
+
+ exportar vídeo 
+
+ render offline 
+
+ preview GPU 
+
+ render farm 
+
+ficam fáceis.
+
+7. Seu DSL
+
+A parte do Pen está interessante.
+
+Eu não deixaria ela isolada.
+
+Hoje:
+
+
+
+dsl/
+
+Eu faria:
+
+
+
+core/
+ └── scripting/
+       parser
+       ast
+       compiler
+
+Porque no futuro seu DSL pode controlar:
+
+
+
+NodeGraph
+Timeline
+Animation
+Materials
+Particles
+
+Não apenas Pen.s

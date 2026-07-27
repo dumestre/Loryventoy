@@ -202,16 +202,13 @@ where
         }
 
         // Render graph zoomed
-        let zoomed_style = self.pan_zoom.zoomed_style.clone();
-        let graph_response = show_zoomed(zoomed_style, ui, |ui| {
-            self.draw_graph_editor_inside_zoom(
-                ui,
-                all_kinds,
-                user_state,
-                prepend_responses,
-                options,
-            )
-        });
+        let graph_response = self.draw_graph_editor_inside_zoom(
+            ui,
+            all_kinds,
+            user_state,
+            prepend_responses,
+            options,
+        );
 
         graph_response
     }
@@ -295,12 +292,14 @@ where
             let margin = 200.0 / zoom;
             Rect::from_two_pos(tl.to_pos2(), br.to_pos2()).expand(margin)
         };
+        let mut _node_count = 0usize;
         for node_id in self.node_order.iter().copied() {
             let node_pos = self.node_positions[node_id];
             // Viewport culling: skip nodes outside visible canvas area
             if !canvas_visible.contains(node_pos) {
                 continue;
             }
+            _node_count += 1;
             let responses = GraphNodeWidget {
                 position: self.node_positions.get_mut(node_id).unwrap(),
                 orientation: self.node_orientations.get_mut(node_id).unwrap(),
@@ -322,6 +321,9 @@ where
             }
         }
 
+        if _node_count > 10 {
+            eprintln!("[graph] drawing {_node_count} nodes (zoom={zoom:.2})");
+        }
         /* Draw the node finder, if open */
         let mut should_close_node_finder = false;
         if let Some(ref mut node_finder) = self.node_finder {

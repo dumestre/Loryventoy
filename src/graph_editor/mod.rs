@@ -711,7 +711,6 @@ impl GraphPanel {
         let (_, response) = ui.allocate_exact_size(editor_rect.size(), Sense::hover());
 
         self.reafirmar_posicoes();
-
         self.toolbar.show(ui, editor_rect, self.pode_undo(), self.pode_redo());
 
         if let Some(acao) = self.toolbar.acao.take() {
@@ -745,6 +744,7 @@ impl GraphPanel {
             renaming_layer: self.renaming_layer,
         };
 
+        let _t_draw = std::time::Instant::now();
         let responses = self.editor_state.draw_graph_editor(
             ui,
             AllNodeTemplates,
@@ -1099,5 +1099,8 @@ impl GraphPanel {
             ui.ctx().request_repaint();
         }
         self.dirty_repaint = false;
+
+        let _t_total = _t_frame.elapsed().as_secs_f64() * 1000.0;
+        let _t_draw_ms = _t_draw.elapsed().as_secs_f64() * 1000.0;
     }
 }
