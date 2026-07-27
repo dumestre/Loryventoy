@@ -202,7 +202,7 @@ impl MovimentoApp {
     /// Reutilizado pelo botão "Aplicar" e pelo atalho Ctrl+Enter.
     fn aplicar_script_editor(&mut self) {
         self.graph.empurrar_historico();
-        match self.graph.aplicar_script(&self.script_text) {
+        match crate::dsl::evaluator::aplicar_script(&mut self.graph, &self.script_text) {
             Ok(()) => {
                 self.script_erro = None;
                 self.log_script("OK: script aplicado, grafo reconstruído.");
@@ -228,7 +228,7 @@ impl MovimentoApp {
             } else {
                 caneta_para_projeto(ex.codigo)
             };
-            match self.graph.aplicar_script(&codigo) {
+            match crate::dsl::evaluator::aplicar_script(&mut self.graph, &codigo) {
                 Ok(()) => {
                     ok += 1;
                     self.log_script(format!("OK: {}", ex.nome));

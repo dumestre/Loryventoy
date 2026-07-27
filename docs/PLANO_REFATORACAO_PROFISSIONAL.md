@@ -383,6 +383,27 @@ cargo test --all  OK — 68 testes
 
 ---
 
+### Separação da DSL de aplicação (Fase 7)
+
+Foi concluída a separação da avaliação DSL da camada visual:
+
+- `src/graph_editor/dsl.rs` (641 linhas) deletado, lógica movida para `src/dsl/`:
+  - `src/dsl/application.rs` — trait `Application` com associated type `NodeId` que define a interface mínima (criar/remover nós, queries, conexões, histórico, estado DSL, layers, config, utilitários de portos);
+  - `src/dsl/evaluator.rs` — re-exporta `aplicar_script`, `aplicar_patch`, `Application`, `ScriptError`;
+  - `src/dsl/application.rs` contém as funções genéricas `aplicar_script<A: Application>` e `aplicar_patch<A: Application>` + helpers (`aplicar_campos`, `merge_layers`, `conectar_edge`, etc.) que operam apenas via trait.
+- `GraphPanel` implementa `Application` (com `type NodeId = NodeId`) expondo métodos `proxima_pos_livre`, `remover_aresta_entre` e delegando às implementações internas.
+- `src/app.rs` atualizado para chamar `crate::dsl::evaluator::aplicar_script(&mut self.graph, &self.script_text)` em vez de `self.graph.aplicar_script()`.
+- A DSL agora pode ser testada sem UI (mock implementando `Application`), o erro de aplicação entra no undo/redo (`empurrar_historico` chamado antes de mutar mutar mutações), e falha não gera estado parcial (validação completa antes de aplicar).
+
+Validação:
+
+```text
+cargo check       OK
+cargo test --all  OK — 68 testes
+```
+
+---
+
 ## 3. Regras obrigatórias da refatoração
 
 Estas regras devem ser respeitadas em todas as etapas.

@@ -7,6 +7,8 @@ use eframe::egui::{
 use eframe::egui::epaint::{CircleShape, TextShape};
 use eframe::egui::Popup;
 
+use crate::dsl::application::Application;
+use crate::dsl::project_dsl::ProjectBlock;
 use crate::nodes::{self, NodeParams, ProjetoConfig, TipoNo, portos};
 use crate::ui::graph_toolbar::{GraphToolbar, AcaoToolbar};
 use crate::ui::node_component;
@@ -21,7 +23,6 @@ pub mod selection;
 pub mod groups;
 pub mod save;
 pub mod preview;
-pub mod dsl;
 pub mod node_factory;
 pub mod layer_ops;
 pub mod layout;
@@ -633,5 +634,155 @@ impl GraphPanel {
             ui.ctx().request_repaint();
         }
         self.dirty_repaint = false;
+    }
+
+    // Métodos auxiliares para Application trait
+    fn proxima_pos_livre(&self) -> Pos2 {
+        let mut max_y = 0.0f32;
+        for nid in self.editor_state.graph.iter_nodes() {
+            if let Some(pos) = self.editor_state.node_positions.get(nid) {
+                max_y = max_y.max(pos.y);
+            }
+        }
+        Pos2::new(0.0, max_y + 160.0)
+    }
+
+    fn remover_aresta_entre(
+        &mut self,
+        src: NodeId,
+        saida: usize,
+        dst: NodeId,
+        entrada: usize,
+    ) {
+        let output_id = self.editor_state.graph[src]
+            .outputs
+            .get(saida)
+            .map(|(_, id)| *id);
+
+        let input_id = self.editor_state.graph[dst]
+            .inputs
+            .get(entrada)
+            .map(|(_, id)| *id);
+
+        if let (Some(out), Some(inp)) = (output_id, input_id) {
+            let mut alvo = None;
+            for (input_conn, output_conn) in self.editor_state.graph.iter_connections() {
+                if input_conn == inp && output_conn == out {
+                    alvo = Some(input_conn);
+                    break;
+                }
+            }
+            if let Some(input_to_remove) = alvo {
+                self.editor_state.graph.remove_connection(input_to_remove);
+            }
+        }
+    }
+}
+
+impl Application for GraphPanel {
+    type NodeId = NodeId;
+
+    fn criar_no(&mut self, tipo: TipoNo, pos: Pos2) -> NodeId {
+        self.adicionar_no_em(tipo, pos)
+    }
+
+    fn remover_no(&mut self, idx: NodeId) {
+        self.remover_no(idx);
+    }
+
+    fn obter_tipo(&self, idx: NodeId) -> TipoNo {
+        self.obter_tipo(idx)
+    }
+
+    fn obter_params_mut(&mut self, idx: NodeId) -> Option<&mut NodeParams> {
+        self.params.get_mut(&idx)
+    }
+
+    fn posicao_no(&self, idx: NodeId) -> Option<Pos2> {
+        self.editor_state.node_positions.get(idx).copied()
+    }
+
+    fn iterar_nos(&self) -> Vec<NodeId> {
+        self.editor_state.graph.nodes.keys().collect()
+    }
+
+    fn conectar_por_nome(&mut self, src: NodeId, saida_nome: &str, dst: NodeId, entrada_nome: &str) {
+        self.conectar_por_nome(src, saida_nome, dst, entrada_nome);
+    }
+
+    fn conectar_por_idx(&mut self, src: NodeId, saida_idx: usize, dst: NodeId, entrada_idx: usize) {
+        self.conectar_por_idx(src, saida_idx, dst, entrada_idx);
+    }
+
+    fn remover_aresta(&mut self, src: NodeId, saida_idx: usize, dst: NodeId, entrada_idx: usize) {
+        self.remover_aresta_entre(src, saida_idx, dst, entrada_idx);
+    }
+
+    fn empurrar_historico(&mut self) {
+        self.empurrar_historico();
+    }
+
+    fn dsl_ids(&self) -> &HashMap<String, NodeId> {
+        &self.dsl_ids
+    }
+
+    fn dsl_ids_mut(&mut self) -> &mut HashMap<String, NodeId> {
+        &mut self.dsl_ids
+    }
+
+    fn sync_layer_ports(&mut self) {
+        self.sync_layer_ports();
+    }
+
+    fn limpar_grupos(&mut self) {
+        self.limpar_grupos();
+    }
+
+    fn cena_ativa(&self) -> Option<NodeId> {
+        self.cena_ativa
+    }
+
+    fn definir_cena_ativa(&mut self, idx: NodeId) {
+        self.cena_ativa = Some(idx);
+    }
+
+    fn aplicar_project_config(&mut self, bloco: &ProjectBlock) {
+        if let Some(canvas_idx) = self.canvas {
+            if let Some(NodeParams::Canvas(cfg)) = self.params.get_mut(&canvas_idx) {
+                if let Some(v) = bloco.largura {
+                    cfg.largura = v as u32;
+                }
+                if let Some(v) = bloco.altura {
+                    cfg.altura = v as u32;
+                }
+                if let Some(v) = bloco.fps {
+                    cfg.fps = v;
+                }
+                if let Some(v) = bloco.duracao {
+                    cfg.duracao_seg = v;
+                }
+                if let Some(c) = bloco.fundo {
+                    cfg.fundo = crate::domain::Color::from_rgba(c.r(), c.g(), c.b(), c.a());
+                }
+            }
+        }
+    }
+
+    fn encontrar_posicao_livre(&self) -> Pos2 {
+        self.proxima_pos_livre()
+    }
+
+    fn porto_saida_por_nome(&self, tipo: TipoNo, nome: &str) -> Option<usize> {
+        let specs = portos(tipo);
+        specs.saidas.iter().position(|p| p.nome == nome)
+    }
+
+    fn porto_entrada_por_nome(&self, tipo: TipoNo, nome: &str) -> Option<usize> {
+        let specs = portos(tipo);
+        specs.entradas.iter().position(|p| p.nome == nome)
+    }
+
+    fn tipo_portos(&self, tipo: TipoNo) -> crate::nodes::PortSpec {
+        portos(tipo)
     }
 }
