@@ -284,7 +284,65 @@ cargo check       OK
 cargo test --all  OK — 68 testes
 ```
 
-O próximo passo arquitetural é criar o `Project` como fonte de verdade (Fase 3 do plano geral).
+### Remoção da dependência egui de TipoNo e migração para o domínio
+
+Foi concluída a remoção da dependência egui de `TipoNo` e sua migração para o domínio:
+
+- criado `src/domain/node_type.rs` com `TipoNo` sem o método `cor()`;
+- `cor()` foi extraído para `graph_editor::types::cor_tipo_no()` como adaptador UI;
+- `src/nodes/mod.rs` passou a reexportar `TipoNo` do domínio;
+- os 5 pontos de uso de `tipo.cor()` foram atualizados para `cor_tipo_no(tipo)`;
+- `TipoNo::pode_conectar()` permanece no domínio como método do enum;
+- todos os consumidores continuam funcionando pelo mesmo nome público.
+
+Validação:
+
+```text
+cargo check       OK
+cargo test --all  OK — 68 testes
+```
+
+### Migração de todos os param structs e NodeParams para o domínio
+
+Foi concluída a migração de todos os parâmetros de nó para `src/domain/`:
+
+- `LayerEntry` migrado de `egui::Color32` para `domain::Color` e movido para `src/domain/layer_entry.rs`;
+- adicionado `Color::from_rgb()` em `src/domain/color.rs` para atender à paleta de layers;
+- `node_component.rs` passou a converter `domain::Color` → `egui::Color32` no ponto de desenho;
+- os 9 arquivos `*_params.rs` movidos de `src/nodes/` para `src/domain/`;
+- `params.rs` (com `NodeParams`) movido para `src/domain/`, removido o método `padrao()`;
+- `nodes::node_params_padrao()` criada como função livre na camada de nós (depende de egui);
+- `src/nodes/mod.rs` reexporta todos os tipos do domínio para compatibilidade;
+- removidos os arquivos originais de `src/nodes/`.
+
+Validação:
+
+```text
+cargo check       OK
+cargo test --all  OK — 68 testes
+```
+
+### Criação do `domain::Project` como fonte de verdade (Fase 3)
+
+Foi concluída a criação do `Project` no domínio como representação pura do projeto:
+
+- criado `src/domain/project.rs` com `ProjectNode`, `ProjectEdge` e `Project`;
+- `GraphPanel::to_project()` extrai o estado do grafo para `Project`;
+- `GraphPanel::load_project()` reconstrói o grafo a partir de `Project`;
+- `ProjetoArquivo::from_project()` e `to_project()` substituem `from_graph()`/`to_graph()`;
+- `app.rs` (`salvar_projeto`, `carregar_projeto`, `carregar_arquivo`) atualizado para usar a nova API;
+- removidos os métodos antigos `from_graph()` e `to_graph()` de `ProjetoArquivo`;
+- undo/redo interno continua usando snapshots internos (`carregar_snapshot`);
+- nenhum formato de arquivo ou comportamento visual foi alterado.
+
+Validação:
+
+```text
+cargo check       OK
+cargo test --all  OK — 68 testes
+```
+
+Neste ponto, todos os passos da **Fase 2** (domínio independente) e parte da **Fase 3** (Project como fonte de verdade) estão concluídos. O próximo passo arquitetural é separar o `GraphPanel` em módulos menores (Fase 4 do plano geral).
 
 ---
 
