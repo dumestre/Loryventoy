@@ -207,7 +207,7 @@ impl From<NodeParams> for NodeParamsJson {
                     altura: c.altura,
                     fps: c.fps,
                     duracao_seg: c.duracao_seg,
-                    fundo: c.fundo.to_array(),
+                    fundo: c.fundo.to_rgba(),
                 }
             }
         }
@@ -300,7 +300,9 @@ impl TryFrom<NodeParamsJson> for NodeParams {
             NodeParamsJson::Canvas { largura, altura, fps, duracao_seg, fundo } => {
                 NodeParams::Canvas(ProjetoConfig {
                     largura, altura, fps, duracao_seg,
-                    fundo: Color32::from_rgba_unmultiplied(fundo[0], fundo[1], fundo[2], fundo[3]),
+                    fundo: crate::domain::Color::from_rgba(
+                        fundo[0], fundo[1], fundo[2], fundo[3],
+                    ),
                 })
             }
         })

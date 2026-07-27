@@ -13,6 +13,8 @@ mod transform;
 
 use eframe::egui::Color32;
 
+pub use crate::domain::ProjectConfig as ProjetoConfig;
+
 // ── Tipos de porto ──────────────────────────────────────────────
 
 #[derive(Clone, Copy, Debug)]
@@ -263,27 +265,6 @@ impl NodeParams {
 }
 
 // ── Structs auxiliares ──────────────────────────────────────────
-
-#[derive(Clone, Copy, Debug)]
-pub struct ProjetoConfig {
-    pub largura: u32,
-    pub altura: u32,
-    pub fps: f32,
-    pub duracao_seg: f32,
-    pub fundo: Color32,
-}
-
-impl Default for ProjetoConfig {
-    fn default() -> Self {
-        Self {
-            largura: 1920,
-            altura: 1080,
-            fps: 30.0,
-            duracao_seg: 5.0,
-            fundo: Color32::WHITE,
-        }
-    }
-}
 
 #[derive(Clone, Debug)]
 pub struct LayerEntry {

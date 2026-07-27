@@ -45,6 +45,33 @@ Os principais pontos de concentração encontrados são:
 
 A existência de testes é uma boa base. A refatoração deve preservar essa base e aumentá-la antes de mover código crítico.
 
+### Progresso da execução
+
+Em 26/07/2026 foi concluída a primeira fatia de implementação deste plano:
+
+- criada a camada inicial `src/domain/`;
+- criado o tipo `domain::Color`, independente de `egui`;
+- criado o tipo `domain::ProjectConfig`, independente de `egui`;
+- `nodes::ProjetoConfig` passou a ser uma compatibilidade temporária para `domain::ProjectConfig`;
+- preview recebeu conversão explícita de cor de domínio para `egui::Color32`;
+- inspector recebeu conversão temporária para editar cor sem contaminar o domínio;
+- DSL de projeto passou a converter a cor para o tipo de domínio;
+- persistência JSON passou a usar conversão explícita RGBA;
+- adicionados dois testes de proteção do domínio;
+- nenhum recurso novo foi criado;
+- o formato `.lory` não foi alterado.
+
+Validação realizada após a alteração:
+
+```text
+cargo check       OK
+cargo test --all  OK — 68 testes
+```
+
+Observação: `cargo fmt --check` ainda acusa diferenças de formatação preexistentes em vários arquivos do projeto. A formatação global não foi aplicada nesta etapa para evitar um diff grande e não relacionado à migração.
+
+Próximo passo seguro: migrar os tipos básicos de parâmetros de nó e `LayerEntry` para o domínio, mantendo adaptadores temporários na UI e sem alterar o comportamento do editor.
+
 ---
 
 ## 3. Regras obrigatórias da refatoração
@@ -1257,4 +1284,3 @@ A primeira etapa prática deve ser pequena:
 9. somente então iniciar a migração de `NodeParams`.
 
 Essa primeira execução deve alterar arquitetura interna sem mudar recursos nem aparência. É o ponto de partida mais seguro para toda a refatoração.
-

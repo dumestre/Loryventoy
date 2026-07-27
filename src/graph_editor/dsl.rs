@@ -7,6 +7,7 @@ use eframe::egui::Pos2;
 use crate::dsl::project_dsl::{self, Expr, NodeDef, ProjectBlock, ScriptError};
 use crate::dsl::patch_dsl::{self, PatchCmd};
 use crate::nodes::{NodeParams, TipoNo, portos};
+use crate::domain::Color;
 
 use super::types::NodeId;
 use super::GraphPanel;
@@ -25,7 +26,7 @@ fn aplicar_project(proj: &mut crate::nodes::ProjetoConfig, p: &ProjectBlock) {
         proj.duracao_seg = v;
     }
     if let Some(c) = p.fundo {
-        proj.fundo = c;
+        proj.fundo = Color::from_rgba(c.r(), c.g(), c.b(), c.a());
     }
 }
 

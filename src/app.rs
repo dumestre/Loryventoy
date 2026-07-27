@@ -455,7 +455,16 @@ impl eframe::App for MovimentoApp {
 
                 // resolução do projeto (nó Canvas) reflete no canvas do preview
                 let cfg_preview = self.graph.projeto();
-                self.preview.set_resolucao(cfg_preview.largura, cfg_preview.altura, cfg_preview.fundo);
+                self.preview.set_resolucao(
+                    cfg_preview.largura,
+                    cfg_preview.altura,
+                    egui::Color32::from_rgba_unmultiplied(
+                        cfg_preview.fundo.r,
+                        cfg_preview.fundo.g,
+                        cfg_preview.fundo.b,
+                        cfg_preview.fundo.a,
+                    ),
+                );
 
                 // sistema procedural: cenas (formas + textos) vêm do grafo; o
                 // tempo vem da timeline (frame / fps) para a animação acompanhar

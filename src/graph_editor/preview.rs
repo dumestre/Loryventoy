@@ -44,7 +44,12 @@ impl GraphPanel {
         let cfg = self.projeto();
         preview.largura = cfg.largura as f32;
         preview.altura = cfg.altura as f32;
-        preview.fundo = cfg.fundo;
+        preview.fundo = eframe::egui::Color32::from_rgba_unmultiplied(
+            cfg.fundo.r,
+            cfg.fundo.g,
+            cfg.fundo.b,
+            cfg.fundo.a,
+        );
 
         // Map Layer NodeId -> cena name
         let mut layer_to_cena: HashMap<NodeId, String> = HashMap::new();

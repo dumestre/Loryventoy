@@ -9,6 +9,7 @@ use eframe::egui::{
     Sense, Stroke, TextStyle, Ui, Vec2,
 };
 use crate::graph_editor::NodeId;
+use crate::domain::Color as DomainColor;
 use crate::nodes::{LayerEntry, NodeParams, ProjetoConfig, TipoNo};
 
 /// Ações que podem ser solicitadas pelo inspector de um nó.
@@ -1137,8 +1138,21 @@ fn grid_canvas(ui: &mut Ui, cfg: &mut ProjetoConfig) {
 
             ui.label("Fundo");
             ui.horizontal(|ui| {
-                ui.color_edit_button_srgba(&mut cfg.fundo);
-                ui.label(hex_de(cfg.fundo));
+                let mut fundo = Color32::from_rgba_unmultiplied(
+                    cfg.fundo.r,
+                    cfg.fundo.g,
+                    cfg.fundo.b,
+                    cfg.fundo.a,
+                );
+                if ui.color_edit_button_srgba(&mut fundo).changed() {
+                    cfg.fundo = DomainColor::from_rgba(
+                        fundo.r(),
+                        fundo.g(),
+                        fundo.b(),
+                        fundo.a(),
+                    );
+                }
+                ui.label(hex_de(fundo));
             });
             ui.end_row();
         });
