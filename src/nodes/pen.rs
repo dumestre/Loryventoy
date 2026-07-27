@@ -1,5 +1,5 @@
 use super::{ParametroPorto, PortSpec, NodeParams, P_LAYER, P_POS_XY, P_PEN};
-use eframe::egui::Color32;
+use crate::domain::Color;
 
 pub(crate) const PEN_EXEMPLO: &str = "\
 # estrela de 5 pontas
@@ -29,8 +29,8 @@ pub(crate) fn padrao() -> NodeParams {
         cena: String::new(),
         codigo: PEN_EXEMPLO.to_string(),
         erro: None,
-        cor: Color32::from_rgb(200, 120, 220),
-        cor_fill: Color32::from_rgb(200, 120, 220),
+        cor: Color::from_rgba(200, 120, 220, 255),
+        cor_fill: Color::from_rgba(200, 120, 220, 255),
         pos_x: 960.0,
         pos_y: 540.0,
         espessura: 3.0,

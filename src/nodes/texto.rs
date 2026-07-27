@@ -1,5 +1,5 @@
 use super::{ParametroPorto, PortSpec, NodeParams, P_LAYER, P_POS_XY, P_TAMANHO, P_OPACIDADE, P_ESC_XY};
-use eframe::egui::Color32;
+use crate::domain::Color;
 
 static ENTRADAS: [ParametroPorto; 5] = [P_LAYER, P_POS_XY, P_TAMANHO, P_OPACIDADE, P_ESC_XY];
 static SAIDAS: [ParametroPorto; 2] = [P_POS_XY, P_TAMANHO];
@@ -17,7 +17,7 @@ pub(crate) fn padrao() -> NodeParams {
         italico: false,
         px: 960.0,
         py: 540.0,
-        cor: Color32::from_rgb(20, 20, 26),
+        cor: Color::from_rgba(20, 20, 26, 255),
         trim_inicio: 0.0,
         trim_fim: 1.0,
     }

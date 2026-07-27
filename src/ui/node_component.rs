@@ -158,6 +158,18 @@ fn hex_de(c: Color32) -> String {
     format!("#{:02X}{:02X}{:02X}", c.r(), c.g(), c.b())
 }
 
+fn cor_egui(cor: DomainColor) -> Color32 {
+    Color32::from_rgba_unmultiplied(cor.r, cor.g, cor.b, cor.a)
+}
+
+fn editar_cor(ui: &mut Ui, cor: &mut DomainColor) {
+    let mut visual = cor_egui(*cor);
+    if ui.color_edit_button_srgba(&mut visual).changed() {
+        *cor = DomainColor::from_rgba(visual.r(), visual.g(), visual.b(), visual.a());
+    }
+    ui.label(hex_de(visual));
+}
+
 /// Meia-extensão (w/2, h/2) do cartão do nó em coordenadas de canvas.
 /// Usado pelo `egui-graph-edit` (hit-test/tamanho) e para posicionar o corpo.
 /// O tamanho é responsivo: reflete a última medida do conteúdo do tipo.
@@ -468,8 +480,7 @@ pub fn show_content(
                     .show(ui, |ui| {
                         ui.label("Cor");
                         ui.horizontal(|ui| {
-                            ui.color_edit_button_srgba(cor);
-                            ui.label(hex_de(*cor));
+                            editar_cor(ui, cor);
                         });
                         ui.end_row();
                     });
@@ -549,8 +560,7 @@ pub fn show_content(
                     .show(ui, |ui| {
                         ui.label("Cor");
                         ui.horizontal(|ui| {
-                            ui.color_edit_button_srgba(cor);
-                            ui.label(hex_de(*cor));
+                            editar_cor(ui, cor);
                         });
                         ui.end_row();
                     });
@@ -624,14 +634,12 @@ pub fn show_content(
                     .show(ui, |ui| {
                         ui.label("Cor traço");
                         ui.horizontal(|ui| {
-                            ui.color_edit_button_srgba(cor);
-                            ui.label(hex_de(*cor));
+                            editar_cor(ui, cor);
                         });
                         ui.end_row();
                         ui.label("Cor preench.");
                         ui.horizontal(|ui| {
-                            ui.color_edit_button_srgba(cor_fill);
-                            ui.label(hex_de(*cor_fill));
+                            editar_cor(ui, cor_fill);
                         });
                         ui.end_row();
                     });

@@ -1,6 +1,7 @@
 use eframe::egui::Color32;
 use serde::{Deserialize, Serialize};
 
+use crate::domain::Color;
 use crate::nodes::{NodeParams, LayerEntry, ProjetoConfig, TipoNo};
 use crate::graph_editor::ArestaInfo;
 
@@ -153,7 +154,7 @@ impl From<NodeParams> for NodeParamsJson {
             NodeParams::Texto { cena, conteudo, tamanho, negrito, italico, px, py, cor, trim_inicio, trim_fim, .. } => {
                 NodeParamsJson::Texto {
                     cena, conteudo, tamanho, negrito, italico, px, py,
-                    cor: cor.to_array(), trim_inicio, trim_fim,
+                    cor: cor.to_rgba(), trim_inicio, trim_fim,
                 }
             }
             NodeParams::Shape {
@@ -162,7 +163,7 @@ impl From<NodeParams> for NodeParamsJson {
             } => {
                 NodeParamsJson::Shape {
                     cena, tipo, px, py, largura, altura, rotacao,
-                    cor: cor.to_array(), seed, noise_scale, amp, veloc,
+                    cor: cor.to_rgba(), seed, noise_scale, amp, veloc,
                     trim_inicio, trim_fim,
                 }
             }
@@ -172,8 +173,8 @@ impl From<NodeParams> for NodeParamsJson {
             } => {
                 NodeParamsJson::Pen {
                     cena, codigo,
-                    cor: cor.to_array(),
-                    cor_fill: Some(cor_fill.to_array()),
+                    cor: cor.to_rgba(),
+                    cor_fill: Some(cor_fill.to_rgba()),
                     pos_x, pos_y, espessura, preenchimento,
                     seed, cantos, ordem, escala_x, escala_y,
                     trim_inicio, trim_fim,
@@ -243,7 +244,7 @@ impl TryFrom<NodeParamsJson> for NodeParams {
             NodeParamsJson::Texto { cena, conteudo, tamanho, negrito, italico, px, py, cor, trim_inicio, trim_fim } => {
                 NodeParams::Texto {
                     cena, conteudo, tamanho, negrito, italico, px, py,
-                    cor: Color32::from_rgba_unmultiplied(cor[0], cor[1], cor[2], cor[3]),
+                    cor: Color::from_rgba(cor[0], cor[1], cor[2], cor[3]),
                     trim_inicio, trim_fim,
                 }
             }
@@ -253,7 +254,7 @@ impl TryFrom<NodeParamsJson> for NodeParams {
             } => {
                 NodeParams::Shape {
                     cena, tipo, px, py, largura, altura, rotacao,
-                    cor: Color32::from_rgba_unmultiplied(cor[0], cor[1], cor[2], cor[3]),
+                    cor: Color::from_rgba(cor[0], cor[1], cor[2], cor[3]),
                     seed, noise_scale, amp, veloc, trim_inicio, trim_fim,
                 }
             }
@@ -261,9 +262,9 @@ impl TryFrom<NodeParamsJson> for NodeParams {
                 cena, codigo, cor, cor_fill, pos_x, pos_y, espessura, preenchimento,
                 seed, cantos, ordem, escala_x, escala_y, trim_inicio, trim_fim,
             } => {
-                let cor = Color32::from_rgba_unmultiplied(cor[0], cor[1], cor[2], cor[3]);
+                let cor = Color::from_rgba(cor[0], cor[1], cor[2], cor[3]);
                 let cor_fill = cor_fill
-                    .map(|c| Color32::from_rgba_unmultiplied(c[0], c[1], c[2], c[3]))
+                    .map(|c| Color::from_rgba(c[0], c[1], c[2], c[3]))
                     .unwrap_or(cor);
                 NodeParams::Pen {
                     cena, codigo,

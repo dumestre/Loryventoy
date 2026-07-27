@@ -134,6 +134,29 @@ cargo test --all  OK — 68 testes
 
 Com isso, `LayerEntry` representa somente dados do projeto. O próximo passo é aplicar o mesmo princípio aos demais parâmetros que ainda usam tipos de UI diretamente, começando pelas cores de `Texto`, `Shape` e `Pen`.
 
+### Migração das cores de Texto, Shape e Pen
+
+Foi concluída a migração das cores persistentes dos nós `Texto`, `Shape` e `Pen`:
+
+- os campos `cor` e `cor_fill` agora usam `domain::Color`;
+- os valores padrão dos nós foram convertidos para o tipo de domínio;
+- o inspector passou a editar cores por meio de um adaptador explícito para `egui::Color32`;
+- o preview converte cores de domínio somente ao montar dados de renderização;
+- a DSL converte cores parseadas para o tipo de domínio antes de alterar os parâmetros;
+- a persistência continua usando exatamente `[u8; 4]`, sem alteração de formato;
+- arquivos `.lory` antigos continuam compatíveis;
+- a camada de Pen DSL continua livre para usar seu tipo de cor de execução, sem contaminar os parâmetros persistentes;
+- não foram adicionados recursos novos.
+
+Validação:
+
+```text
+cargo check       OK
+cargo test --all  OK — 68 testes
+```
+
+Neste ponto, as cores persistentes de Canvas, Layer, Shape, Texto e Pen já possuem representação de domínio. A próxima etapa recomendada é separar os demais parâmetros de `NodeParams` em estruturas específicas (`CanvasParams`, `ShapeParams`, `TextParams`, `PenParams` etc.), preservando as variantes públicas durante a transição.
+
 ---
 
 ## 3. Regras obrigatórias da refatoração

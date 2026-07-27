@@ -130,7 +130,7 @@ fn aplicar_campos(
                         }
                     }
                     "rotation" | "rot" => *rotacao = v.as_num(),
-                    "color" | "colour" => *cor = v.as_hex(),
+                    "color" | "colour" => *cor = crate::domain::Color::from_rgba(v.as_hex().r(), v.as_hex().g(), v.as_hex().b(), v.as_hex().a()),
                     "seed" => *seed = v.as_num(),
                     "noise" => *noise_scale = v.as_num(),
                     "amp" => *amp = v.as_num(),
@@ -175,7 +175,10 @@ fn aplicar_campos(
                             *py = *b;
                         }
                     }
-                    "color" | "colour" => *cor = v.as_hex(),
+                    "color" | "colour" => {
+                        let h = v.as_hex();
+                        *cor = crate::domain::Color::from_rgba(h.r(), h.g(), h.b(), h.a());
+                    }
                     "trim_start" | "trim_inicio" => *trim_inicio = v.as_num(),
                     "trim_end" | "trim_fim" => *trim_fim = v.as_num(),
                     _ => {}
@@ -220,11 +223,12 @@ fn aplicar_campos(
                     }
                     "color" | "colour" => {
                         let h = v.as_hex();
+                        let h = crate::domain::Color::from_rgba(h.r(), h.g(), h.b(), h.a());
                         *cor = h;
                         *cor_fill = h;
                     }
-                    "stroke_color" | "strokecolor" => *cor = v.as_hex(),
-                    "fill_color" | "fillcolor" => *cor_fill = v.as_hex(),
+                    "stroke_color" | "strokecolor" => { let h = v.as_hex(); *cor = crate::domain::Color::from_rgba(h.r(), h.g(), h.b(), h.a()); },
+                    "fill_color" | "fillcolor" => { let h = v.as_hex(); *cor_fill = crate::domain::Color::from_rgba(h.r(), h.g(), h.b(), h.a()); },
                     "seed" => *seed = v.as_num(),
                     "corners" => *cantos = v.as_num(),
                     "order" => *ordem = v.as_num(),

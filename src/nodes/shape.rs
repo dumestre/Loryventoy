@@ -1,5 +1,5 @@
 use super::{ParametroPorto, TipoPorto, PortSpec, NodeParams, P_LAYER, P_POS_XY, P_LARGURA, P_ALTURA};
-use eframe::egui::Color32;
+use crate::domain::Color;
 
 static P_ROT: ParametroPorto = ParametroPorto { nome: "Rotação", tipo: TipoPorto::Escalar };
 static ENTRADAS: [ParametroPorto; 5] = [P_LAYER, P_POS_XY, P_LARGURA, P_ALTURA, P_ROT];
@@ -18,7 +18,7 @@ pub(crate) fn padrao() -> NodeParams {
         largura: 200.0,
         altura: 200.0,
         rotacao: 0.0,
-        cor: Color32::from_rgb(235, 150, 120),
+        cor: Color::from_rgba(235, 150, 120, 255),
         seed: 1.0,
         noise_scale: 0.6,
         amp: 0.0,
