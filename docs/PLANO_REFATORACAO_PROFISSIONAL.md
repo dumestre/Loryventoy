@@ -342,7 +342,26 @@ cargo check       OK
 cargo test --all  OK — 68 testes
 ```
 
-Neste ponto, todos os passos da **Fase 2** (domínio independente) e parte da **Fase 3** (Project como fonte de verdade) estão concluídos. O próximo passo arquitetural é separar o `GraphPanel` em módulos menores (Fase 4 do plano geral).
+Neste ponto, todos os passos da **Fase 2** (domínio independente) e parte da **Fase 3** (Project como fonte de verdade) estão concluídos.
+
+### Separação do GraphPanel em módulos menores (Fase 4)
+
+Foi concluída a divisão do `GraphPanel` em módulos especializados:
+
+- `node_factory.rs` — criação de nós (`criar_nos_padrao`, `adicionar_no_em`, `adicionar_no`);
+- `layer_ops.rs` — operações de cenas e layers (`cenas_disponiveis`, `normalizar_cena`, `sync_layer_ports`, CRUD de layers);
+- `layout.rs` — coordenadas, hit test e portas espaciais (6 métodos de consulta espacial);
+- `search.rs` — busca textual de nós por nome/tipo;
+- `mod.rs` caiu de **1106 → 535 linhas**, mantendo apenas o coordenador `show()`, conexões, queries básicas e estrutura `GraphPanel`.
+
+Validação:
+
+```text
+cargo check       OK — sem warnings
+cargo test --all  OK — 68 testes
+```
+
+O próximo passo arquitetural é refatorar o inspector (`node_component.rs`, ~1115 linhas) — Fase 9 do plano geral — ou o `app.rs` (~1157 linhas) — Fase 10.
 
 ---
 
