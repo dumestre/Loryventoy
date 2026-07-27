@@ -15,12 +15,24 @@ mod layer_entry;
 mod shape_params;
 mod text_params;
 mod pen_params;
+mod saida_params;
+mod ruido_params;
+mod transform_params;
+mod cena_params;
+mod layer_params;
+mod anim_params;
 
 pub use params::NodeParams;
 pub use layer_entry::LayerEntry;
 pub use shape_params::ShapeParams;
 pub use text_params::TextParams;
 pub use pen_params::PenParams;
+pub use saida_params::SaidaParams;
+pub use ruido_params::RuidoParams;
+pub use transform_params::TransformParams;
+pub use cena_params::CenaParams;
+pub use layer_params::LayerParams;
+pub use anim_params::AnimParams;
 
 use eframe::egui::Color32;
 

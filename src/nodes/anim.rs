@@ -1,4 +1,4 @@
-use super::{ParametroPorto, PortSpec, NodeParams, P_ANIM_OUT};
+use super::{ParametroPorto, PortSpec, NodeParams, AnimParams, P_ANIM_OUT};
 
 static SAIDAS: [ParametroPorto; 1] = [P_ANIM_OUT];
 
@@ -7,7 +7,7 @@ pub(crate) fn portos() -> PortSpec {
 }
 
 pub(crate) fn padrao() -> NodeParams {
-    NodeParams::Anim {
+    NodeParams::Anim(AnimParams {
         alvo: 0,
         loop_mode: 0,
         segmentos: vec![crate::procedural::AnimSeg {
@@ -17,5 +17,5 @@ pub(crate) fn padrao() -> NodeParams {
             v_fim: [960.0, 540.0],
             easing: crate::procedural::Easing::EaseInOut,
         }],
-    }
+    })
 }

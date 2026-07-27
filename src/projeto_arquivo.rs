@@ -2,7 +2,12 @@ use eframe::egui::Color32;
 use serde::{Deserialize, Serialize};
 
 use crate::domain::Color;
-use crate::nodes::{NodeParams, LayerEntry, ProjetoConfig, ShapeParams, TextParams, PenParams, TipoNo};
+use crate::nodes::{
+    NodeParams, LayerEntry, ProjetoConfig,
+    ShapeParams, TextParams, PenParams,
+    TransformParams, CenaParams, LayerParams,
+    RuidoParams, AnimParams, SaidaParams, TipoNo,
+};
 use crate::graph_editor::ArestaInfo;
 
 /// Espelho serializável de um segmento de animação (`AnimSeg`).
@@ -132,13 +137,13 @@ pub enum NodeParamsJson {
 impl From<NodeParams> for NodeParamsJson {
     fn from(p: NodeParams) -> Self {
         match p {
-            NodeParams::Transform { px, py, pz, rx, ry, rz, sx, sy, sz } => {
+            NodeParams::Transform(TransformParams { px, py, pz, rx, ry, rz, sx, sy, sz }) => {
                 NodeParamsJson::Transform { px, py, pz, rx, ry, rz, sx, sy, sz }
             }
-            NodeParams::Cena { nome_cena, ativa, zoom, angulo, opacidade } => {
+            NodeParams::Cena(CenaParams { nome_cena, ativa, zoom, angulo, opacidade }) => {
                 NodeParamsJson::Cena { nome_cena, ativa, zoom, angulo, opacidade }
             }
-            NodeParams::Layer { cena, layers, selected } => {
+            NodeParams::Layer(LayerParams { cena, layers, selected }) => {
                 NodeParamsJson::Layer {
                     cena,
                     layers: layers.into_iter().map(|l| LayerEntryJson {
@@ -180,10 +185,10 @@ impl From<NodeParams> for NodeParamsJson {
                     trim_inicio, trim_fim,
                 }
             }
-            NodeParams::Ruido { seed, freq, amp, veloc, alvo } => {
+            NodeParams::Ruido(RuidoParams { seed, freq, amp, veloc, alvo }) => {
                 NodeParamsJson::Ruido { seed, freq, amp, veloc, alvo }
             }
-            NodeParams::Anim { alvo, loop_mode, segmentos } => {
+            NodeParams::Anim(AnimParams { alvo, loop_mode, segmentos }) => {
                 NodeParamsJson::Anim {
                     alvo,
                     loop_mode,
@@ -199,7 +204,7 @@ impl From<NodeParams> for NodeParamsJson {
                         .collect(),
                 }
             }
-            NodeParams::Saida { brilho, contraste, saturacao } => {
+            NodeParams::Saida(SaidaParams { brilho, contraste, saturacao }) => {
                 NodeParamsJson::Saida { brilho, contraste, saturacao }
             }
             NodeParams::Canvas(c) => {
@@ -221,13 +226,13 @@ impl TryFrom<NodeParamsJson> for NodeParams {
     fn try_from(j: NodeParamsJson) -> Result<Self, Self::Error> {
         Ok(match j {
             NodeParamsJson::Transform { px, py, pz, rx, ry, rz, sx, sy, sz } => {
-                NodeParams::Transform { px, py, pz, rx, ry, rz, sx, sy, sz }
+                NodeParams::Transform(TransformParams { px, py, pz, rx, ry, rz, sx, sy, sz })
             }
             NodeParamsJson::Cena { nome_cena, ativa, zoom, angulo, opacidade } => {
-                NodeParams::Cena { nome_cena, ativa, zoom, angulo, opacidade }
+                NodeParams::Cena(CenaParams { nome_cena, ativa, zoom, angulo, opacidade })
             }
             NodeParamsJson::Layer { cena, layers, selected } => {
-                NodeParams::Layer {
+                NodeParams::Layer(LayerParams {
                     cena,
                     layers: layers.into_iter().enumerate().map(|(i, l)| LayerEntry {
                         nome: l.nome,
@@ -239,7 +244,7 @@ impl TryFrom<NodeParamsJson> for NodeParams {
                         visivel: l.visivel,
                     }).collect(),
                     selected,
-                }
+                })
             }
             NodeParamsJson::Texto { cena, conteudo, tamanho, negrito, italico, px, py, cor, trim_inicio, trim_fim } => {
                 NodeParams::Texto(TextParams {
@@ -276,10 +281,10 @@ impl TryFrom<NodeParamsJson> for NodeParams {
                 })
             }
             NodeParamsJson::Ruido { seed, freq, amp, veloc, alvo } => {
-                NodeParams::Ruido { seed, freq, amp, veloc, alvo }
+                NodeParams::Ruido(RuidoParams { seed, freq, amp, veloc, alvo })
             }
             NodeParamsJson::Anim { alvo, loop_mode, segmentos } => {
-                NodeParams::Anim {
+                NodeParams::Anim(AnimParams {
                     alvo,
                     loop_mode,
                     segmentos: segmentos
@@ -292,10 +297,10 @@ impl TryFrom<NodeParamsJson> for NodeParams {
                             easing: crate::procedural::Easing::from_u8(s.easing),
                         })
                         .collect(),
-                }
+                })
             }
             NodeParamsJson::Saida { brilho, contraste, saturacao } => {
-                NodeParams::Saida { brilho, contraste, saturacao }
+                NodeParams::Saida(SaidaParams { brilho, contraste, saturacao })
             }
             NodeParamsJson::Canvas { largura, altura, fps, duracao_seg, fundo } => {
                 NodeParams::Canvas(ProjetoConfig {

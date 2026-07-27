@@ -40,43 +40,33 @@ fn aplicar_campos(
         None => return Ok(()),
     };
     match params {
-        NodeParams::Cena {
-            nome_cena,
-            zoom,
-            angulo,
-            opacidade,
-            ..
-        } => {
+        NodeParams::Cena(cena) => {
             for (c, v) in &n.campos {
                 match c.as_str() {
-                    "name" => *nome_cena = v.as_str(),
-                    "zoom" => *zoom = v.as_num(),
-                    "angle" => *angulo = v.as_num(),
-                    "opacity" => *opacidade = v.as_num(),
+                    "name" => cena.nome_cena = v.as_str(),
+                    "zoom" => cena.zoom = v.as_num(),
+                    "angle" => cena.angulo = v.as_num(),
+                    "opacity" => cena.opacidade = v.as_num(),
                     _ => {}
                 }
             }
         }
-        NodeParams::Layer {
-            cena,
-            layers,
-            ..
-        } => {
+        NodeParams::Layer(layer) => {
             for (c, v) in &n.campos {
                 match c.as_str() {
-                    "scene" => *cena = v.as_str(),
+                    "scene" => layer.cena = v.as_str(),
                     "name" => {
-                        if let Some(entry) = layers.first_mut() {
+                        if let Some(entry) = layer.layers.first_mut() {
                             entry.nome = v.as_str();
                         }
                     }
                     "opacity" => {
-                        if let Some(entry) = layers.first_mut() {
+                        if let Some(entry) = layer.layers.first_mut() {
                             entry.opacidade = v.as_num();
                         }
                     }
                     "order" => {
-                        if let Some(entry) = layers.first_mut() {
+                        if let Some(entry) = layer.layers.first_mut() {
                             entry.ordem = v.as_num();
                         }
                     }
@@ -201,40 +191,30 @@ fn aplicar_campos(
                 pen.codigo = n.codigo.clone().unwrap_or_default();
             }
         }
-        NodeParams::Ruido {
-            seed,
-            freq,
-            amp,
-            veloc,
-            alvo,
-        } => {
+        NodeParams::Ruido(ruido) => {
             for (c, v) in &n.campos {
                 match c.as_str() {
-                    "seed" => *seed = v.as_num(),
-                    "freq" | "frequency" => *freq = v.as_num(),
-                    "amp" | "amplitude" => *amp = v.as_num(),
-                    "speed" | "veloc" => *veloc = v.as_num(),
-                    "target" | "alvo" => *alvo = v.as_num() as u8,
+                    "seed" => ruido.seed = v.as_num(),
+                    "freq" | "frequency" => ruido.freq = v.as_num(),
+                    "amp" | "amplitude" => ruido.amp = v.as_num(),
+                    "speed" | "veloc" => ruido.veloc = v.as_num(),
+                    "target" | "alvo" => ruido.alvo = v.as_num() as u8,
                     _ => {}
                 }
             }
         }
-        NodeParams::Anim {
-            alvo,
-            loop_mode,
-            ..
-        } => {
+        NodeParams::Anim(anim) => {
             for (c, v) in &n.campos {
                 match c.as_str() {
-                    "target" | "alvo" => *alvo = v.as_num() as u8,
-                    "loop" | "loop_mode" => *loop_mode = v.as_num() as u8,
+                    "target" | "alvo" => anim.alvo = v.as_num() as u8,
+                    "loop" | "loop_mode" => anim.loop_mode = v.as_num() as u8,
                     _ => {}
                 }
             }
         }
-        NodeParams::Transform { .. } => {}
+        NodeParams::Transform(..) => {}
         NodeParams::Canvas(_) => {}
-        NodeParams::Saida { .. } => {}
+        NodeParams::Saida(..) => {}
     }
 
     Ok(())
@@ -307,7 +287,7 @@ impl GraphPanel {
         }
         for (_idx, params) in &mut self.params {
             let cena = match params {
-                NodeParams::Layer { cena, .. } => cena,
+                NodeParams::Layer(layer) => &mut layer.cena,
                 NodeParams::Pen(pen) => &mut pen.cena,
                 NodeParams::Texto(texto) => &mut texto.cena,
                 NodeParams::Shape(shape) => &mut shape.cena,
@@ -320,22 +300,22 @@ impl GraphPanel {
 
         // Merge Layer nodes that share the same scene into the first one.
         let layer_nids: Vec<NodeId> = self.params.iter()
-            .filter(|(_, p)| matches!(p, NodeParams::Layer { .. }))
+            .filter(|(_, p)| matches!(p, NodeParams::Layer(..)))
             .map(|(&nid, _)| nid)
             .collect();
         let mut scene_to_first: HashMap<String, NodeId> = HashMap::new();
         for &nid in &layer_nids {
             let cena = match self.params.get(&nid) {
-                Some(NodeParams::Layer { cena, .. }) => cena.clone(),
+                Some(NodeParams::Layer(layer)) => layer.cena.clone(),
                 _ => continue,
             };
             if let Some(&first) = scene_to_first.get(&cena) {
                 let entries: Vec<_> = match self.params.get(&nid) {
-                    Some(NodeParams::Layer { layers, .. }) => layers.clone(),
+                    Some(NodeParams::Layer(layer)) => layer.layers.clone(),
                     _ => continue,
                 };
-                if let Some(NodeParams::Layer { layers, .. }) = self.params.get_mut(&first) {
-                    layers.extend(entries);
+                if let Some(NodeParams::Layer(layer)) = self.params.get_mut(&first) {
+                    layer.layers.extend(entries);
                 }
                 self.remover_no(nid);
                 for (_, nid_val) in self.dsl_ids.iter_mut() {

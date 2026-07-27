@@ -1,10 +1,16 @@
 use super::{
-    anim, canvas, cena, layer, pen, ruido, saida, shape, texto, transform, LayerEntry,
+    anim, canvas, cena, layer, pen, ruido, saida, shape, texto, transform,
     ProjetoConfig, TipoNo,
 };
 pub use super::shape_params::ShapeParams;
 pub use super::text_params::TextParams;
 pub use super::pen_params::PenParams;
+pub use super::saida_params::SaidaParams;
+pub use super::ruido_params::RuidoParams;
+pub use super::transform_params::TransformParams;
+pub use super::cena_params::CenaParams;
+pub use super::layer_params::LayerParams;
+pub use super::anim_params::AnimParams;
 
 /// Parâmetros editáveis de cada tipo de nó.
 ///
@@ -12,15 +18,15 @@ pub use super::pen_params::PenParams;
 /// serão migradas para o domínio em uma etapa posterior.
 #[derive(Clone, Debug)]
 pub enum NodeParams {
-    Transform { px: f32, py: f32, pz: f32, rx: f32, ry: f32, rz: f32, sx: f32, sy: f32, sz: f32 },
-    Cena { nome_cena: String, ativa: bool, zoom: f32, angulo: f32, opacidade: f32 },
-    Layer { cena: String, layers: Vec<LayerEntry>, selected: usize },
+    Transform(TransformParams),
+    Cena(CenaParams),
+    Layer(LayerParams),
     Texto(TextParams),
     Shape(ShapeParams),
     Pen(PenParams),
-    Ruido { seed: f32, freq: f32, amp: f32, veloc: f32, alvo: u8 },
-    Anim { alvo: u8, loop_mode: u8, segmentos: Vec<crate::procedural::AnimSeg> },
-    Saida { brilho: f32, contraste: f32, saturacao: f32 },
+    Ruido(RuidoParams),
+    Anim(AnimParams),
+    Saida(SaidaParams),
     Canvas(ProjetoConfig),
 }
 

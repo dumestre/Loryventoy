@@ -217,7 +217,56 @@ cargo check       OK
 cargo test --all  OK — 68 testes
 ```
 
-Esta é a sequência que será repetida para `Canvas`, `Layer`, `Cena`, `Transform`, `Ruído`, `Animação` e `Saída`, sempre uma variante por vez.
+### Variantes restantes: Transform, Cena, Layer, Ruído, Animação e Saída
+
+Foi concluída a migração de todas as variantes restantes de `NodeParams` para estruturas específicas em arquivos próprios:
+
+| Variante | Arquivo | Estrutura |
+|---|---|---|
+| Transform | `src/nodes/transform_params.rs` | `TransformParams` |
+| Cena | `src/nodes/cena_params.rs` | `CenaParams` |
+| Layer | `src/nodes/layer_params.rs` | `LayerParams` |
+| Ruído | `src/nodes/ruido_params.rs` | `RuidoParams` |
+| Animação | `src/nodes/anim_params.rs` | `AnimParams` |
+| Saída | `src/nodes/saida_params.rs` | `SaidaParams` |
+
+Nesta etapa:
+
+- criados 6 arquivos de parâmetros;
+- todas as variantes de `NodeParams` passaram a ser tuplas com struct específica;
+- `NodeParams` agora não tem mais variantes com campos inline — todas encapsulam uma struct;
+- defaults, inspector, DSL, preview, normalização de cena e persistência foram adaptados;
+- o JSON continua com os mesmos campos e o mesmo formato;
+- o comportamento visual e os valores padrão foram preservados;
+- nenhum recurso novo foi adicionado.
+
+Validação:
+
+```text
+cargo check       OK
+cargo test --all  OK — 68 testes
+```
+
+### Estado atual do `NodeParams`
+
+Agora `NodeParams` possui exclusivamente variantes tuplas com structs específicas:
+
+```rust
+pub enum NodeParams {
+    Transform(TransformParams),
+    Cena(CenaParams),
+    Layer(LayerParams),
+    Texto(TextParams),
+    Shape(ShapeParams),
+    Pen(PenParams),
+    Ruido(RuidoParams),
+    Anim(AnimParams),
+    Saida(SaidaParams),
+    Canvas(ProjetoConfig),
+}
+```
+
+O próximo passo arquitetural é criar o `Project` como fonte de verdade (Fase 3 do plano geral).
 
 ---
 

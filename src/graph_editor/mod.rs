@@ -138,15 +138,15 @@ impl GraphPanel {
         let layer_loc = Pos2::new(0.0, 180.0);
         let layer = self.adicionar_no_em(TipoNo::Layer, layer_loc);
         let nome_cena = self.obter_params(cena).and_then(|p| {
-            if let NodeParams::Cena { nome_cena, .. } = p {
-                Some(nome_cena.clone())
+            if let NodeParams::Cena(cena) = p {
+                Some(cena.nome_cena.clone())
             } else {
                 None
             }
         });
         if let Some(nome) = &nome_cena {
-            if let Some(NodeParams::Layer { cena: lc, .. }) = self.params.get_mut(&layer) {
-                *lc = nome.clone();
+            if let Some(NodeParams::Layer(layer)) = self.params.get_mut(&layer) {
+                layer.cena = nome.clone();
             }
         }
 
@@ -190,8 +190,8 @@ impl GraphPanel {
         let cenas = self.cenas_disponiveis();
         let cena_preferida = self.cena_ativa.and_then(|ci| {
             self.params.get(&ci).and_then(|p| {
-                if let NodeParams::Cena { nome_cena, .. } = p {
-                    if !nome_cena.is_empty() { Some(nome_cena.clone()) } else { None }
+                if let NodeParams::Cena(cena) = p {
+                    if !cena.nome_cena.is_empty() { Some(cena.nome_cena.clone()) } else { None }
                 } else { None }
             })
         });
@@ -286,8 +286,8 @@ impl GraphPanel {
     fn cenas_disponiveis(&self) -> Vec<String> {
         let mut v: Vec<String> = self.params.iter()
             .filter_map(|(_, p)| {
-                if let NodeParams::Cena { nome_cena, .. } = p {
-                    if !nome_cena.is_empty() { Some(nome_cena.clone()) } else { None }
+                if let NodeParams::Cena(cena) = p {
+                    if !cena.nome_cena.is_empty() { Some(cena.nome_cena.clone()) } else { None }
                 } else { None }
             })
             .collect();
@@ -299,8 +299,8 @@ impl GraphPanel {
     fn cenas_disponiveis_com_indice(&self) -> Vec<(String, NodeId)> {
         let mut v: Vec<(String, NodeId)> = self.params.iter()
             .filter_map(|(&idx, p)| {
-                if let NodeParams::Cena { nome_cena, .. } = p {
-                    if !nome_cena.is_empty() { Some((nome_cena.clone(), idx)) } else { None }
+                if let NodeParams::Cena(cena) = p {
+                    if !cena.nome_cena.is_empty() { Some((cena.nome_cena.clone(), idx)) } else { None }
                 } else { None }
             })
             .collect();
@@ -312,7 +312,7 @@ impl GraphPanel {
     fn normalizar_cena(&mut self, idx: NodeId, cenas: &[String], preferida: Option<String>) {
         if let Some(params) = self.params.get_mut(&idx) {
             let cena = match params {
-                NodeParams::Layer { cena, .. } => cena,
+                NodeParams::Layer(layer) => &mut layer.cena,
                 NodeParams::Pen(pen) => &mut pen.cena,
                 NodeParams::Texto(texto) => &mut texto.cena,
                 NodeParams::Shape(shape) => &mut shape.cena,
@@ -326,14 +326,14 @@ impl GraphPanel {
 
     fn sync_layer_ports(&mut self) {
         let layer_nids: Vec<NodeId> = self.params.iter()
-            .filter(|(_, p)| matches!(p, NodeParams::Layer { .. }))
+            .filter(|(_, p)| matches!(p, NodeParams::Layer(..)))
             .map(|(&nid, _)| nid)
             .collect();
 
         for nid in layer_nids {
             let entries: Vec<(String, f32)> = match self.params.get(&nid) {
-                Some(NodeParams::Layer { layers, .. }) => {
-                    layers.iter().map(|e| (e.nome.clone(), e.opacidade)).collect()
+                Some(NodeParams::Layer(layer)) => {
+                    layer.layers.iter().map(|e| (e.nome.clone(), e.opacidade)).collect()
                 }
                 _ => continue,
             };
@@ -397,27 +397,27 @@ impl GraphPanel {
         let cenas = self.cenas_disponiveis();
         let cena_nome = self.cena_ativa.and_then(|ci| {
             self.params.get(&ci).and_then(|p| {
-                if let NodeParams::Cena { nome_cena, .. } = p {
-                    if !nome_cena.is_empty() { Some(nome_cena.clone()) } else { None }
+                if let NodeParams::Cena(cena) = p {
+                    if !cena.nome_cena.is_empty() { Some(cena.nome_cena.clone()) } else { None }
                 } else { None }
             })
         }).or_else(|| cenas.first().cloned()).unwrap_or_default();
 
         // Find existing Layer node for this scene
         let existing = self.params.iter().find_map(|(&idx, p)| {
-            if let NodeParams::Layer { cena, .. } = p {
-                if *cena == cena_nome { Some(idx) } else { None }
+            if let NodeParams::Layer(layer) = p {
+                if layer.cena == cena_nome { Some(idx) } else { None }
             } else { None }
         });
 
         if let Some(layer_nid) = existing {
             // Add new entry to existing Layer node (at the top)
             let count = match self.params.get(&layer_nid) {
-                Some(NodeParams::Layer { layers, .. }) => layers.len(),
+                Some(NodeParams::Layer(layer)) => layer.layers.len(),
                 _ => 0,
             };
-            if let Some(NodeParams::Layer { layers, .. }) = self.params.get_mut(&layer_nid) {
-                layers.insert(0, LayerEntry {
+            if let Some(NodeParams::Layer(layer)) = self.params.get_mut(&layer_nid) {
+                layer.layers.insert(0, LayerEntry {
                     nome: format!("Layer {}", count + 1),
                     ordem: 0.0,
                     opacidade: 1.0,
@@ -432,9 +432,9 @@ impl GraphPanel {
                 200.0 + (self.contador as f32 / 3.0) * 150.0,
             );
             let idx = self.adicionar_no_em(TipoNo::Layer, loc);
-            if let Some(NodeParams::Layer { cena, layers, .. }) = self.params.get_mut(&idx) {
-                *cena = cena_nome;
-                layers.insert(0, LayerEntry {
+            if let Some(NodeParams::Layer(layer)) = self.params.get_mut(&idx) {
+                layer.cena = cena_nome;
+                layer.layers.insert(0, LayerEntry {
                     nome: "Layer 1".to_string(),
                     ordem: 0.0,
                     opacidade: 1.0,
@@ -448,10 +448,10 @@ impl GraphPanel {
 
     pub fn remover_layer_entry(&mut self, layer_idx: NodeId, entry_idx: usize) {
         let (should_remove_node, should_remove_entry) = match self.params.get(&layer_idx) {
-            Some(NodeParams::Layer { layers, .. }) => {
-                if entry_idx < layers.len() && layers.len() > 1 {
+            Some(NodeParams::Layer(layer)) => {
+                if entry_idx < layer.layers.len() && layer.layers.len() > 1 {
                     (false, true)
-                } else if layers.len() == 1 {
+                } else if layer.layers.len() == 1 {
                     (true, false)
                 } else {
                     (false, false)
@@ -465,20 +465,20 @@ impl GraphPanel {
             self.limpar_grupos();
         } else if should_remove_entry {
             self.empurrar_historico();
-            if let Some(NodeParams::Layer { layers, selected, .. }) = self.params.get_mut(&layer_idx) {
-                layers.remove(entry_idx);
-                if *selected >= layers.len() {
-                    *selected = layers.len().saturating_sub(1);
+            if let Some(NodeParams::Layer(layer)) = self.params.get_mut(&layer_idx) {
+                layer.layers.remove(entry_idx);
+                if layer.selected >= layer.layers.len() {
+                    layer.selected = layer.layers.len().saturating_sub(1);
                 }
             }
         }
     }
 
     pub fn mover_layer_entry(&mut self, layer_idx: NodeId, entry_idx: usize, delta: i32) {
-        if let Some(NodeParams::Layer { layers, .. }) = self.params.get_mut(&layer_idx) {
+        if let Some(NodeParams::Layer(layer)) = self.params.get_mut(&layer_idx) {
             let new_idx = (entry_idx as i32 + delta) as usize;
-            if new_idx < layers.len() {
-                layers.swap(entry_idx, new_idx);
+            if new_idx < layer.layers.len() {
+                layer.layers.swap(entry_idx, new_idx);
             }
         }
     }
@@ -490,10 +490,10 @@ impl GraphPanel {
         let mut cenas_para_remover: Vec<NodeId> = Vec::new();
 
         for (&idx, p) in &self.params {
-            if let NodeParams::Cena { nome_cena, .. } = p {
-                if !nome_cena.is_empty() {
-                    if nomes_marc.contains(nome_cena) {
-                        cenas_por_nome.insert(nome_cena.clone(), idx);
+            if let NodeParams::Cena(cena) = p {
+                if !cena.nome_cena.is_empty() {
+                    if nomes_marc.contains(&cena.nome_cena) {
+                        cenas_por_nome.insert(cena.nome_cena.clone(), idx);
                     } else {
                         cenas_para_remover.push(idx);
                     }
@@ -501,7 +501,7 @@ impl GraphPanel {
             }
         }
         for idx in cenas_para_remover {
-            if self.params.get(&idx).map_or(false, |p| matches!(p, NodeParams::Cena { .. })) {
+            if self.params.get(&idx).map_or(false, |p| matches!(p, NodeParams::Cena(..))) {
                 self.remover_no(idx);
             }
         }
@@ -512,8 +512,8 @@ impl GraphPanel {
                     (self.contador as f32 / 3.0) * 150.0,
                 );
                 let idx = self.adicionar_no_em(TipoNo::Cena, loc);
-                if let Some(NodeParams::Cena { nome_cena, .. }) = self.params.get_mut(&idx) {
-                    *nome_cena = nome.clone();
+                if let Some(NodeParams::Cena(cena)) = self.params.get_mut(&idx) {
+                    cena.nome_cena = nome.clone();
                 }
                 cenas_por_nome.insert(nome.clone(), idx);
                 self.contador += 1;
@@ -663,7 +663,7 @@ impl GraphPanel {
 
     pub fn garantir_master(&mut self) {
         let mestres: Vec<NodeId> = self.params.iter()
-            .filter(|(_, p)| matches!(p, NodeParams::Saida { .. }))
+            .filter(|(_, p)| matches!(p, NodeParams::Saida(..)))
             .map(|(&idx, _)| idx)
             .collect();
 
@@ -804,9 +804,9 @@ impl GraphPanel {
                     let cenas = self.cenas_disponiveis();
                     let cena_preferida = self.cena_ativa.and_then(|ci| {
                         self.params.get(&ci).and_then(|p| {
-                            if let NodeParams::Cena { nome_cena, .. } = p {
-                                if !nome_cena.is_empty() { Some(nome_cena.clone()) } else { None }
-                            } else { None }
+                if let NodeParams::Cena(cena) = p {
+                    if !cena.nome_cena.is_empty() { Some(cena.nome_cena.clone()) } else { None }
+                } else { None }
                         })
                     });
                     self.normalizar_cena(*nid, &cenas, cena_preferida);
@@ -978,16 +978,16 @@ impl GraphPanel {
                 self.marcar_sujo();
             }
             node_component::AcaoInspector::SelecionarLayer(nid, entry_idx) => {
-                if let Some(NodeParams::Layer { selected, .. }) = self.params.get_mut(&nid) {
-                    *selected = entry_idx;
+                if let Some(NodeParams::Layer(layer)) = self.params.get_mut(&nid) {
+                    layer.selected = entry_idx;
                     self.marcar_sujo();
                 }
             }
             node_component::AcaoInspector::Nenhuma => {}
             node_component::AcaoInspector::ToggleVisivelLayer(_, _) => {}
             node_component::AcaoInspector::RenomearLayerEntry(nid, entry_idx) => {
-                if let Some(NodeParams::Layer { layers, .. }) = self.params.get_mut(&nid) {
-                    if let Some(_layer) = layers.get_mut(entry_idx) {
+                if let Some(NodeParams::Layer(layer)) = self.params.get_mut(&nid) {
+                    if let Some(_layer) = layer.layers.get_mut(entry_idx) {
                         self.sync_layer_ports();
                         self.marcar_sujo();
                     }

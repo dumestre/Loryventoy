@@ -384,36 +384,28 @@ pub fn show_content(
             }
         }
         TipoNo::Transform => {
-            if let NodeParams::Transform {
-                px, py, pz, rx, ry, rz, sx, sy, sz,
-            } = params
+            if let NodeParams::Transform(t) = params
             {
-                grid_xyz(ui, "Posição", px, py, pz);
-                grid_xyz(ui, "Rotação", rx, ry, rz);
-                grid_xyz(ui, "Escala", sx, sy, sz);
+                grid_xyz(ui, "Posição", &mut t.px, &mut t.py, &mut t.pz);
+                grid_xyz(ui, "Rotação", &mut t.rx, &mut t.ry, &mut t.rz);
+                grid_xyz(ui, "Escala", &mut t.sx, &mut t.sy, &mut t.sz);
             }
         }
         TipoNo::Cena => {
-            if let NodeParams::Cena {
-                nome_cena,
-                ativa,
-                zoom,
-                angulo,
-                opacidade,
-            } = params
+            if let NodeParams::Cena(cena) = params
             {
-                grid_texto(ui, "Cena", nome_cena);
+                grid_texto(ui, "Cena", &mut cena.nome_cena);
                 Grid::new("cena_ativa")
                     .num_columns(2)
                     .spacing([8.0, 3.0])
                     .show(ui, |ui| {
                         ui.label("Ativa");
-                        ui.checkbox(ativa, "");
+                        ui.checkbox(&mut cena.ativa, "");
                         ui.end_row();
                     });
-                grid_2(ui, "Zoom", zoom, 0.01..=10.0, "", 2);
-                grid_2(ui, "Ângulo", angulo, -360.0..=360.0, "°", 1);
-                grid_2(ui, "Opacidade", opacidade, 0.0..=1.0, "", 2);
+                grid_2(ui, "Zoom", &mut cena.zoom, 0.01..=10.0, "", 2);
+                grid_2(ui, "Ângulo", &mut cena.angulo, -360.0..=360.0, "°", 1);
+                grid_2(ui, "Opacidade", &mut cena.opacidade, 0.0..=1.0, "", 2);
 
                 ui.separator();
                 ui.label(egui::RichText::new("Cenas disponíveis").strong());
@@ -431,14 +423,14 @@ pub fn show_content(
             }
         }
         TipoNo::Layer => {
-            if let NodeParams::Layer { cena, layers, selected } = params {
-                let h = render_layer_header(ui, cena, cenas);
+            if let NodeParams::Layer(layer) = params {
+                let h = render_layer_header(ui, &mut layer.cena, cenas);
                 if h != AcaoInspector::Nenhuma { acao = h; }
-                let count = layers.len();
+                let count = layer.layers.len();
                 for rev_i in 0..count {
                     let i = count - 1 - rev_i;
                     let is_renaming = *renaming_layer == Some((node_id, i));
-                    let (r, rename_changed) = render_layer_row(ui, i, layers, *selected, node_id, is_renaming);
+                    let (r, rename_changed) = render_layer_row(ui, i, &mut layer.layers, layer.selected, node_id, is_renaming);
                     if r != AcaoInspector::Nenhuma && acao == AcaoInspector::Nenhuma { acao = r; }
                     if rename_changed {
                         *renaming_layer = if is_renaming { None } else { Some((node_id, i)) };
@@ -712,43 +704,29 @@ pub fn show_content(
             }
         }
         TipoNo::Ruido => {
-            if let NodeParams::Ruido {
-                seed,
-                freq,
-                amp,
-                veloc,
-                alvo,
-            } = params
+            if let NodeParams::Ruido(ruido) = params
             {
-                grid_combo_alvo(ui, "Alvo", alvo);
-                grid_2(ui, "Seed", seed, 0.0..=9999.0, "", 0);
-                grid_2(ui, "Frequência", freq, 0.01..=5.0, "", 2);
-                grid_2(ui, "Amplitude", amp, 0.0..=1000.0, "", 1);
-                grid_2(ui, "Velocidade", veloc, 0.0..=10.0, "x", 2);
+                grid_combo_alvo(ui, "Alvo", &mut ruido.alvo);
+                grid_2(ui, "Seed", &mut ruido.seed, 0.0..=9999.0, "", 0);
+                grid_2(ui, "Frequência", &mut ruido.freq, 0.01..=5.0, "", 2);
+                grid_2(ui, "Amplitude", &mut ruido.amp, 0.0..=1000.0, "", 1);
+                grid_2(ui, "Velocidade", &mut ruido.veloc, 0.0..=10.0, "x", 2);
             }
         }
         TipoNo::Anim => {
-            if let NodeParams::Anim {
-                alvo,
-                loop_mode,
-                segmentos,
-            } = params
+            if let NodeParams::Anim(anim) = params
             {
-                grid_combo_anim_alvo(ui, "Alvo", alvo);
-                grid_combo_loop(ui, "Loop", loop_mode);
-                editor_segmentos(ui, segmentos);
+                grid_combo_anim_alvo(ui, "Alvo", &mut anim.alvo);
+                grid_combo_loop(ui, "Loop", &mut anim.loop_mode);
+                editor_segmentos(ui, &mut anim.segmentos);
             }
         }
         TipoNo::Saida => {
-            if let NodeParams::Saida {
-                brilho,
-                contraste,
-                saturacao,
-            } = params
+            if let NodeParams::Saida(saida) = params
             {
-                grid_2(ui, "Brilho", brilho, 0.0..=2.0, "", 2);
-                grid_2(ui, "Contraste", contraste, 0.0..=2.0, "", 2);
-                grid_2(ui, "Saturação", saturacao, 0.0..=2.0, "", 2);
+                grid_2(ui, "Brilho", &mut saida.brilho, 0.0..=2.0, "", 2);
+                grid_2(ui, "Contraste", &mut saida.contraste, 0.0..=2.0, "", 2);
+                grid_2(ui, "Saturação", &mut saida.saturacao, 0.0..=2.0, "", 2);
             }
         }
     });

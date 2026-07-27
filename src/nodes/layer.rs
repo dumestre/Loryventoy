@@ -1,11 +1,11 @@
-use super::{PortSpec, NodeParams, LayerEntry};
+use super::{PortSpec, NodeParams, LayerEntry, LayerParams};
 
 pub(crate) fn portos() -> PortSpec {
     PortSpec { entradas: &[], saidas: &[] }
 }
 
 pub(crate) fn padrao() -> NodeParams {
-    NodeParams::Layer {
+    NodeParams::Layer(LayerParams {
         cena: String::new(),
         layers: vec![LayerEntry {
             nome: "Layer 1".to_string(),
@@ -15,5 +15,5 @@ pub(crate) fn padrao() -> NodeParams {
             visivel: true,
         }],
         selected: 0,
-    }
+    })
 }

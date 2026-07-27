@@ -54,23 +54,23 @@ impl GraphPanel {
         // Map Layer NodeId -> cena name
         let mut layer_to_cena: HashMap<NodeId, String> = HashMap::new();
         for (&nid, params) in &self.params {
-            if let NodeParams::Layer { cena, .. } = params {
-                layer_to_cena.insert(nid, cena.clone());
+            if let NodeParams::Layer(layer) = params {
+                layer_to_cena.insert(nid, layer.cena.clone());
             }
         }
 
         // Group scenes by name
         let mut cena_names: Vec<(String, NodeId)> = Vec::new();
         for (&nid, params) in &self.params {
-            if let NodeParams::Cena { nome_cena, .. } = params {
-                cena_names.push((nome_cena.clone(), nid));
+            if let NodeParams::Cena(cena) = params {
+                cena_names.push((cena.nome_cena.clone(), nid));
             }
         }
 
         // For each scene, build CenaPreview
         for (nome_cena, cena_nid) in &cena_names {
             let cena_opac = match self.params.get(cena_nid) {
-                Some(NodeParams::Cena { opacidade, .. }) => *opacidade,
+                Some(NodeParams::Cena(cena)) => cena.opacidade,
                 _ => 1.0,
             };
 
@@ -88,8 +88,8 @@ impl GraphPanel {
             // For each Layer node, iterate its internal layer entries
             for &layer_nid in &layer_nids {
                 let entries: Vec<(usize, String, f32, f32, bool)> = match self.params.get(&layer_nid) {
-                    Some(NodeParams::Layer { layers, .. }) => {
-                        layers.iter().enumerate()
+                    Some(NodeParams::Layer(layer)) => {
+                        layer.layers.iter().enumerate()
                             .map(|(i, e)| (i, e.nome.clone(), e.ordem, e.opacidade, e.visivel))
                             .collect()
                     }
@@ -339,13 +339,13 @@ impl GraphPanel {
         for (_, input_id) in &node.inputs {
             if let Some(output_id) = graph.connection(*input_id) {
                 let src_nid = graph.outputs[output_id].node;
-                if let Some(NodeParams::Ruido { seed, freq, amp, veloc, alvo }) = self.params.get(&src_nid) {
+                if let Some(NodeParams::Ruido(ruido)) = self.params.get(&src_nid) {
                     return Some(crate::procedural::RuidoDriver {
-                        seed: *seed,
-                        freq: *freq,
-                        amp: *amp,
-                        veloc: *veloc,
-                        alvo: *alvo,
+                        seed: ruido.seed,
+                        freq: ruido.freq,
+                        amp: ruido.amp,
+                        veloc: ruido.veloc,
+                        alvo: ruido.alvo,
                         comp: None,
                     });
                 }
@@ -361,11 +361,11 @@ impl GraphPanel {
         for (_, input_id) in &node.inputs {
             if let Some(output_id) = graph.connection(*input_id) {
                 let src_nid = graph.outputs[output_id].node;
-                if let Some(NodeParams::Anim { alvo, loop_mode, segmentos }) = self.params.get(&src_nid) {
+                if let Some(NodeParams::Anim(anim)) = self.params.get(&src_nid) {
                     return Some(crate::procedural::AnimDriver {
-                        segmentos: segmentos.clone(),
-                        loop_mode: crate::procedural::LoopMode::from_u8(*loop_mode),
-                        alvo: *alvo,
+                        segmentos: anim.segmentos.clone(),
+                        loop_mode: crate::procedural::LoopMode::from_u8(anim.loop_mode),
+                        alvo: anim.alvo,
                         comp: None,
                     });
                 }

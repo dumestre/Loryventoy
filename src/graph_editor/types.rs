@@ -191,8 +191,8 @@ impl NodeDataTrait for GraphNode {
         }
         let params = user_state.params.get_mut(&node_id);
         let cenas = &user_state.cenas;
-        if let Some(NodeParams::Layer { cena, .. }) = params {
-            let acao = crate::ui::node_component::render_layer_header(ui, cena, cenas);
+        if let Some(NodeParams::Layer(layer)) = params {
+            let acao = crate::ui::node_component::render_layer_header(ui, &mut layer.cena, cenas);
             if acao != AcaoInspector::Nenhuma {
                 user_state.acao_inspector = acao;
             }
@@ -227,18 +227,18 @@ impl NodeDataTrait for GraphNode {
 
         let is_renaming = user_state.renaming_layer == Some((node_id,
             user_state.params.get(&node_id)
-                .and_then(|p| if let NodeParams::Layer { layers, .. } = p {
-                    layers.iter().position(|l| l.nome == param_name)
+                .and_then(|p| if let NodeParams::Layer(layer) = p {
+                    layer.layers.iter().position(|l| l.nome == param_name)
                 } else { None })
                 .unwrap_or(0),
         ));
 
         let params = user_state.params.get_mut(&node_id);
-        if let Some(NodeParams::Layer { layers, selected, .. }) = params {
-            if let Some(idx) = layers.iter().position(|l| l.nome == param_name) {
+        if let Some(NodeParams::Layer(layer)) = params {
+            if let Some(idx) = layer.layers.iter().position(|l| l.nome == param_name) {
                 ui.with_layout(Layout::left_to_right(Align::Min), |ui| {
                     let (r, rename_changed) = crate::ui::node_component::render_layer_row(
-                        ui, idx, layers, *selected, node_id, is_renaming,
+                        ui, idx, &mut layer.layers, layer.selected, node_id, is_renaming,
                     );
                     if r != AcaoInspector::Nenhuma {
                         user_state.acao_inspector = r;

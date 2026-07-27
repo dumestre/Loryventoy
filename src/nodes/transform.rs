@@ -1,4 +1,4 @@
-use super::{ParametroPorto, PortSpec, TipoPorto, NodeParams, COMP_XYZ};
+use super::{ParametroPorto, PortSpec, TipoPorto, NodeParams, TransformParams, COMP_XYZ};
 
 static P_POS: ParametroPorto = ParametroPorto { nome: "Posição", tipo: TipoPorto::Vetor(COMP_XYZ) };
 static P_ROT: ParametroPorto = ParametroPorto { nome: "Rotação", tipo: TipoPorto::Vetor(COMP_XYZ) };
@@ -12,9 +12,9 @@ pub(crate) fn portos() -> PortSpec {
 }
 
 pub(crate) fn padrao() -> NodeParams {
-    NodeParams::Transform {
+    NodeParams::Transform(TransformParams {
         px: 0.0, py: 0.0, pz: 0.0,
         rx: 0.0, ry: 0.0, rz: 0.0,
         sx: 1.0, sy: 1.0, sz: 1.0,
-    }
+    })
 }
