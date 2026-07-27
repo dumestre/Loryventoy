@@ -18,6 +18,9 @@ mod saida_params;
 mod anim_params;
 mod params;
 
+// ── Projeto ──────────────────────────────────────────────────────
+mod project;
+
 pub use color::Color;
 pub use project_config::ProjectConfig;
 pub use animation::{Easing, LoopMode, AnimSeg};
@@ -34,6 +37,8 @@ pub use ruido_params::RuidoParams;
 pub use saida_params::SaidaParams;
 pub use anim_params::AnimParams;
 pub use params::NodeParams;
+
+pub use project::{Project, ProjectNode, ProjectEdge};
 
 #[cfg(test)]
 mod tests {

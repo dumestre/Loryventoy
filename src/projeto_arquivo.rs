@@ -1,13 +1,12 @@
 use serde::{Deserialize, Serialize};
 
-use crate::domain::{Color, LayerEntry};
+use crate::domain::{Color, LayerEntry, Project, ProjectEdge, ProjectNode};
 use crate::nodes::{
     NodeParams, ProjetoConfig,
     ShapeParams, TextParams, PenParams,
     TransformParams, CenaParams, LayerParams,
     RuidoParams, AnimParams, SaidaParams, TipoNo,
 };
-use crate::graph_editor::ArestaInfo;
 
 /// Espelho serializável de um segmento de animação (`AnimSeg`).
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -343,74 +342,68 @@ pub struct ProjetoArquivo {
 }
 
 impl ProjetoArquivo {
-    /// Constrói o arquivo a partir do estado atual do grafo e do script.
-    pub fn from_graph(
-        nos: &[(TipoNo, eframe::egui::Pos2, NodeParams)],
-        arestas: &[(usize, usize, ArestaInfo)],
-        script_text: &str,
-    ) -> Self {
-        let nos_json: Vec<NoJson> = nos
+    pub fn from_project(proj: &Project) -> Self {
+        let nos_json: Vec<NoJson> = proj
+            .nodes
             .iter()
-            .map(|(tipo, loc, p)| NoJson {
-                tipo: tipo.nome().to_string(),
-                pos_x: loc.x,
-                pos_y: loc.y,
-                params: NodeParamsJson::from(p.clone()),
+            .map(|n| NoJson {
+                tipo: n.tipo.nome().to_string(),
+                pos_x: n.pos_x,
+                pos_y: n.pos_y,
+                params: NodeParamsJson::from(n.params.clone()),
             })
             .collect();
-        let arestas_json: Vec<ArestaJson> = arestas
+        let arestas_json: Vec<ArestaJson> = proj
+            .edges
             .iter()
-            .map(|(de, para, info)| ArestaJson {
-                de: *de,
-                para: *para,
-                saida: info.saida,
-                saida_comp: info.saida_comp,
-                entrada: info.entrada,
-                entrada_comp: info.entrada_comp,
+            .map(|e| ArestaJson {
+                de: e.from,
+                para: e.to,
+                saida: e.from_port,
+                saida_comp: e.from_comp,
+                entrada: e.to_port,
+                entrada_comp: e.to_comp,
             })
             .collect();
         ProjetoArquivo {
             versao: 1,
-            script_text: script_text.to_string(),
+            script_text: proj.script_text.clone(),
             nos: nos_json,
             arestas: arestas_json,
         }
     }
 
-    /// Converte de volta para as estruturas do grafo.
-    pub fn to_graph(
-        &self,
-    ) -> Result<
-        (
-            Vec<(TipoNo, eframe::egui::Pos2, NodeParams)>,
-            Vec<(usize, usize, ArestaInfo)>,
-        ),
-        String,
-    > {
-        let mut nos = Vec::new();
+    pub fn to_project(&self) -> Result<Project, String> {
+        let mut nodes = Vec::new();
         for n in &self.nos {
             let tipo = TipoNo::from_label(&n.tipo)
                 .ok_or_else(|| format!("tipo de nó desconhecido: {}", n.tipo))?;
             let params = NodeParams::try_from(n.params.clone())?;
-            nos.push((
+            nodes.push(ProjectNode {
                 tipo,
-                eframe::egui::Pos2::new(n.pos_x, n.pos_y),
+                pos_x: n.pos_x,
+                pos_y: n.pos_y,
                 params,
-            ));
+            });
         }
-        let mut arestas = Vec::new();
-        for a in &self.arestas {
-            arestas.push((
-                a.de,
-                a.para,
-                ArestaInfo {
-                    saida: a.saida,
-                    saida_comp: a.saida_comp,
-                    entrada: a.entrada,
-                    entrada_comp: a.entrada_comp,
-                },
-            ));
-        }
-        Ok((nos, arestas))
+        let edges: Vec<ProjectEdge> = self
+            .arestas
+            .iter()
+            .map(|a| ProjectEdge {
+                from: a.de,
+                to: a.para,
+                from_port: a.saida,
+                from_comp: a.saida_comp,
+                to_port: a.entrada,
+                to_comp: a.entrada_comp,
+            })
+            .collect();
+        Ok(Project {
+            script_text: self.script_text.clone(),
+            nodes,
+            edges,
+        })
     }
 }
+
+

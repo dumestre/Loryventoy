@@ -247,8 +247,9 @@ impl MovimentoApp {
     /// usuário). Sem dependência externa de diálogo: grava em
     /// `<dir_usuario>/movimento/projeto.lory`.
     fn salvar_projeto(&mut self) {
-        let (nos, arestas) = self.graph.snapshot();
-        let arquivo = ProjetoArquivo::from_graph(&nos, &arestas, &self.script_text);
+        let mut proj = self.graph.to_project();
+        proj.script_text = self.script_text.clone();
+        let arquivo = ProjetoArquivo::from_project(&proj);
         let json = match serde_json::to_string_pretty(&arquivo) {
             Ok(j) => j,
             Err(e) => {
@@ -298,11 +299,11 @@ impl MovimentoApp {
                 return;
             }
         };
-        match arquivo.to_graph() {
-            Ok((nos, arestas)) => {
+        match arquivo.to_project() {
+            Ok(proj) => {
                 self.graph.empurrar_historico();
-                self.graph.carregar_snapshot(&nos, &arestas);
-                self.script_text = arquivo.script_text.clone();
+                self.graph.load_project(&proj);
+                self.script_text = proj.script_text.clone();
                 self.script_erro = None;
                 let msg = format!("carregado de {}", caminho.display());
                 eprintln!("[Movimento] {msg}");
@@ -318,11 +319,11 @@ impl MovimentoApp {
 
     /// Aplica um `ProjetoArquivo` ao grafo e ao script.
     fn carregar_arquivo(&mut self, arquivo: ProjetoArquivo) {
-        match arquivo.to_graph() {
-            Ok((nos, arestas)) => {
+        match arquivo.to_project() {
+            Ok(proj) => {
                 self.graph.empurrar_historico();
-                self.graph.carregar_snapshot(&nos, &arestas);
-                self.script_text = arquivo.script_text.clone();
+                self.graph.load_project(&proj);
+                self.script_text = proj.script_text.clone();
                 self.script_erro = None;
             }
             Err(e) => {

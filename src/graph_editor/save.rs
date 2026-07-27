@@ -1,5 +1,8 @@
+use std::collections::HashMap;
+
 use eframe::egui::Pos2;
 
+use crate::domain::{Project, ProjectNode, ProjectEdge};
 use crate::nodes::{NodeParams, TipoNo};
 
 use super::GraphPanel;
@@ -110,5 +113,78 @@ impl GraphPanel {
 
     pub fn pode_redo(&self) -> bool {
         !self.redo_stack.is_empty()
+    }
+
+    pub fn to_project(&self) -> Project {
+        let mut idx_map: HashMap<NodeId, usize> = HashMap::new();
+        let nodes: Vec<ProjectNode> = self
+            .editor_state
+            .graph
+            .iter_nodes()
+            .enumerate()
+            .map(|(i, nid)| {
+                idx_map.insert(nid, i);
+                let node = &self.editor_state.graph[nid];
+                let loc = self.editor_state.node_positions.get(nid).copied().unwrap_or(Pos2::ZERO);
+                let params = self.params.get(&nid).cloned().unwrap_or_else(|| node.user_data.params.clone());
+                ProjectNode {
+                    tipo: node.user_data.tipo,
+                    pos_x: loc.x,
+                    pos_y: loc.y,
+                    params,
+                }
+            })
+            .collect();
+
+        let edges: Vec<ProjectEdge> = self
+            .editor_state
+            .graph
+            .iter_connections()
+            .map(|(input_id, output_id)| {
+                let src_nid = self.editor_state.graph[output_id].node;
+                let dst_nid = self.editor_state.graph[input_id].node;
+                let from = idx_map.get(&src_nid).copied().unwrap_or(0);
+                let to = idx_map.get(&dst_nid).copied().unwrap_or(0);
+                ProjectEdge {
+                    from,
+                    to,
+                    from_port: 0,
+                    from_comp: None,
+                    to_port: 0,
+                    to_comp: None,
+                }
+            })
+            .collect();
+
+        Project { nodes, edges, script_text: String::new() }
+    }
+
+    pub fn load_project(&mut self, proj: &Project) {
+        self.editor_state.graph = super::types::MyGraph::default();
+        self.editor_state.node_order.clear();
+        self.editor_state.node_positions = Default::default();
+        self.editor_state.node_orientations = Default::default();
+        self.editor_state.selected_nodes.clear();
+        self.params.clear();
+        self.liberados.clear();
+        self.dsl_ids.clear();
+
+        let mut idx_to_nid: Vec<NodeId> = Vec::new();
+        for n in &proj.nodes {
+            let loc = Pos2::new(n.pos_x, n.pos_y);
+            let nid = self.adicionar_no_em(n.tipo, loc);
+            self.definir_params(nid, n.params.clone());
+            idx_to_nid.push(nid);
+        }
+
+        for e in &proj.edges {
+            if let (Some(&src), Some(&dst)) = (idx_to_nid.get(e.from), idx_to_nid.get(e.to)) {
+                self.conectar_por_idx(src, e.from_port, dst, e.to_port);
+            }
+        }
+
+        self.canvas = idx_to_nid.iter().zip(&proj.nodes).find(|(_, n)| n.tipo == TipoNo::Canvas).map(|(n, _)| *n);
+        self.master = idx_to_nid.iter().zip(&proj.nodes).find(|(_, n)| n.tipo == TipoNo::Saida).map(|(n, _)| *n);
+        self.cena = idx_to_nid.iter().zip(&proj.nodes).find(|(_, n)| n.tipo == TipoNo::Cena).map(|(n, _)| *n);
     }
 }
