@@ -112,6 +112,28 @@ cargo check       OK
 cargo test --all  OK — 68 testes
 ```
 
+### Separação do estado de renomeação
+
+Foi concluída a primeira separação entre dados persistentes e estado visual da layer:
+
+- removido `renomeando` de `LayerEntry`;
+- removida a inicialização desse campo nos nós padrão e no graph editor;
+- removida a reconstrução desse campo durante o carregamento JSON;
+- o estado ativo de renomeação passou a ser controlado por `UserState.renaming_layer` e `GraphPanel.renaming_layer`;
+- o inspector agora recebe o estado de apresentação explicitamente;
+- o comportamento de duplo clique, Enter e Escape foi preservado;
+- não há mais ocorrências de `renomeando` no código Rust;
+- o formato JSON existente não foi alterado, pois esse campo já não era persistido.
+
+Validação:
+
+```text
+cargo check       OK
+cargo test --all  OK — 68 testes
+```
+
+Com isso, `LayerEntry` representa somente dados do projeto. O próximo passo é aplicar o mesmo princípio aos demais parâmetros que ainda usam tipos de UI diretamente, começando pelas cores de `Texto`, `Shape` e `Pen`.
+
 ---
 
 ## 3. Regras obrigatórias da refatoração

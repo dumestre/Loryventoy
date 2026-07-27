@@ -350,6 +350,7 @@ pub fn show_content(
     params: Option<&mut NodeParams>,
     cenas: &[(String, NodeId)],
     node_id: NodeId,
+    renaming_layer: &mut Option<(NodeId, usize)>,
     topo_tela: f32,
     zoom: f32,
 ) -> AcaoInspector {
@@ -424,11 +425,11 @@ pub fn show_content(
                 let count = layers.len();
                 for rev_i in 0..count {
                     let i = count - 1 - rev_i;
-                    let is_renaming = layers[i].renomeando;
+                    let is_renaming = *renaming_layer == Some((node_id, i));
                     let (r, rename_changed) = render_layer_row(ui, i, layers, *selected, node_id, is_renaming);
                     if r != AcaoInspector::Nenhuma && acao == AcaoInspector::Nenhuma { acao = r; }
                     if rename_changed {
-                        layers[i].renomeando = !is_renaming;
+                        *renaming_layer = if is_renaming { None } else { Some((node_id, i)) };
                         if is_renaming {
                             acao = AcaoInspector::RenomearLayerEntry(node_id, i);
                         }

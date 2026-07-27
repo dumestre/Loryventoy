@@ -1,9 +1,6 @@
 use eframe::egui::Color32;
 
-/// Dados de uma layer usados pelo modelo atual do projeto.
-///
-/// `renomeando` ainda é mantido temporariamente por compatibilidade com a UI.
-/// Ele será movido para o estado de apresentação em uma etapa específica.
+/// Dados persistentes de uma layer.
 #[derive(Clone, Debug)]
 pub struct LayerEntry {
     pub nome: String,
@@ -11,7 +8,6 @@ pub struct LayerEntry {
     pub opacidade: f32,
     pub cor: Color32,
     pub visivel: bool,
-    pub renomeando: bool,
 }
 
 impl LayerEntry {

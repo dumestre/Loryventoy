@@ -13,7 +13,6 @@ pub(crate) fn padrao() -> NodeParams {
             opacidade: 1.0,
             cor: LayerEntry::cor_por_idx(0),
             visivel: true,
-            renomeando: false,
         }],
         selected: 0,
     }

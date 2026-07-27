@@ -418,7 +418,6 @@ impl GraphPanel {
                     opacidade: 1.0,
                     cor: LayerEntry::cor_por_idx(count),
                     visivel: true,
-                    renomeando: false,
                 });
             }
         } else {
@@ -436,7 +435,6 @@ impl GraphPanel {
                     opacidade: 1.0,
                     cor: LayerEntry::cor_por_idx(0),
                     visivel: true,
-                    renomeando: false,
                 });
             }
             self.contador += 1;
