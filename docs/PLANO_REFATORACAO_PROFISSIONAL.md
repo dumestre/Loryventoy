@@ -361,7 +361,25 @@ cargo check       OK — sem warnings
 cargo test --all  OK — 68 testes
 ```
 
-O próximo passo arquitetural é refatorar o inspector (`node_component.rs`, ~1115 linhas) — Fase 9 do plano geral — ou o `app.rs` (~1157 linhas) — Fase 10.
+### Separação da persistência em infrastructure/persistence (Fase 6)
+
+Foi concluída a separação da camada de persistência:
+
+- `src/projeto_arquivo.rs` deletado, conteúdo redistribuído:
+  - `src/infrastructure/persistence/format.rs` — tipos-espelho JSON (`AnimSegJson`, `NodeParamsJson`, `NoJson`, `ArestaJson`, `ProjetoArquivo`) e conversões `From`/`TryFrom` com o domínio (~350 linhas);
+  - `src/infrastructure/persistence/migrations.rs` — sistema de migração por versão (`VERSAO_ATUAL = 1`, `migrate()` sequencial);
+  - `src/infrastructure/persistence/repository.rs` — `load_project()`, `save_project()`, `load_from_str()` com `PersistenceError` unificado (I/O, parse, validação);
+  - `src/infrastructure/persistence/mod.rs` — reexporta apenas a API pública (`load_project`, `save_project`, `load_from_str`, `PersistenceError`).
+- `src/main.rs` declara `mod infrastructure` (removeu `mod projeto_arquivo`);
+- `src/app.rs` substituiu uso direto de `ProjetoArquivo` e I/O inline por chamadas ao repositório (`load_from_str`, `load_project`, `save_project`);
+- `carregar_arquivo()` simplificado: recebe `&Project` em vez de `ProjetoArquivo`.
+
+Validação:
+
+```text
+cargo check       OK — sem warnings
+cargo test --all  OK — 68 testes
+```
 
 ---
 

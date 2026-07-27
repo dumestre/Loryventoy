@@ -4,7 +4,8 @@ use std::time::Instant;
 
 use crate::theme;
 
-use crate::projeto_arquivo::ProjetoArquivo;
+use crate::domain::Project;
+use crate::infrastructure::persistence::{load_from_str, save_project, PersistenceError};
 
 use crate::ui::{
     graph::GraphPanel,
@@ -103,10 +104,8 @@ impl MovimentoApp {
         };
 
         if let Some(path) = start_project {
-            if let Ok(raw) = std::fs::read_to_string(&path) {
-                if let Ok(proj) = serde_json::from_str::<ProjetoArquivo>(&raw) {
-                    app.carregar_arquivo(proj);
-                }
+            if let Ok(proj) = load_from_str(&std::fs::read_to_string(&path).unwrap_or_default()) {
+                app.carregar_arquivo(&proj);
             }
         }
 
@@ -243,28 +242,20 @@ impl MovimentoApp {
         self.log_script(format!("=== Fim: {ok} ok, {falha} falha ==="));
     }
 
-    /// Salva o projeto atual em arquivo JSON (caminho fixo na pasta do
-    /// usuário). Sem dependência externa de diálogo: grava em
-    /// `<dir_usuario>/movimento/projeto.lory`.
     fn salvar_projeto(&mut self) {
         let mut proj = self.graph.to_project();
         proj.script_text = self.script_text.clone();
-        let arquivo = ProjetoArquivo::from_project(&proj);
-        let json = match serde_json::to_string_pretty(&arquivo) {
-            Ok(j) => j,
-            Err(e) => {
-                let msg = format!("falha ao serializar: {e}");
-                eprintln!("[Movimento] {msg}");
-                self.projeto_aviso = Some(msg);
-                return;
-            }
-        };
         let dir = std::env::current_dir()
             .unwrap_or_else(|_| std::path::PathBuf::from("."));
         let caminho = dir.join("projeto.lory");
-        match std::fs::write(&caminho, json) {
+        match save_project(&caminho, &proj) {
             Ok(()) => {
                 let msg = format!("salvo em {}", caminho.display());
+                eprintln!("[Movimento] {msg}");
+                self.projeto_aviso = Some(msg);
+            }
+            Err(PersistenceError::Parse(e)) => {
+                let msg = format!("falha ao serializar: {e}");
                 eprintln!("[Movimento] {msg}");
                 self.projeto_aviso = Some(msg);
             }
@@ -276,30 +267,11 @@ impl MovimentoApp {
         }
     }
 
-    /// Carrega um projeto de arquivo JSON, reconstruindo o grafo e o script.
     fn carregar_projeto(&mut self) {
         let dir = std::env::current_dir()
             .unwrap_or_else(|_| std::path::PathBuf::from("."));
         let caminho = dir.join("projeto.lory");
-        let texto = match std::fs::read_to_string(&caminho) {
-            Ok(t) => t,
-            Err(e) => {
-                let msg = format!("não foi possível ler {}: {e}", caminho.display());
-                eprintln!("[Movimento] {msg}");
-                self.projeto_aviso = Some(msg);
-                return;
-            }
-        };
-        let arquivo: ProjetoArquivo = match serde_json::from_str(&texto) {
-            Ok(a) => a,
-            Err(e) => {
-                let msg = format!("arquivo inválido: {e}");
-                eprintln!("[Movimento] {msg}");
-                self.projeto_aviso = Some(msg);
-                return;
-            }
-        };
-        match arquivo.to_project() {
+        match crate::infrastructure::persistence::load_project(&caminho) {
             Ok(proj) => {
                 self.graph.empurrar_historico();
                 self.graph.load_project(&proj);
@@ -310,28 +282,18 @@ impl MovimentoApp {
                 self.projeto_aviso = Some(msg);
             }
             Err(e) => {
-                let msg = format!("não foi possível reconstruir o grafo: {e}");
+                let msg = format!("não foi possível carregar: {e}");
                 eprintln!("[Movimento] {msg}");
                 self.projeto_aviso = Some(msg);
             }
         }
     }
 
-    /// Aplica um `ProjetoArquivo` ao grafo e ao script.
-    fn carregar_arquivo(&mut self, arquivo: ProjetoArquivo) {
-        match arquivo.to_project() {
-            Ok(proj) => {
-                self.graph.empurrar_historico();
-                self.graph.load_project(&proj);
-                self.script_text = proj.script_text.clone();
-                self.script_erro = None;
-            }
-            Err(e) => {
-                let msg = format!("não foi possível reconstruir o grafo: {e}");
-                eprintln!("[Movimento] {msg}");
-                self.projeto_aviso = Some(msg);
-            }
-        }
+    fn carregar_arquivo(&mut self, proj: &Project) {
+        self.graph.empurrar_historico();
+        self.graph.load_project(proj);
+        self.script_text = proj.script_text.clone();
+        self.script_erro = None;
     }
 
 }

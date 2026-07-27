@@ -1,14 +1,11 @@
 use serde::{Deserialize, Serialize};
 
-use crate::domain::{Color, LayerEntry, Project, ProjectEdge, ProjectNode};
+use crate::domain::{Color, LayerEntry, Project, ProjectConfig, ProjectEdge, ProjectNode};
 use crate::nodes::{
-    NodeParams, ProjetoConfig,
-    ShapeParams, TextParams, PenParams,
-    TransformParams, CenaParams, LayerParams,
-    RuidoParams, AnimParams, SaidaParams, TipoNo,
+    AnimParams, CenaParams, LayerParams, NodeParams, PenParams,
+    RuidoParams, SaidaParams, ShapeParams, TextParams, TransformParams, TipoNo,
 };
 
-/// Espelho serializável de um segmento de animação (`AnimSeg`).
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AnimSegJson {
     pub t_ini: f32,
@@ -18,7 +15,6 @@ pub struct AnimSegJson {
     pub easing: u8,
 }
 
-/// Espelho serializável de uma entrada de layer.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct LayerEntryJson {
     pub nome: String,
@@ -34,8 +30,6 @@ fn default_true() -> bool {
     true
 }
 
-/// Espelho serializável do `NodeParams`
-/// não-serializáveis direto). Cada variante espelha os campos relevantes.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum NodeParamsJson {
@@ -301,7 +295,7 @@ impl TryFrom<NodeParamsJson> for NodeParams {
                 NodeParams::Saida(SaidaParams { brilho, contraste, saturacao })
             }
             NodeParamsJson::Canvas { largura, altura, fps, duracao_seg, fundo } => {
-                NodeParams::Canvas(ProjetoConfig {
+                NodeParams::Canvas(ProjectConfig {
                     largura, altura, fps, duracao_seg,
                     fundo: crate::domain::Color::from_rgba(
                         fundo[0], fundo[1], fundo[2], fundo[3],
@@ -312,7 +306,6 @@ impl TryFrom<NodeParamsJson> for NodeParams {
     }
 }
 
-/// Nó serializável: tipo (rótulo), posição e params em JSON.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct NoJson {
     pub tipo: String,
@@ -321,7 +314,6 @@ pub struct NoJson {
     pub params: NodeParamsJson,
 }
 
-/// Aresta serializável: índices de origem/destino e portos.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ArestaJson {
     pub de: usize,
@@ -332,7 +324,6 @@ pub struct ArestaJson {
     pub entrada_comp: Option<usize>,
 }
 
-/// Snapshot completo do projeto em disco.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ProjetoArquivo {
     pub versao: u32,
@@ -405,5 +396,3 @@ impl ProjetoArquivo {
         })
     }
 }
-
-
