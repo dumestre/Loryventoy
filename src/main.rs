@@ -2,6 +2,7 @@ mod app;
 mod playback;
 mod biblioteca;
 mod domain;
+mod error;
 mod nodes;
 mod procedural;
 mod dsl;

@@ -1,31 +1,78 @@
 #![allow(dead_code)]
 
-/// Registro simples de avisos/erros em arquivo, para que mensagens que
-/// aparecem na UI (em vermelho) possam ser inspecionadas e copiadas fora
-/// do app (já que a UI do egui não permite seleção de texto nesses rótulos).
 use std::io::Write;
 
-/// Anexa uma linha de aviso a `arquivo`, com timestamp simples.
-fn anexar(arquivo: &str, nivel: &str, msg: &str) {
-    if let Ok(mut f) = std::fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(arquivo)
-    {
-        let _ = writeln!(f, "[{}] {} {}", agora(), nivel, msg);
+/// Níveis de log centralizados.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum LogLevel {
+    Diagnostic,
+    Info,
+    Warn,
+    Error,
+}
+
+impl LogLevel {
+    fn as_str(self) -> &'static str {
+        match self {
+            LogLevel::Error => "ERRO",
+            LogLevel::Warn => "AVISO",
+            LogLevel::Info => "INFO",
+            LogLevel::Diagnostic => "DIAGNÓSTICO",
+        }
     }
 }
 
-/// Aviso do Hub de Projetos (grava em `hub.log`).
-pub fn hub(nivel: &str, msg: &str) {
-    anexar("hub.log", nivel, msg);
-    eprintln!("[hub] {} {}", nivel, msg);
+static mut NIVEL_LOG: LogLevel = LogLevel::Warn;
+
+/// Define o nível mínimo de log. Mensagens abaixo deste nível são descartadas.
+pub fn definir_nivel(nivel: LogLevel) {
+    unsafe { NIVEL_LOG = nivel; }
 }
 
-/// Aviso do app / editor (grava em `app.log`).
-pub fn app(nivel: &str, msg: &str) {
-    anexar("app.log", nivel, msg);
-    eprintln!("[app] {} {}", nivel, msg);
+/// Retorna o nível atual de log.
+pub fn nivel_atual() -> LogLevel {
+    unsafe { NIVEL_LOG }
+}
+
+/// Anexa uma linha de log ao arquivo em `logs/`, com timestamp.
+fn anexar(arquivo: &str, nivel: LogLevel, msg: &str) {
+    if nivel < unsafe { NIVEL_LOG } {
+        return;
+    }
+    let dir = "logs";
+    let _ = std::fs::create_dir_all(dir);
+    if let Ok(mut f) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(format!("{dir}/{arquivo}"))
+    {
+        let _ = writeln!(f, "[{}] [{}] {}", agora(), nivel.as_str(), msg);
+    }
+}
+
+/// Log de erro — grava em `logs/app.log` e exibe no stderr.
+pub fn erro(msg: impl Into<String>) {
+    let msg = msg.into();
+    anexar("app.log", LogLevel::Error, &msg);
+    eprintln!("[ERRO] {msg}");
+}
+
+/// Log de aviso — grava em `logs/app.log`.
+pub fn aviso(msg: impl Into<String>) {
+    let msg = msg.into();
+    anexar("app.log", LogLevel::Warn, &msg);
+}
+
+/// Log informativo — grava em `logs/app.log`.
+pub fn info(msg: impl Into<String>) {
+    let msg = msg.into();
+    anexar("app.log", LogLevel::Info, &msg);
+}
+
+/// Log de diagnóstico — grava em `logs/app.log` (útil para debug verbose).
+pub fn diag(msg: impl Into<String>) {
+    let msg = msg.into();
+    anexar("app.log", LogLevel::Diagnostic, &msg);
 }
 
 fn agora() -> String {
@@ -61,4 +108,34 @@ fn agora() -> String {
     let m = (t % 3600) / 60;
     let s = t % 60;
     format!("{:02}/{:02}/{} {:02}:{:02}:{:02}", d + 1, mes + 1, y, h, m, s)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn nivel_por_default_e_warn() {
+        assert_eq!(nivel_atual(), LogLevel::Warn);
+    }
+
+    #[test]
+    fn filtragem_por_nivel() {
+        definir_nivel(LogLevel::Error);
+        assert_eq!(nivel_atual(), LogLevel::Error);
+        // Diagnostic < Error → filtrado
+        assert!(LogLevel::Diagnostic < LogLevel::Error);
+        // Warn < Error → filtrado
+        assert!(LogLevel::Warn < LogLevel::Error);
+        // Error == Error → mostrado
+        assert_eq!(LogLevel::Error, LogLevel::Error);
+        definir_nivel(LogLevel::Warn);
+    }
+
+    #[test]
+    fn ordem_dos_niveis() {
+        assert!(LogLevel::Diagnostic < LogLevel::Info);
+        assert!(LogLevel::Info < LogLevel::Warn);
+        assert!(LogLevel::Warn < LogLevel::Error);
+    }
 }

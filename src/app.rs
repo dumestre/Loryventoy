@@ -2,6 +2,8 @@ use eframe::egui;
 use egui::Vec2;
 use std::time::Instant;
 
+use crate::log::{diag, erro, info};
+
 use crate::theme;
 
 use crate::domain::Project;
@@ -247,17 +249,17 @@ impl Loryventoy {
         match save_project(&caminho, &proj) {
             Ok(()) => {
                 let msg = format!("salvo em {}", caminho.display());
-                eprintln!("[Loryventoy] {msg}");
+                info(&msg);
                 self.projeto_aviso = Some(msg);
             }
             Err(PersistenceError::Parse(e)) => {
                 let msg = format!("falha ao serializar: {e}");
-                eprintln!("[Loryventoy] {msg}");
+                erro(&msg);
                 self.projeto_aviso = Some(msg);
             }
             Err(e) => {
                 let msg = format!("não foi possível salvar {}: {e}", caminho.display());
-                eprintln!("[Loryventoy] {msg}");
+                erro(&msg);
                 self.projeto_aviso = Some(msg);
             }
         }
@@ -274,12 +276,12 @@ impl Loryventoy {
                 self.script_text = proj.script_text.clone();
                 self.script_erro = None;
                 let msg = format!("carregado de {}", caminho.display());
-                eprintln!("[Loryventoy] {msg}");
+                info(&msg);
                 self.projeto_aviso = Some(msg);
             }
             Err(e) => {
                 let msg = format!("não foi possível carregar: {e}");
-                eprintln!("[Loryventoy] {msg}");
+                erro(&msg);
                 self.projeto_aviso = Some(msg);
             }
         }
@@ -630,12 +632,12 @@ impl eframe::App for Loryventoy {
 
                 self.perf_frame += 1;
                 if self.perf_frame % 60 == 0 {
-                    eprintln!(
-                        "[perf] preview={preview:.1}ms  graph={graph:.1}ms  timeline={tl:.1}ms",
+                    diag(&format!(
+                        "preview={:.1}ms  graph={:.1}ms  timeline={:.1}ms",
                         preview = self.perf_preview_ms,
                         graph = self.perf_graph_ms,
                         tl = self.perf_timeline_ms,
-                    );
+                    ));
                 }
 
             });

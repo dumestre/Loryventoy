@@ -20,6 +20,7 @@ dependencies = [
  "serde_json",
  "slotmap",
  "smallvec",
+ "thiserror 1.0.69",
  "winres",
 ]
 

@@ -16,6 +16,7 @@ use eframe::egui::epaint::{
 };
 use eframe::egui::{Color32, ColorImage, Pos2, Rect, Shape, Vec2};
 
+use crate::log::aviso;
 use crate::procedural::{CenaPreview, PenPath, PreviewData, TextoItem};
 use crate::procedural::render::{color_to_color32, shape_to_egui};
 use crate::ui::preview::PreviewPanel;
@@ -441,11 +442,11 @@ mod tests {
         if let Some(ref r) = test_result {
             let has_pixels = r.imagem.pixels.iter().any(|c| c.a() > 0);
             if !has_pixels {
-                eprintln!("SKIP: raster retornou imagem vazia (sem pixels alpha > 0)");
+                aviso("SKIP: raster retornou imagem vazia (sem pixels alpha > 0)");
                 return;
             }
         } else {
-            eprintln!("SKIP: nenhuma fonte do sistema encontrada");
+            aviso("SKIP: nenhuma fonte do sistema encontrada");
             return;
         }
 

@@ -23,6 +23,7 @@ homepage = "https://github.com/dumestre/Loryventoy"
 eframe = "0.35"
 egui = "0.35"
 egui_extras = { version = "0.35", features = ["svg", "image"] }
+thiserror = "1"
 slotmap = "1.0"
 smallvec = "1.11.2"
 serde = { version = "1.0", features = ["derive"] }

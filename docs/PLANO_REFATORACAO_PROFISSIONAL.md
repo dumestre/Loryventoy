@@ -1334,41 +1334,26 @@ pub struct Loryventoy {
 
 ---
 
-## Fase 11 — Padronizar erros, logs e diagnósticos
+## Fase 11 — Padronizar erros, logs e diagnósticos ### CONCLUÍDA
 
-### Objetivo
-
-Substituir falhas silenciosas e mensagens inconsistentes.
-
-### Erros recomendados
-
-```rust
-pub enum AppError {
-    Io(std::io::Error),
-    InvalidProject(String),
-    InvalidNode(String),
-    InvalidConnection(String),
-    Parse(ParseError),
-    Evaluation(String),
-    Export(String),
-}
-```
-
-Usar `thiserror` se for adequado ao projeto.
-
-### Regras de log
-
-- não usar `eprintln!` espalhado;
-- centralizar logs;
-- distinguir erro, aviso, informação e diagnóstico;
-- não registrar conteúdo sensível sem necessidade;
-- não deixar arquivos de debug no diretório raiz;
-- permitir desligar logs verbosos;
-- métricas de performance devem ser opcionais.
-
----
-
-## Fase 12 — Testes de regressão
+### O que foi feito
+1. **`thiserror` adicionado** ao `Cargo.toml`.
+2. **`src/error.rs` criado** com `AppError` enum usando `#[derive(Error)]`:
+   - `Io(std::io::Error)` — via `#[from]`
+   - `Parse(String)`
+   - `InvalidProject(String)`
+   - `Dsl(String)`
+   - `Export(String)`
+   - `Evaluation(String)`
+3. **`src/log.rs` refatorado** com:
+   - `LogLevel` enum (Error, Warn, Info, Diagnostic) com `PartialOrd`/`Ord`
+   - `definir_nivel()` / `nivel_atual()` para controle de verbosidade
+   - Logs escritos em `logs/app.log` (não mais raiz do projeto)
+   - Funções: `erro()`, `aviso()`, `info()`, `diag()`
+   - Filtro por nível — mensagens abaixo do nível mínimo são descartadas
+4. **`eprintln!` eliminado** de `app.rs` (salvar/carregar substituídos por `info!`/`erro!`; métricas de performance por `diag!`)
+5. **`eprintln!` eliminado** de `export.rs` (substituídos por `aviso!`)
+6. `src/log.rs` adicionado a `src/main.rs` e `src/error.rs` adicionado
 
 ### Objetivo
 
