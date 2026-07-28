@@ -51,16 +51,19 @@ impl<T: PartialEq + Clone> History<T> {
         !self.redo_stack.is_empty()
     }
 
+    #[allow(dead_code)] // usado em testes; diagnósticos (Fase 11)
     pub fn len(&self) -> usize {
         self.stack.len()
     }
 
+    #[allow(dead_code)]
     pub fn lim(&self) -> usize {
         self.limit
     }
 }
 
 impl<T: PartialEq + Clone + Serialize> History<T> {
+    #[allow(dead_code)] // serialização para debug/export
     pub fn stack_json(&self) -> String {
         serde_json::to_string(&self.stack).unwrap_or_default()
     }

@@ -18,10 +18,12 @@ impl Color {
         Self { r, g, b, a }
     }
 
+    #[allow(dead_code)] // reservado para adapters de render (premultiplied vs straight alpha)
     pub const fn from_rgba_unmultiplied(r: u8, g: u8, b: u8, a: u8) -> Self {
         Self { r, g, b, a }
     }
 
+    #[allow(dead_code)]
     pub const fn from_rgba_premultiplied(r: u8, g: u8, b: u8, a: u8) -> Self {
         Self { r, g, b, a }
     }

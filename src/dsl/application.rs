@@ -18,7 +18,9 @@ pub trait Application {
     // ===== Queries de nó =====
     fn obter_tipo(&self, idx: Self::NodeId) -> TipoNo;
     fn obter_params_mut(&mut self, idx: Self::NodeId) -> Option<&mut NodeParams>;
+    #[allow(dead_code)] // patch DSL
     fn posicao_no(&self, idx: Self::NodeId) -> Option<Pos2>;
+    #[allow(dead_code)]
     fn iterar_nos(&self) -> Vec<Self::NodeId>;
 
     // ===== Conexões =====
@@ -36,6 +38,7 @@ pub trait Application {
         dst: Self::NodeId,
         entrada_idx: usize,
     );
+    #[allow(dead_code)] // patch DSL
     fn remover_aresta(
         &mut self,
         src: Self::NodeId,
@@ -53,14 +56,18 @@ pub trait Application {
 
     // ===== Camadas / cenas =====
     fn sync_layer_ports(&mut self);
+    #[allow(dead_code)] // patch DSL
     fn limpar_grupos(&mut self);
+    #[allow(dead_code)]
     fn cena_ativa(&self) -> Option<Self::NodeId>;
+    #[allow(dead_code)]
     fn definir_cena_ativa(&mut self, idx: Self::NodeId);
 
     // ===== Configuração do projeto =====
     fn aplicar_project_config(&mut self, bloco: &ProjectBlock);
 
     // ===== Utilitários =====
+    #[allow(dead_code)] // patch DSL
     fn encontrar_posicao_livre(&self) -> Pos2;
     fn porto_saida_por_nome(&self, tipo: TipoNo, nome: &str) -> Option<usize>;
     fn porto_entrada_por_nome(&self, tipo: TipoNo, nome: &str) -> Option<usize>;
@@ -124,6 +131,7 @@ pub fn aplicar_script<A: Application>(app: &mut A, codigo: &str) -> Result<(), S
 }
 
 /// Aplica patch DSL incremental.
+#[allow(dead_code)] // aguardando integração UI/IA (ver patch_dsl.rs)
 pub fn aplicar_patch<A: Application>(app: &mut A, codigo: &str) -> Result<(), ScriptError> {
     let cmds = crate::dsl::patch_dsl::parse_patch(codigo)?;
 
@@ -512,6 +520,7 @@ fn conectar_edge<A: Application>(app: &mut A, e: &EdgeDef) -> Result<(), ScriptE
     Ok(())
 }
 
+#[allow(dead_code)]
 fn conectar_patch<A: Application>(app: &mut A, c: &Conexao) -> Result<(), ScriptError> {
     let src = *app
         .dsl_ids()
@@ -543,6 +552,7 @@ fn conectar_patch<A: Application>(app: &mut A, c: &Conexao) -> Result<(), Script
     Ok(())
 }
 
+#[allow(dead_code)]
 fn desconectar_patch<A: Application>(app: &mut A, c: &Conexao) -> Result<(), ScriptError> {
     let src = *app
         .dsl_ids()
@@ -566,6 +576,7 @@ fn desconectar_patch<A: Application>(app: &mut A, c: &Conexao) -> Result<(), Scr
     Ok(())
 }
 
+#[allow(dead_code)]
 fn resolver_conexao<A: Application>(
     app: &A,
     c: &Conexao,

@@ -1,6 +1,7 @@
 # Loryventoy — Agent Memory
 
 ## Project Overview
+
 Rust application with `eframe/egui`, node-based graph editor, procedural timeline, custom DSL, JSON serialization.
 
 ## Status by Phase
@@ -24,24 +25,27 @@ Rust application with `eframe/egui`, node-based graph editor, procedural timelin
 ## Completed Phases in Detail
 
 ### Fase 2/3 — Domain Extraction & Project as Source of Truth
+
 - Created `src/domain/` with domain-independent types:
   - `Color` (RGBA, no egui dependency) in `domain/color.rs`
   - `ProjectConfig` in `domain/project_config.rs`
-  - `NodeParams`, 9 param structs in `domain/params.rs` (params in `domain/` subfolder)
+  - `NodeParams`, 9 param structs in `domain/params.rs`
   - `Project`, `ProjectNode`, `ProjectEdge` in `domain/project.rs`
   - `TipoNo` in `domain/node_type.rs`
   - `LayerEntry` in `domain/layer_entry.rs` (colors use domain `Color`, not egui `Color32`)
   - math re-exports (`retangulo_rot`, `elipse_rot`, `poligono_regular`, `estrela`) in `domain/math.rs`
   - `Animation` types (`Easing`, `LoopMode`, `AnimSeg`) in `domain/animation.rs`
 - `GraphPanel::to_project()` / `load_project()` use `domain::Project` as single source of truth
-- Removed `from_graph()`/`to_graph()` from `ProjetoArquivo` (replaced by `from_project()`/`to_project()`)
+- Persistence uses `from_project()` / `to_project()` via repository API
 - `app.rs` updated for new API
 
-### Fase 4 — GraphPanel Split (src/graph_editor/)
-Split `mod.rs` (~1106 lines) into specialized submodules:
+### Fase 4 — GraphPanel Split (`src/graph_editor/`)
+
+Split into specialized submodules:
+
 - `node_factory.rs` — `criar_nos_padrao`, `adicionar_no_em`, `adicionar_no`
 - `layer_ops.rs` — `cenas_disponiveis`, `normalizar_cena`, `sync_layer_ports`, CRUD layers
-- `layout.rs` — 6 spatial query methods (hit test, port positions, coordinates)
+- `layout.rs` — spatial query methods (hit test, port positions, coordinates)
 - `search.rs` — text search by name/type
 - `types.rs` — type aliases and constants
 - `ports.rs` — port-related utilities
@@ -57,7 +61,6 @@ Split `mod.rs` (~1106 lines) into specialized submodules:
 - Undo/redo still operates on graph snapshots directly
 - `len()`, `lim()`, `stack_json()` methods exist but are unused (`allow(dead_code)`)
 
-### Fase 6 — Persistence Separation (src/infrastructure/persistence/)
 - `src/projeto_arquivo.rs` deleted; content redistributed:
   - `src/infrastructure/persistence/format.rs` — JSON mirror types + `From`/`TryFrom` conversions (~350 lines)
   - `src/infrastructure/persistence/migrations.rs` — versioned migration system (`VERSAO_ATUAL = 1`)
@@ -76,27 +79,16 @@ Split `mod.rs` (~1106 lines) into specialized submodules:
 - `GraphPanel implements Application` (`type NodeId = NodeId`)
 - `app.rs` calls `crate::dsl::evaluator::aplicar_script(&mut self.graph, &text)`
 
-### Fase 8 — Procedural Evaluation/Rendering Separation (src/procedural/)
+### Fase 8 — Procedural Evaluation/Rendering Separation (`src/procedural/`)
+
 - `src/procedural.rs` deleted; replaced by `src/procedural/mod.rs`
 - `src/procedural/domain.rs` — pure evaluation logic, NO egui dependency
   - Types: `ShapeGenerator`, `PenPath`, `TextoItem`, `PreviewData`, `CenaPreview`, `LayerPreview`, `Shape`, `AnimDriver`, `RuidoDriver`
   - Functions: `generate()`, `trim_path_pts()`, `fbm()`, `ruido_offset()`
-  - `Trim_path_pts` uses `domain::Pos2` (glam::Vec2), NOT egui's `Pos2`
-- `src/procedural/render.rs` — domain → egui conversion adapter
-  - `shape_to_egui()` converts `domain::Shape` → `egui::Shape`
-  - `generate_shape_egui()` evaluates + converts in one step
-  - `color_to_color32()` converts `domain::Color` → `Color32`
-- `src/graph_editor/preview.rs` uses `preview_data()` → builds `PreviewData` (domain types), then converts for rendering
-- `src/ui/preview.rs`:
-  - Uses `shape_to_egui()` to convert domain shapes before `aplicar_opacidade()` and `translate_shape()`
-  - Uses `color_to_color32()` for all domain Color → Color32 conversions (text, pens, background)
-  - Builds `pts` buffer using `domain::Pos2` (glam::Vec2) — NOT egui's `Pos2` — for `trim_path_pts()`
-  - Uses `domain::Vec2` instead of removed `GVec2` alias
-- `src/export.rs`:
-  - Uses `shape_to_egui()` + `traduzir()` for domain→egui conversion
-  - Uses `color_to_color32()` for pen, text, and background colors
-  - Test code uses `domain::Color::from_rgb()` (no `YELLOW`/`RED` constants exist on domain `Color`)
-- `src/dsl/pen.rs`: all `GVec2` references migrated to `crate::domain::Vec2` (~15 occurrences)
+  - Uses `domain::Pos2` / `domain::Vec2` (glam), NOT egui types
+- `src/procedural/render.rs` — domain → egui adapter
+  - `shape_to_egui()`, `generate_shape_egui()`, `color_to_color32()`
+- Consumers updated: `graph_editor/preview.rs`, `ui/preview.rs`, `export.rs`, `dsl/pen.rs`
 
 ## In Progress Phases
 
@@ -174,6 +166,7 @@ The following infrastructure exists but is not yet wired into the application fl
 | `icon_ico` | `build.rs:37` | Unused variable |
 
 ## Key Type Relationships
+
 - `domain::Color` (r/g/b/a u8) ↔ `egui::Color32` — use `procedural::render::color_to_color32()`
 - `domain::Pos2` = `glam::Vec2` ↔ `egui::Pos2` — different types, same fields
 - `domain::Vec2` = `glam::Vec2` ↔ `eframe::egui::Vec2` — different types, same fields
