@@ -4,33 +4,25 @@
 
 Rust application with `eframe/egui`, node-based graph editor, procedural timeline, custom DSL, JSON serialization.
 
-Plano completo: [`docs/PLANO_REFATORACAO_PROFISSIONAL.md`](docs/PLANO_REFATORACAO_PROFISSIONAL.md)
-
-## Status das Fases
+## Status by Phase
 
 | Fase | Descrição | Status |
-|------|-----------|--------|
-| 0–1 | Proteção, inventário, padronização | 🟡 Parcial (`cargo fmt --check` ainda difere) |
-| 2–3 | Domínio independente + `Project` como fonte de verdade | ✅ Concluída |
-| 4 | Dividir `GraphPanel` em submódulos | ✅ Concluída |
-| 5 | Refatorar undo/redo sobre `Project` | 🟡 Parcial — `History<T>` genérico existe; undo ainda acoplado ao grafo |
-| 6 | Separar persistência (`infrastructure/persistence/`) | ✅ Concluída |
-| 7 | Separar DSL de aplicação (`src/dsl/`) | ✅ Concluída |
+|---|---|---|
+| 0 | Proteção e inventário | ✅ Concluída |
+| 1 | Padronização de qualidade | 🟡 Parcial (formatting preexistente não resolvida) |
+| 2 | Criar domínio independente da UI | ✅ Concluída |
+| 3 | Criar `Project` como fonte de verdade | ✅ Concluída |
+| 4 | Dividir `GraphPanel` em módulos menores | ✅ Concluída |
+| 5 | Refatorar undo/redo | 🟡 Parcial (`History<T>` existe, undo ainda acoplado ao grafo) |
+| 6 | Separar persistência e migrações | ✅ Concluída |
+| 7 | Separar DSL de aplicação | ✅ Concluída |
 | 8 | Separar avaliação procedural e renderização | ✅ Concluída |
-| 9 | Dividir inspector (`node_component.rs` → `ui/inspector/`) | 🟡 Iniciada — wrapper fino; implementação ainda monolítica (~1200 linhas) |
-| 10 | Refatorar app principal (`Loryventoy`) | ✅ Concluída — `PlaybackState` extraído; `app.rs` ainda ~995 linhas |
-| 11 | Padronizar erros, logs e diagnósticos | 🟡 Parcial — `AppError` + `log.rs` criados; `AppError` ainda não integrado ao fluxo |
+| 9 | Dividir o inspector | 🟡 Iniciada (wrapper fino em `ui/inspector/mod.rs`) |
+| 10 | Refatorar `Loryventoy` | ✅ Concluída (`PlaybackState`, rename `MovimentoApp` → `Loryventoy`) |
+| 11 | Padronizar erros, logs e diagnósticos | 🟡 Parcial (`AppError`/`log.rs` existem, mas `AppError` não está no fluxo da app) |
 | 12 | Testes de regressão adicionais | ❌ Pendente |
 
-## Current Status
-
-```text
-cargo check       OK — sem warnings
-cargo test --all  OK — 87 testes
-cargo fmt --check diferenças preexistentes (não aplicadas)
-```
-
-## Fases Concluídas (detalhe)
+## Completed Phases in Detail
 
 ### Fase 2/3 — Domain Extraction & Project as Source of Truth
 
@@ -42,6 +34,7 @@ cargo fmt --check diferenças preexistentes (não aplicadas)
   - `TipoNo` in `domain/node_type.rs`
   - `LayerEntry` in `domain/layer_entry.rs` (colors use domain `Color`, not egui `Color32`)
   - math re-exports (`retangulo_rot`, `elipse_rot`, `poligono_regular`, `estrela`) in `domain/math.rs`
+  - `Animation` types (`Easing`, `LoopMode`, `AnimSeg`) in `domain/animation.rs`
 - `GraphPanel::to_project()` / `load_project()` use `domain::Project` as single source of truth
 - Persistence uses `from_project()` / `to_project()` via repository API
 - `app.rs` updated for new API
@@ -54,24 +47,35 @@ Split into specialized submodules:
 - `layer_ops.rs` — `cenas_disponiveis`, `normalizar_cena`, `sync_layer_ports`, CRUD layers
 - `layout.rs` — spatial query methods (hit test, port positions, coordinates)
 - `search.rs` — text search by name/type
-- `mod.rs` — coordinator `show()` + connections + basic queries (~939 linhas atuais)
+- `types.rs` — type aliases and constants
+- `ports.rs` — port-related utilities
+- `selection.rs` — selection state and operations
+- `groups.rs` — group operations
+- `rendering.rs` — rendering helpers
+- `save.rs` — save-related logic
+- `mod.rs` — coordinator `show()` + connections + basic queries (~937 lines)
 
-### Fase 6 — Persistence Separation (`src/infrastructure/persistence/`)
+### Fase 5 — Undo/Redo (Partial)
+- `History<T>` generic struct exists in `src/history.rs` with `undo()`, `redo()`, `push()`, `clear()`
+- `History<T>` is **not yet integrated** as the undo/redo backend for `GraphPanel`
+- Undo/redo still operates on graph snapshots directly
+- `len()`, `lim()`, `stack_json()` methods exist but are unused (`allow(dead_code)`)
 
 - `src/projeto_arquivo.rs` deleted; content redistributed:
-  - `format.rs` — JSON mirror types + `From`/`TryFrom` conversions (~350 lines)
-  - `migrations.rs` — versioned migration system (`VERSAO_ATUAL = 1`)
-  - `repository.rs` — `load_project()`, `save_project()`, `load_from_str()` with `PersistenceError`
-  - `mod.rs` — public API re-export only
+  - `src/infrastructure/persistence/format.rs` — JSON mirror types + `From`/`TryFrom` conversions (~350 lines)
+  - `src/infrastructure/persistence/migrations.rs` — versioned migration system (`VERSAO_ATUAL = 1`)
+  - `src/infrastructure/persistence/repository.rs` — `load_project()`, `save_project()`, `load_from_str()` with `PersistenceError`
+  - `src/infrastructure/persistence/mod.rs` — public API re-export only
 - `src/main.rs` declares `mod infrastructure`
-- `src/app.rs` uses repository API
+- `src/app.rs` uses repository API (`load_from_str`, `load_project`, `save_project`) instead of direct `ProjetoArquivo` usage
 
-### Fase 7 — DSL/Application Decoupling (`src/dsl/`)
-
-- `src/graph_editor/dsl.rs` deleted; logic moved to `src/dsl/`
-- `src/dsl/application.rs` — `Application` trait, `aplicar_script`, `aplicar_patch`
+### Fase 7 — DSL/Application Decoupling (src/dsl/)
+- `src/graph_editor/dsl.rs` (641 lines) deleted, logic moved to `src/dsl/`
+- `src/dsl/application.rs` — `Application` trait (associated type `NodeId`), functions `aplicar_script<A: Application>`, `aplicar_patch<A: Application>`
 - `src/dsl/evaluator.rs` — re-exports `aplicar_script`, `aplicar_patch`
-- `src/dsl/patch_dsl.rs` — parser de patch incremental (pronto, aguardando UI/IA)
+- `src/dsl/pen.rs` — Pen DSL lexer/parser/evaluator
+- `src/dsl/project_dsl.rs` — Project DSL parser and validator
+- `src/dsl/patch_dsl.rs` — Patch DSL for incremental edits
 - `GraphPanel implements Application` (`type NodeId = NodeId`)
 - `app.rs` calls `crate::dsl::evaluator::aplicar_script(&mut self.graph, &text)`
 
@@ -86,36 +90,80 @@ Split into specialized submodules:
   - `shape_to_egui()`, `generate_shape_egui()`, `color_to_color32()`
 - Consumers updated: `graph_editor/preview.rs`, `ui/preview.rs`, `export.rs`, `dsl/pen.rs`
 
-### Fase 10 — App Principal (`Loryventoy`)
+## In Progress Phases
 
-- `MovimentoApp` renomeado para `Loryventoy` em `app.rs` e `main.rs`
-- Criado `src/playback.rs` com `PlaybackState` — play/pause, FPS, acumulador de frames
-- App delega playback para `self.playback.update()`
-- Prefixo de log `[Movimento]` → `[Loryventoy]`
+### Fase 9 — Dividir o inspector (INICIADA 🟡)
+- Created `src/ui/inspector/mod.rs` as a thin wrapper over `node_component.rs`
+- `mod.rs` re-exports `AcaoInspector` from `node_component` without behavioral change
+- `node_component.rs` (1198 lines) still contains all inspector logic in a single file
+- Next steps: split into `canvas.rs`, `scene.rs`, `layer.rs`, `shape.rs`, `text.rs`, `pen.rs`, `noise.rs`, `animation.rs`, `transform.rs`, `output.rs`
 
-## Fases Parciais / Em Andamento
+### Fase 10 — Refatorar `Loryventoy` (CONCLUÍDA ✅)
+- Created `src/playback.rs` with `PlaybackState` — struct dedicated to playback state (play/pause, FPS, frame accumulator, timestamp) with `update()` method
+- Renamed `MovimentoApp` → `Loryventoy` in `src/app.rs` and `src/main.rs`
+- Renamed log prefix `[Movimento]` → `[Loryventoy]` in `src/app.rs`
+- `Loryventoy` now contains only UI composition (panels, menus, DSL windows, layout), delegating playback to `self.playback.update()`
 
-### Fase 5 — Undo/Redo
+### Fase 11 — Padronizar erros, logs e diagnósticos (PARCIAL 🟡)
+- `thiserror` added to `Cargo.toml`
+- `src/error.rs` created with `AppError` enum using `#[derive(Error)]`:
+  - `Io(std::io::Error)` via `#[from]`
+  - `Parse(String)`
+  - `InvalidProject(String)`
+  - `Dsl(String)`
+  - `Export(String)`
+  - `Evaluation(String)`
+- `src/log.rs` refactored with:
+  - `LogLevel` enum (Error, Warn, Info, Diagnostic) with `PartialOrd`/`Ord`
+  - `definir_nivel()` / `nivel_atual()` for verbosity control
+  - Logs written to `logs/app.log` (not project root)
+  - Functions: `erro()`, `aviso()`, `info()`, `diag()`
+  - Filter by level — messages below minimum are discarded
+- `eprintln!` eliminated from `app.rs` (save/load use `info!`/`erro!`; performance metrics use `diag!`)
+- `eprintln!` eliminated from `export.rs` (replaced by `aviso!`)
+- `src/log.rs` added to `src/main.rs`; `src/error.rs` added to `src/main.rs`
+- **Not yet integrated**: `AppError` is never imported or used in `app.rs` or anywhere in the app flow — it exists as infrastructure but is not wired into the application logic
 
-- `src/history.rs` — `History<T>` genérico com push/undo/redo
-- GraphPanel usa `History<Project>` para snapshots
-- Pendente: histórico 100% sobre operações de domínio, transações DSL formalizadas
+## Pending Phases
 
-### Fase 9 — Inspector
+### Fase 12 — Testes de regressão adicionais (PENDENTE ❌)
+- Domain tests (project creation, defaults, validation, connections, IDs, layers, scenes, animation, easing, noise, trim, geometry)
+- Application tests (add/remove nodes, connect/disconnect, undo/redo, grouping, selection, parameter changes, command application, transactional failures)
+- Persistence tests (save/load, version migration, corrupted files, invalid types, invalid connections)
+- DSL tests (project parser, patch parser, Pen DSL, line/column messages, port validation, transactional application + undo)
+- Rendering tests (deterministic preview, time points, loop modes, text, shapes, Pen, PNG export)
 
-- Criado `src/ui/inspector/mod.rs` como re-export fino de `node_component.rs`
-- Pendente: extrair editores por tipo de nó (`canvas.rs`, `scene.rs`, `layer.rs`, `shape.rs`, `text.rs`, `pen.rs`, etc.) e `common.rs` para helpers compartilhados
+## Current Metrics
+- `cargo test --all` — **87/87 PASS**
+- `cargo check` — compiles with **18 warnings** (1 build script + 15 binary + 2 preexisting)
+- `cargo fmt --check` — preexistent formatting differences not yet fixed
+- `src/app.rs` — 994 lines
+- `src/graph_editor/mod.rs` — 937 lines
+- `src/ui/node_component.rs` — 1198 lines
 
-### Fase 11 — Erros, Logs e Diagnósticos
+## Infraestrutura Pronta (Não Integrada)
 
-- `src/error.rs` — `AppError` enum com `thiserror` (Io, Parse, InvalidProject, Dsl, Export, Evaluation)
-- `src/log.rs` — `LogLevel`, `erro!`/`aviso!`/`info!`/`diag!`, logs em `logs/app.log`
-- `eprintln!` eliminado de `app.rs` e `export.rs`
-- Pendente: integrar `AppError` nos fluxos de salvar/carregar/DSL/export; remover `#![allow(dead_code)]` de `error.rs` após integração
+The following infrastructure exists but is not yet wired into the application flow (silenced with `allow(dead_code)`):
 
-## Próximo Passo Recomendado
-
-**Fase 9** — dividir `src/ui/node_component.rs` (~1200 linhas) em módulos em `src/ui/inspector/`, mantendo o projeto compilando a cada extração.
+| Item | Location | Status |
+|---|---|---|
+| `AppError` enum | `src/error.rs` | Defined but never imported or used |
+| `AppError::is_validation()` | `src/error.rs:25` | Never called |
+| `aplicar_patch()` | `src/dsl/application.rs:127` | Never called |
+| `conectar_patch()` | `src/dsl/application.rs:515` | Never called |
+| `desconectar_patch()` | `src/dsl/application.rs:546` | Never called |
+| `resolver_conexao()` | `src/dsl/application.rs:569` | Never called |
+| `indice_porto()` | `src/dsl/project_dsl.rs:506` | Never called |
+| `alias_porto()` | `src/dsl/project_dsl.rs:525` | Never called |
+| `proxima_pos_livre()` | `src/graph_editor/mod.rs:789` | Never called |
+| `remover_aresta_entre()` | `src/graph_editor/mod.rs:799` | Never called |
+| `History::len()` / `History::lim()` | `src/history.rs:54,58` | Never called |
+| `History::stack_json()` | `src/history.rs:64` | Never called |
+| `PenPath.erro_eval` | `src/procedural/domain.rs:179` | Never read |
+| `generate_shape_egui()` | `src/procedural/render.rs:52` | Never called |
+| `Color::from_rgba_unmultiplied()` | `src/domain/color.rs:21` | Never called |
+| `Color::from_rgba_premultiplied()` | `src/domain/color.rs:25` | Never called |
+| `icon_ico` | `build.rs:37` | Unused variable |
 
 ## Key Type Relationships
 
@@ -124,11 +172,8 @@ Split into specialized submodules:
 - `domain::Vec2` = `glam::Vec2` ↔ `eframe::egui::Vec2` — different types, same fields
 - `domain::Shape` (procedural, no egui) ↔ `egui::Shape` — use `procedural::render::shape_to_egui()`
 
-## Infraestrutura Pronta (não integrada)
+## Architecture Target
+See [`docs/PLANO_REFATORACAO_PROFISSIONAL.md`](docs/PLANO_REFATORACAO_PROFISSIONAL.md) for the full architecture target, phase plan, contracts, and quality criteria.
 
-Código preparado para fases futuras, silenciado com `#[allow(dead_code)]` documentado:
-
-- `AppError` e `is_validation()` — Fase 11
-- `aplicar_patch` + métodos do trait `Application` usados só pelo patch DSL — Fase 7/IA
-- `parse_patch` / `patch_dsl.rs` — aguardando UI ou agente IA
-- `generate_shape_egui`, `History::stack_json`, `erro_eval` em `PenPath` — conveniência/diagnóstico
+## Next Recommended Step
+**Finish Fase 9** — split `node_component.rs` (1198 lines) into individual inspector editors per node type, keeping the project compiling at each step.
