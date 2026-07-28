@@ -1,7 +1,10 @@
-use super::{PortSpec, NodeParams, ProjetoConfig};
+use super::{NodeParams, PortSpec, ProjetoConfig};
 
 pub(crate) fn portos() -> PortSpec {
-    PortSpec { entradas: &[], saidas: &[] }
+    PortSpec {
+        entradas: &[],
+        saidas: &[],
+    }
 }
 
 pub(crate) fn padrao() -> NodeParams {

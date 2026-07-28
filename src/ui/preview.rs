@@ -1,35 +1,19 @@
 use std::collections::HashMap;
 
-use eframe::egui::{
-    Color32,
-    CornerRadius,
-    CursorIcon,
-    Key,
-    Mesh,
-    PointerButton,
-    Pos2,
-    Rect,
-    Sense,
-    Shape,
-    Stroke,
-    StrokeKind,
-    TextureHandle,
-    TextureId,
-    Ui,
-    Vec2,
-};
 use eframe::egui::epaint::{EllipseShape, PathShape, RectShape, Vertex};
 use eframe::egui::TextureOptions;
+use eframe::egui::{
+    Color32, CornerRadius, CursorIcon, Key, Mesh, PointerButton, Pos2, Rect, Sense, Shape, Stroke,
+    StrokeKind, TextureHandle, TextureId, Ui, Vec2,
+};
 
-use crate::procedural::{PreviewData, trim_path_pts};
 use crate::procedural::render::{color_to_color32, shape_to_egui};
+use crate::procedural::{trim_path_pts, PreviewData};
 
 use crate::ui::scroll_delta;
 use crate::ui::text_raster::TextRaster;
 
-
 pub struct PreviewPanel {
-
     // deslocamento do pan (arrastar)
     pub offset: Vec2,
 
@@ -61,11 +45,8 @@ pub struct PreviewPanel {
     cache_pen_erros: Vec<String>,
 }
 
-
 impl PreviewPanel {
-
     pub fn new() -> Self {
-
         Self {
             offset: Vec2::ZERO,
             zoom: 1.0,
@@ -106,7 +87,6 @@ impl PreviewPanel {
         self.tempo
     }
 
-
     /// Ajusta o canvas da cena conforme a resolução do projeto (nó Canvas),
     /// preservando o aspect ratio. O maior lado é normalizado para uma base
     /// fixa, então o zoom continua controlando a escala visual.
@@ -119,15 +99,8 @@ impl PreviewPanel {
         self.cor_fundo = fundo;
     }
 
-
     // Aplica um fator de zoom mantendo o ponto `anchor` (tela) fixo
-    fn apply_zoom(
-        &mut self,
-        factor: f32,
-        anchor: Pos2,
-        screen_center: Pos2,
-    ) {
-
+    fn apply_zoom(&mut self, factor: f32, anchor: Pos2, screen_center: Pos2) {
         let new_zoom = (self.zoom * factor).clamp(0.1, 16.0);
         let factor = new_zoom / self.zoom;
 
@@ -136,36 +109,19 @@ impl PreviewPanel {
         self.zoom = new_zoom;
     }
 
-
-    pub fn show(
-        &mut self,
-        ui: &mut Ui,
-    ) {
-
-        let size = Vec2::new(
-            ui.available_width(),
-            ui.available_height(),
-        );
-
+    pub fn show(&mut self, ui: &mut Ui) {
+        let size = Vec2::new(ui.available_width(), ui.available_height());
 
         // Aloca a área e detecta drag (para o botão do meio)
-        let (rect, response) = ui.allocate_exact_size(
-            size,
-            Sense::drag(),
-        );
-
+        let (rect, response) = ui.allocate_exact_size(size, Sense::drag());
 
         // Tecla F com o cursor sobre a área: recentraliza e reseta o zoom
-        if response.hovered()
-            && ui.ctx().input(|i| i.key_pressed(Key::F))
-        {
+        if response.hovered() && ui.ctx().input(|i| i.key_pressed(Key::F)) {
             self.offset = Vec2::ZERO;
             self.zoom = 1.0;
         }
 
-
         let alt = ui.ctx().input(|i| i.modifiers.alt);
-
 
         // Gesto bruto independente da fonte (mouse, toque ou trackpad)
         let mut gesture = Vec2::ZERO;
@@ -194,10 +150,10 @@ impl PreviewPanel {
             }
         }
 
-
         if alt {
             // Alt + gesto = zoom seguindo o cursor (usa o componente vertical)
-            let anchor = ui.ctx()
+            let anchor = ui
+                .ctx()
                 .pointer_interact_pos()
                 .unwrap_or_else(|| rect.center());
             let factor = (-gesture.y * 0.01).exp();
@@ -209,7 +165,6 @@ impl PreviewPanel {
             ui.ctx().request_repaint();
         }
 
-
         // Cursor
         if response.dragged_by(PointerButton::Middle) {
             ui.ctx().set_cursor_icon(CursorIcon::Grabbing);
@@ -217,26 +172,15 @@ impl PreviewPanel {
             ui.ctx().set_cursor_icon(CursorIcon::Grab);
         }
 
-
         let painter = ui.painter().with_clip_rect(rect);
 
-
         // Fundo escuro da janela preview
-        painter.rect_filled(
-            rect,
-            CornerRadius::same(8),
-            Color32::from_rgb(22, 22, 30),
-        );
-
+        painter.rect_filled(rect, CornerRadius::same(8), Color32::from_rgb(22, 22, 30));
 
         // Canvas branco centralizado + offset do pan, na escala do zoom
         let scaled_size = self.canvas_size * self.zoom;
         let canvas_origin = rect.center() + self.offset - scaled_size / 2.0;
-        let canvas_rect = Rect::from_min_size(
-            canvas_origin,
-            scaled_size,
-        );
-
+        let canvas_rect = Rect::from_min_size(canvas_origin, scaled_size);
 
         // Sombra do canvas
         painter.rect_filled(
@@ -246,11 +190,7 @@ impl PreviewPanel {
         );
 
         // Canvas branco (cena)
-        painter.rect_filled(
-            canvas_rect,
-            CornerRadius::same(2),
-            self.cor_fundo,
-        );
+        painter.rect_filled(canvas_rect, CornerRadius::same(2), self.cor_fundo);
 
         // Borda sutil do canvas
         painter.rect_stroke(
@@ -271,13 +211,11 @@ impl PreviewPanel {
         let proj_scale = (self.canvas_size.x / proj_w).max(1e-6);
         let escala = proj_scale * self.zoom;
         let canvas_min = canvas_rect.min;
-        let para_tela = move |p: Pos2| -> Pos2 {
-            canvas_min + p.to_vec2() * escala
-        };
+        let para_tela = move |p: Pos2| -> Pos2 { canvas_min + p.to_vec2() * escala };
         let para_tela_v = move |v: Vec2| -> Vec2 { v * escala };
 
-        let precisa_rebuild = self.cache_shapes.is_empty()
-            || (self.tempo - self.ultimo_tempo).abs() > f32::EPSILON;
+        let precisa_rebuild =
+            self.cache_shapes.is_empty() || (self.tempo - self.ultimo_tempo).abs() > f32::EPSILON;
 
         if precisa_rebuild {
             self.ultimo_tempo = self.tempo;
@@ -286,15 +224,19 @@ impl PreviewPanel {
             let mut tex_idx = 0usize;
             let cenas = self.data.cenas.clone();
             for cena in &cenas {
-                if cena.opacidade <= 0.001 { continue; }
+                if cena.opacidade <= 0.001 {
+                    continue;
+                }
                 let opac_cena = cena.opacidade;
                 for layer in &cena.layers {
-                    if layer.opacidade <= 0.001 { continue; }
+                    if layer.opacidade <= 0.001 {
+                        continue;
+                    }
                     let opac = opac_cena * layer.opacidade;
-for gen in &layer.formas {
-                         let shape = shape_to_egui(gen.generate(self.tempo));
-                         let op = opac * gen.opac_em(self.tempo);
-                         let shape = Self::aplicar_opacidade(shape, op);
+                    for gen in &layer.formas {
+                        let shape = shape_to_egui(gen.generate(self.tempo));
+                        let op = opac * gen.opac_em(self.tempo);
+                        let shape = Self::aplicar_opacidade(shape, op);
                         let tela = Self::translate_shape(shape, &para_tela, &para_tela_v);
                         self.cache_shapes.push(tela.clone());
                         painter.add(tela);
@@ -303,23 +245,40 @@ for gen in &layer.formas {
                         let (tx, ty) = txt.pos_em(self.tempo);
                         let (esx, esy) = txt.escala_em(self.tempo);
                         let r = match self.rasterizar_texto(
-                            &txt.conteudo, txt.tamanho, txt.negrito, txt.italico, color_to_color32(txt.cor), escala,
+                            &txt.conteudo,
+                            txt.tamanho,
+                            txt.negrito,
+                            txt.italico,
+                            color_to_color32(txt.cor),
+                            escala,
                         ) {
                             Some(r) => r,
                             None => continue,
                         };
-                        let key = Self::tex_cache_key(&txt.conteudo, txt.tamanho, escala, txt.negrito, txt.italico, color_to_color32(txt.cor));
+                        let key = Self::tex_cache_key(
+                            &txt.conteudo,
+                            txt.tamanho,
+                            escala,
+                            txt.negrito,
+                            txt.italico,
+                            color_to_color32(txt.cor),
+                        );
                         let handle = if let Some(h) = self.tex_cache.get(&key) {
                             h.clone()
                         } else {
                             let name = format!("preview_text_{}", tex_idx);
                             tex_idx += 1;
-                            let h = ui.ctx().load_texture(name, r.imagem, TextureOptions::LINEAR);
+                            let h = ui
+                                .ctx()
+                                .load_texture(name, r.imagem, TextureOptions::LINEAR);
                             self.tex_cache.insert(key, h.clone());
                             h
                         };
                         let anchor = para_tela(Pos2::new(tx, ty));
-                        let size = Vec2::new(r.tam_logico[0] * escala.max(0.05) * esx, r.tam_logico[1] * escala.max(0.05) * esy);
+                        let size = Vec2::new(
+                            r.tam_logico[0] * escala.max(0.05) * esx,
+                            r.tam_logico[1] * escala.max(0.05) * esy,
+                        );
                         let op = opac * txt.opac_em(self.tempo) * txt.trim_em(self.tempo);
                         let a = (op.clamp(0.0, 1.0) * 255.0) as u8;
                         let img_rect = Rect::from_min_size(anchor, size);
@@ -330,7 +289,11 @@ for gen in &layer.formas {
                         painter.add(shape);
                     }
                     let mut pen_ord: Vec<&crate::procedural::PenPath> = layer.pen.iter().collect();
-                    pen_ord.sort_by(|a, b| a.ordem.partial_cmp(&b.ordem).unwrap_or(std::cmp::Ordering::Equal));
+                    pen_ord.sort_by(|a, b| {
+                        a.ordem
+                            .partial_cmp(&b.ordem)
+                            .unwrap_or(std::cmp::Ordering::Equal)
+                    });
                     self.pen_erros.clear();
                     for pen in pen_ord {
                         let cmds = match pen.program.eval(self.tempo, pen.seed) {
@@ -341,11 +304,23 @@ for gen in &layer.formas {
                             }
                         };
                         let progress = (self.tempo / pen.duracao.max(0.001)).clamp(0.0, 1.0);
-                        let trim_fim_anim = pen.trim_inicio + (pen.trim_fim - pen.trim_inicio) * progress;
+                        let trim_fim_anim =
+                            pen.trim_inicio + (pen.trim_fim - pen.trim_inicio) * progress;
                         let shapes = Self::pen_cmds_para_shapes(
-                            &cmds, pen.pos_em(self.tempo), color_to_color32(pen.cor), color_to_color32(pen.cor_fill),
-                            pen.espessura, pen.preenchimento, pen.cantos, pen.escala_x, pen.escala_y,
-                            &para_tela, &para_tela_v, opac * pen.opac_em(self.tempo), pen.trim_inicio, trim_fim_anim,
+                            &cmds,
+                            pen.pos_em(self.tempo),
+                            color_to_color32(pen.cor),
+                            color_to_color32(pen.cor_fill),
+                            pen.espessura,
+                            pen.preenchimento,
+                            pen.cantos,
+                            pen.escala_x,
+                            pen.escala_y,
+                            &para_tela,
+                            &para_tela_v,
+                            opac * pen.opac_em(self.tempo),
+                            pen.trim_inicio,
+                            trim_fim_anim,
                         );
                         for s in shapes {
                             self.cache_shapes.push(s.clone());
@@ -355,20 +330,37 @@ for gen in &layer.formas {
                         let pen_escala = (pen.escala_x, pen.escala_y);
                         let op_pen = opac * pen.opac_em(self.tempo) * pen.trim_em(self.tempo);
                         for pt in crate::dsl::extrair_textos(&cmds) {
-                            let pos = (penpos.x + pt.x * pen_escala.0, penpos.y + pt.y * pen_escala.1);
+                            let pos = (
+                                penpos.x + pt.x * pen_escala.0,
+                                penpos.y + pt.y * pen_escala.1,
+                            );
                             let r = match self.rasterizar_texto(
-                                &pt.conteudo, pt.tamanho, pt.negrito, pt.italico, pt.cor, escala,
+                                &pt.conteudo,
+                                pt.tamanho,
+                                pt.negrito,
+                                pt.italico,
+                                pt.cor,
+                                escala,
                             ) {
                                 Some(r) => r,
                                 None => continue,
                             };
-                            let key = Self::tex_cache_key(&pt.conteudo, pt.tamanho, escala, pt.negrito, pt.italico, pt.cor);
+                            let key = Self::tex_cache_key(
+                                &pt.conteudo,
+                                pt.tamanho,
+                                escala,
+                                pt.negrito,
+                                pt.italico,
+                                pt.cor,
+                            );
                             let handle = if let Some(h) = self.tex_cache.get(&key) {
                                 h.clone()
                             } else {
                                 let name = format!("preview_text_{}", tex_idx);
                                 tex_idx += 1;
-                                let h = ui.ctx().load_texture(name, r.imagem, TextureOptions::LINEAR);
+                                let h =
+                                    ui.ctx()
+                                        .load_texture(name, r.imagem, TextureOptions::LINEAR);
                                 self.tex_cache.insert(key, h.clone());
                                 h
                             };
@@ -381,22 +373,27 @@ for gen in &layer.formas {
                             };
                             let anchor_proj = Pos2::new(pos.0 + dx, pos.1);
                             let anchor = para_tela(anchor_proj);
-                            let size = Vec2::new(r.tam_logico[0] * escala.max(0.05) * pen_escala.0, r.tam_logico[1] * escala.max(0.05) * pen_escala.1);
+                            let size = Vec2::new(
+                                r.tam_logico[0] * escala.max(0.05) * pen_escala.0,
+                                r.tam_logico[1] * escala.max(0.05) * pen_escala.1,
+                            );
                             if pt.rotacao.abs() < 0.001 {
                                 let img_rect = Rect::from_min_size(anchor, size);
                                 let img_uv = Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0));
                                 let tint = Color32::from_white_alpha(a);
-                                let shape = Self::make_image_shape(handle.id(), img_rect, img_uv, tint);
+                                let shape =
+                                    Self::make_image_shape(handle.id(), img_rect, img_uv, tint);
                                 self.cache_shapes.push(shape.clone());
                                 painter.add(shape);
                             } else {
                                 let rot = pt.rotacao.to_radians();
                                 let (cs, sn) = (rot.cos(), rot.sin());
                                 let giro = |v: Pos2| -> Pos2 {
-                                    anchor + Vec2::new(
-                                        (v.x - anchor.x) * cs - (v.y - anchor.y) * sn,
-                                        (v.x - anchor.x) * sn + (v.y - anchor.y) * cs,
-                                    )
+                                    anchor
+                                        + Vec2::new(
+                                            (v.x - anchor.x) * cs - (v.y - anchor.y) * sn,
+                                            (v.x - anchor.x) * sn + (v.y - anchor.y) * cs,
+                                        )
                                 };
                                 let p0 = giro(anchor);
                                 let p1 = giro(anchor + Vec2::new(size.x, 0.0));
@@ -408,10 +405,26 @@ for gen in &layer.formas {
                                     texture_id: handle.id(),
                                     indices: vec![0, 1, 2, 0, 2, 3],
                                     vertices: vec![
-                                        Vertex { pos: p0, uv: uv.min, color: tint },
-                                        Vertex { pos: p1, uv: Pos2::new(uv.max.x, uv.min.y), color: tint },
-                                        Vertex { pos: p2, uv: uv.max, color: tint },
-                                        Vertex { pos: p3, uv: Pos2::new(uv.min.x, uv.max.y), color: tint },
+                                        Vertex {
+                                            pos: p0,
+                                            uv: uv.min,
+                                            color: tint,
+                                        },
+                                        Vertex {
+                                            pos: p1,
+                                            uv: Pos2::new(uv.max.x, uv.min.y),
+                                            color: tint,
+                                        },
+                                        Vertex {
+                                            pos: p2,
+                                            uv: uv.max,
+                                            color: tint,
+                                        },
+                                        Vertex {
+                                            pos: p3,
+                                            uv: Pos2::new(uv.min.x, uv.max.y),
+                                            color: tint,
+                                        },
                                     ],
                                 };
                                 let shape = Shape::Mesh(meshy.into());
@@ -430,7 +443,7 @@ for gen in &layer.formas {
             self.pen_erros = self.cache_pen_erros.clone();
         }
 
-    // Overlay de erros de eval dos pens
+        // Overlay de erros de eval dos pens
         if !self.pen_erros.is_empty() {
             let mut y = rect.top() + 30.0;
             let x = rect.left() + 10.0;
@@ -445,7 +458,6 @@ for gen in &layer.formas {
                 y += 18.0;
             }
         }
-
     }
 
     /// Aplica opacidade (0..1) à cor de uma forma antes de desenhá-la.
@@ -484,16 +496,39 @@ for gen in &layer.formas {
             texture_id,
             indices: vec![0, 1, 2, 0, 2, 3],
             vertices: vec![
-                Vertex { pos: rect.min, uv: uv.min, color: tint },
-                Vertex { pos: Pos2::new(rect.max.x, rect.min.y), uv: Pos2::new(uv.max.x, uv.min.y), color: tint },
-                Vertex { pos: rect.max, uv: uv.max, color: tint },
-                Vertex { pos: Pos2::new(rect.min.x, rect.max.y), uv: Pos2::new(uv.min.x, uv.max.y), color: tint },
+                Vertex {
+                    pos: rect.min,
+                    uv: uv.min,
+                    color: tint,
+                },
+                Vertex {
+                    pos: Pos2::new(rect.max.x, rect.min.y),
+                    uv: Pos2::new(uv.max.x, uv.min.y),
+                    color: tint,
+                },
+                Vertex {
+                    pos: rect.max,
+                    uv: uv.max,
+                    color: tint,
+                },
+                Vertex {
+                    pos: Pos2::new(rect.min.x, rect.max.y),
+                    uv: Pos2::new(uv.min.x, uv.max.y),
+                    color: tint,
+                },
             ],
         };
         Shape::Mesh(mesh.into())
     }
 
-    fn tex_cache_key(conteudo: &str, tamanho: f32, escala: f32, negrito: bool, italico: bool, cor: Color32) -> String {
+    fn tex_cache_key(
+        conteudo: &str,
+        tamanho: f32,
+        escala: f32,
+        negrito: bool,
+        italico: bool,
+        cor: Color32,
+    ) -> String {
         let px = (tamanho * escala.max(0.05)).round().clamp(1.0, 4096.0) as u32;
         format!(
             "{}\x00{}\x00{}\x00{}\x00{:02x}{:02x}{:02x}{:02x}",
@@ -517,8 +552,14 @@ for gen in &layer.formas {
         cor: Color32,
         escala_total: f32,
     ) -> Option<crate::ui::text_raster::TextoRaster> {
-        self.raster
-            .raster(conteudo, tamanho, escala_total.max(0.05), negrito, italico, cor)
+        self.raster.raster(
+            conteudo,
+            tamanho,
+            escala_total.max(0.05),
+            negrito,
+            italico,
+            cor,
+        )
     }
 
     /// Traduz uma `Shape` (em coords de projeto) para as coords de tela via
@@ -574,11 +615,23 @@ for gen in &layer.formas {
     /// Pública para ser reutilizada pela exportação off-screen (PNG), que
     /// passa `para_tela`/`para_tela_v` mapeando coords de projeto direto para
     /// o buffer de imagem.
-    fn cubic_bezier_point(p0: crate::domain::Pos2, p1: crate::domain::Pos2, p2: crate::domain::Pos2, p3: crate::domain::Pos2, t: f32) -> crate::domain::Pos2 {
+    fn cubic_bezier_point(
+        p0: crate::domain::Pos2,
+        p1: crate::domain::Pos2,
+        p2: crate::domain::Pos2,
+        p3: crate::domain::Pos2,
+        t: f32,
+    ) -> crate::domain::Pos2 {
         let mt = 1.0 - t;
         crate::domain::Pos2::new(
-            mt * mt * mt * p0.x + 3.0 * mt * mt * t * p1.x + 3.0 * mt * t * t * p2.x + t * t * t * p3.x,
-            mt * mt * mt * p0.y + 3.0 * mt * mt * t * p1.y + 3.0 * mt * t * t * p2.y + t * t * t * p3.y,
+            mt * mt * mt * p0.x
+                + 3.0 * mt * mt * t * p1.x
+                + 3.0 * mt * t * t * p2.x
+                + t * t * t * p3.x,
+            mt * mt * mt * p0.y
+                + 3.0 * mt * mt * t * p1.y
+                + 3.0 * mt * t * t * p2.y
+                + t * t * t * p3.y,
         )
     }
 
@@ -602,13 +655,13 @@ for gen in &layer.formas {
         F: Fn(Pos2) -> Pos2,
         G: Fn(Vec2) -> Vec2,
     {
-        use lyon::tessellation::{
-            FillTessellator, FillOptions, StrokeTessellator, StrokeOptions,
-            VertexBuffers, BuffersBuilder, FillVertexConstructor, StrokeVertexConstructor,
-            FillVertex, StrokeVertex, LineJoin, LineCap,
-        };
-        use lyon::math::Point as LPoint;
         use crate::dsl::PathCmd;
+        use lyon::math::Point as LPoint;
+        use lyon::tessellation::{
+            BuffersBuilder, FillOptions, FillTessellator, FillVertex, FillVertexConstructor,
+            LineCap, LineJoin, StrokeOptions, StrokeTessellator, StrokeVertex,
+            StrokeVertexConstructor, VertexBuffers,
+        };
 
         let sx = escala_x;
         let sy = escala_y;
@@ -623,7 +676,12 @@ for gen in &layer.formas {
             preenche: bool,
         }
 
-        let mut st = St { cor: cor_padrao, cor_fill: cor_fill_padrao, esp: espessura_padrao, preenche: preenche_padrao };
+        let mut st = St {
+            cor: cor_padrao,
+            cor_fill: cor_fill_padrao,
+            esp: espessura_padrao,
+            preenche: preenche_padrao,
+        };
 
         let to_scr = |p: &crate::domain::Vec2| -> LPoint {
             let sp = para_tela(Pos2::new(desloc.x + p.x * sx, desloc.y + p.y * sy));
@@ -692,7 +750,8 @@ for gen in &layer.formas {
                 }
                 PathCmd::Bezier(c1, c2, p) => {
                     if let Some(ref mut sp) = cur {
-                        sp.ops.push(SubPathOp::Cubic(to_scr(c1), to_scr(c2), to_scr(p)));
+                        sp.ops
+                            .push(SubPathOp::Cubic(to_scr(c1), to_scr(c2), to_scr(p)));
                         sp.single = false;
                     } else {
                         let pt = to_scr(p);
@@ -720,7 +779,10 @@ for gen in &layer.formas {
                     }
                 }
                 PathCmd::Stroke(w) => st.esp = *w,
-                PathCmd::Color(c) => { st.cor = *c; st.cor_fill = *c; }
+                PathCmd::Color(c) => {
+                    st.cor = *c;
+                    st.cor_fill = *c;
+                }
                 PathCmd::ColorStroke(c) => st.cor = *c,
                 PathCmd::ColorFill(c) => st.cor_fill = *c,
                 PathCmd::Text { .. } => {}
@@ -728,7 +790,9 @@ for gen in &layer.formas {
         }
         flush_sub!();
 
-        struct TessV { pos: [f32; 2] }
+        struct TessV {
+            pos: [f32; 2],
+        }
         struct FillC;
         impl FillVertexConstructor<TessV> for FillC {
             fn new_vertex(&mut self, v: FillVertex) -> TessV {
@@ -746,12 +810,19 @@ for gen in &layer.formas {
 
         for sp in subs {
             let co = Color32::from_rgba_unmultiplied(sp.cor.r(), sp.cor.g(), sp.cor.b(), a);
-            let cfo = Color32::from_rgba_unmultiplied(sp.cor_fill.r(), sp.cor_fill.g(), sp.cor_fill.b(), a);
+            let cfo = Color32::from_rgba_unmultiplied(
+                sp.cor_fill.r(),
+                sp.cor_fill.g(),
+                sp.cor_fill.b(),
+                a,
+            );
 
             if sp.single {
                 let r = (para_tela_v(Vec2::splat(sp.esp)).x).max(1.0);
                 out.push(Shape::Ellipse(EllipseShape::filled(
-                    Pos2::new(sp.start.x, sp.start.y), Vec2::splat(r), co,
+                    Pos2::new(sp.start.x, sp.start.y),
+                    Vec2::splat(r),
+                    co,
                 )));
                 continue;
             }
@@ -763,13 +834,21 @@ for gen in &layer.formas {
                 let mut pts = vec![crate::domain::Pos2::new(sp.start.x, sp.start.y)];
                 for op in &sp.ops {
                     match op {
-                        SubPathOp::Line(p) => { pts.push(crate::domain::Pos2::new(p.x, p.y)); }
+                        SubPathOp::Line(p) => {
+                            pts.push(crate::domain::Pos2::new(p.x, p.y));
+                        }
                         SubPathOp::Cubic(c1, c2, p) => {
                             let p0 = *pts.last().unwrap();
                             let n = 12;
                             for i in 1..=n {
                                 let t = i as f32 / n as f32;
-                                pts.push(Self::cubic_bezier_point(p0, crate::domain::Pos2::new(c1.x, c1.y), crate::domain::Pos2::new(c2.x, c2.y), crate::domain::Pos2::new(p.x, p.y), t));
+                                pts.push(Self::cubic_bezier_point(
+                                    p0,
+                                    crate::domain::Pos2::new(c1.x, c1.y),
+                                    crate::domain::Pos2::new(c2.x, c2.y),
+                                    crate::domain::Pos2::new(p.x, p.y),
+                                    t,
+                                ));
                             }
                         }
                     }
@@ -797,8 +876,12 @@ for gen in &layer.formas {
                 b.begin(sp.start);
                 for op in &sp.ops {
                     match op {
-                        SubPathOp::Line(p) => { b.line_to(*p); }
-                        SubPathOp::Cubic(c1, c2, p) => { b.cubic_bezier_to(*c1, *c2, *p); }
+                        SubPathOp::Line(p) => {
+                            b.line_to(*p);
+                        }
+                        SubPathOp::Cubic(c1, c2, p) => {
+                            b.cubic_bezier_to(*c1, *c2, *p);
+                        }
                     }
                 }
                 if sp.close || sp.preenche {
@@ -807,22 +890,31 @@ for gen in &layer.formas {
                 (b.build(), true)
             };
 
-            if !trimmed { continue; }
+            if !trimmed {
+                continue;
+            }
 
             if sp.preenche && !use_trim {
                 let mut fb: VertexBuffers<TessV, u32> = VertexBuffers::new();
                 if FillTessellator::new()
-                    .tessellate_path(&path, &FillOptions::default().with_tolerance(0.1),
-                        &mut BuffersBuilder::new(&mut fb, FillC))
+                    .tessellate_path(
+                        &path,
+                        &FillOptions::default().with_tolerance(0.1),
+                        &mut BuffersBuilder::new(&mut fb, FillC),
+                    )
                     .is_ok()
                     && !fb.vertices.is_empty()
                 {
                     out.push(Shape::from(egui::epaint::Mesh {
-                        vertices: fb.vertices.iter().map(|v| Vertex {
-                            pos: Pos2::new(v.pos[0], v.pos[1]),
-                            uv: egui::epaint::WHITE_UV,
-                            color: cfo,
-                        }).collect(),
+                        vertices: fb
+                            .vertices
+                            .iter()
+                            .map(|v| Vertex {
+                                pos: Pos2::new(v.pos[0], v.pos[1]),
+                                uv: egui::epaint::WHITE_UV,
+                                color: cfo,
+                            })
+                            .collect(),
                         indices: fb.indices,
                         texture_id: Default::default(),
                     }));
@@ -831,23 +923,34 @@ for gen in &layer.formas {
 
             if esp_tela > 0.0 {
                 let mut sb: VertexBuffers<TessV, u32> = VertexBuffers::new();
-                let join = if cantos >= 0.5 { LineJoin::Round } else { LineJoin::Miter };
+                let join = if cantos >= 0.5 {
+                    LineJoin::Round
+                } else {
+                    LineJoin::Miter
+                };
                 if StrokeTessellator::new()
-                    .tessellate_path(&path, &StrokeOptions::default()
-                        .with_tolerance(0.1)
-                        .with_line_join(join)
-                        .with_line_cap(LineCap::Round)
-                        .with_line_width(esp_tela),
-                        &mut BuffersBuilder::new(&mut sb, StrokeC))
+                    .tessellate_path(
+                        &path,
+                        &StrokeOptions::default()
+                            .with_tolerance(0.1)
+                            .with_line_join(join)
+                            .with_line_cap(LineCap::Round)
+                            .with_line_width(esp_tela),
+                        &mut BuffersBuilder::new(&mut sb, StrokeC),
+                    )
                     .is_ok()
                     && !sb.vertices.is_empty()
                 {
                     out.push(Shape::from(egui::epaint::Mesh {
-                        vertices: sb.vertices.iter().map(|v| Vertex {
-                            pos: Pos2::new(v.pos[0], v.pos[1]),
-                            uv: egui::epaint::WHITE_UV,
-                            color: co,
-                        }).collect(),
+                        vertices: sb
+                            .vertices
+                            .iter()
+                            .map(|v| Vertex {
+                                pos: Pos2::new(v.pos[0], v.pos[1]),
+                                uv: egui::epaint::WHITE_UV,
+                                color: co,
+                            })
+                            .collect(),
                         indices: sb.indices,
                         texture_id: Default::default(),
                     }));
@@ -857,7 +960,6 @@ for gen in &layer.formas {
 
         out
     }
-
 }
 
 #[cfg(test)]
@@ -885,9 +987,14 @@ mod tests {
             &|p: Pos2| p,
             &|v: Vec2| v,
             1.0,
-            0.0, 1.0,
+            0.0,
+            1.0,
         );
-        assert!(shapes.is_empty(), "esperado 0 shapes, veio {}", shapes.len());
+        assert!(
+            shapes.is_empty(),
+            "esperado 0 shapes, veio {}",
+            shapes.len()
+        );
         // e os textos devem ser extraíveis
         assert_eq!(crate::dsl::extrair_textos(&cmds).len(), 1);
     }

@@ -22,11 +22,7 @@ impl PlaybackState {
 
     /// Atualiza o estado de reprodução e avança o frame se necessário.
     /// Retorna o número de frames para avançar (0 se não houver aviso).
-    pub fn update(
-        &mut self,
-        now: f64,
-        is_playing: bool,
-    ) -> u32 {
+    pub fn update(&mut self, now: f64, is_playing: bool) -> u32 {
         if is_playing != self.was_playing {
             self.last_time = now;
             self.frame_accum = 0.0;

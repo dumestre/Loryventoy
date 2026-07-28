@@ -1,14 +1,14 @@
-use eframe::egui::{
-    Align, Area, Color32, CornerRadius, CursorIcon, Id, Image, Layout, Order,
-    Pos2, Rect, Sense, Stroke, StrokeKind, TextEdit, Ui, Vec2,
-};
 use eframe::egui::color_picker::Alpha;
 use eframe::egui::epaint::RectShape;
 use eframe::egui::Popup;
+use eframe::egui::{
+    Align, Area, Color32, CornerRadius, CursorIcon, Id, Image, Layout, Order, Pos2, Rect, Sense,
+    Stroke, StrokeKind, TextEdit, Ui, Vec2,
+};
 
-use super::GraphPanel;
-use super::types::NodeId;
 use super::ports::tamanho;
+use super::types::NodeId;
+use super::GraphPanel;
 
 pub const CORES_GRUPO: [Color32; 8] = [
     Color32::from_rgb(90, 140, 220),
@@ -107,12 +107,17 @@ impl GraphPanel {
                 Stroke::new(1.5, c),
                 StrokeKind::Inside,
             ));
-            let header =
-                Rect::from_min_max(surf.min, Pos2::new(surf.max.x, surf.min.y + header_h));
+            let header = Rect::from_min_max(surf.min, Pos2::new(surf.max.x, surf.min.y + header_h));
             let mut cr = CornerRadius::same(10);
             cr.sw = 0;
             cr.se = 0;
-            painter.add(RectShape::new(header, cr, head, Stroke::NONE, StrokeKind::Inside));
+            painter.add(RectShape::new(
+                header,
+                cr,
+                head,
+                Stroke::NONE,
+                StrokeKind::Inside,
+            ));
         }
     }
 
@@ -172,8 +177,9 @@ impl GraphPanel {
                                     Color32::from_rgba_unmultiplied(0, 0, 0, 45),
                                 );
                             }
-                            let img = Image::new(eframe::egui::include_image!("../ui/icons/cor.svg"))
-                                .fit_to_exact_size(Vec2::splat(14.0));
+                            let img =
+                                Image::new(eframe::egui::include_image!("../ui/icons/cor.svg"))
+                                    .fit_to_exact_size(Vec2::splat(14.0));
                             img.paint_at(
                                 ui,
                                 Rect::from_center_size(rect_btn.center(), Vec2::splat(14.0)),

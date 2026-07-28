@@ -21,12 +21,12 @@ pub fn scroll_delta(ctx: &Context) -> eframe::egui::Vec2 {
     total
 }
 
-pub mod splitter;
-pub mod preview;
-pub mod timeline;
-pub mod graph;
 pub mod bartool;
+pub mod graph;
 pub mod graph_toolbar;
-pub mod node_component;
 pub mod inspector;
+pub mod node_component;
+pub mod preview;
+pub mod splitter;
 pub mod text_raster;
+pub mod timeline;

@@ -1,46 +1,46 @@
 //! Tipos centrais do domínio, independentes da camada visual.
 
-mod color;
-mod math;
-mod project_config;
 mod animation;
-mod node_type;
+mod color;
 mod layer_entry;
+mod math;
+mod node_type;
+mod project_config;
 
 // ── Parâmetros de nós ────────────────────────────────────────────
-mod transform_params;
+mod anim_params;
 mod cena_params;
 mod layer_params;
-mod text_params;
-mod shape_params;
+mod params;
 mod pen_params;
 mod ruido_params;
 mod saida_params;
-mod anim_params;
-mod params;
+mod shape_params;
+mod text_params;
+mod transform_params;
 
 // ── Projeto ──────────────────────────────────────────────────────
 mod project;
 
+pub use animation::{AnimSeg, Easing, LoopMode};
 pub use color::{Color, Pos2, Vec2};
-pub use math::*;
-pub use project_config::ProjectConfig;
-pub use animation::{Easing, LoopMode, AnimSeg};
-pub use node_type::TipoNo;
 pub use layer_entry::LayerEntry;
+pub use math::*;
+pub use node_type::TipoNo;
+pub use project_config::ProjectConfig;
 
-pub use transform_params::TransformParams;
+pub use anim_params::AnimParams;
 pub use cena_params::CenaParams;
 pub use layer_params::LayerParams;
-pub use text_params::TextParams;
-pub use shape_params::ShapeParams;
+pub use params::NodeParams;
 pub use pen_params::PenParams;
 pub use ruido_params::RuidoParams;
 pub use saida_params::SaidaParams;
-pub use anim_params::AnimParams;
-pub use params::NodeParams;
+pub use shape_params::ShapeParams;
+pub use text_params::TextParams;
+pub use transform_params::TransformParams;
 
-pub use project::{Project, ProjectNode, ProjectEdge};
+pub use project::{Project, ProjectEdge, ProjectNode};
 
 #[cfg(test)]
 mod tests {

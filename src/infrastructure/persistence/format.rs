@@ -2,8 +2,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::domain::{Color, LayerEntry, Project, ProjectConfig, ProjectEdge, ProjectNode};
 use crate::nodes::{
-    AnimParams, CenaParams, LayerParams, NodeParams, PenParams,
-    RuidoParams, SaidaParams, ShapeParams, TextParams, TransformParams, TipoNo,
+    AnimParams, CenaParams, LayerParams, NodeParams, PenParams, RuidoParams, SaidaParams,
+    ShapeParams, TextParams, TipoNo, TransformParams,
 };
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -34,9 +34,15 @@ fn default_true() -> bool {
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum NodeParamsJson {
     Transform {
-        px: f32, py: f32, pz: f32,
-        rx: f32, ry: f32, rz: f32,
-        sx: f32, sy: f32, sz: f32,
+        px: f32,
+        py: f32,
+        pz: f32,
+        rx: f32,
+        ry: f32,
+        rz: f32,
+        sx: f32,
+        sy: f32,
+        sz: f32,
     },
     Cena {
         nome_cena: String,
@@ -67,8 +73,10 @@ pub enum NodeParamsJson {
     Shape {
         cena: String,
         tipo: u8,
-        px: f32, py: f32,
-        largura: f32, altura: f32,
+        px: f32,
+        py: f32,
+        largura: f32,
+        altura: f32,
         rotacao: f32,
         cor: [u8; 4],
         seed: f32,
@@ -129,85 +137,195 @@ pub enum NodeParamsJson {
 impl From<NodeParams> for NodeParamsJson {
     fn from(p: NodeParams) -> Self {
         match p {
-            NodeParams::Transform(TransformParams { px, py, pz, rx, ry, rz, sx, sy, sz }) => {
-                NodeParamsJson::Transform { px, py, pz, rx, ry, rz, sx, sy, sz }
-            }
-            NodeParams::Cena(CenaParams { nome_cena, ativa, zoom, angulo, opacidade }) => {
-                NodeParamsJson::Cena { nome_cena, ativa, zoom, angulo, opacidade }
-            }
-            NodeParams::Layer(LayerParams { cena, layers, selected }) => {
-                NodeParamsJson::Layer {
-                    cena,
-                    layers: layers.into_iter().map(|l| LayerEntryJson {
+            NodeParams::Transform(TransformParams {
+                px,
+                py,
+                pz,
+                rx,
+                ry,
+                rz,
+                sx,
+                sy,
+                sz,
+            }) => NodeParamsJson::Transform {
+                px,
+                py,
+                pz,
+                rx,
+                ry,
+                rz,
+                sx,
+                sy,
+                sz,
+            },
+            NodeParams::Cena(CenaParams {
+                nome_cena,
+                ativa,
+                zoom,
+                angulo,
+                opacidade,
+            }) => NodeParamsJson::Cena {
+                nome_cena,
+                ativa,
+                zoom,
+                angulo,
+                opacidade,
+            },
+            NodeParams::Layer(LayerParams {
+                cena,
+                layers,
+                selected,
+            }) => NodeParamsJson::Layer {
+                cena,
+                layers: layers
+                    .into_iter()
+                    .map(|l| LayerEntryJson {
                         nome: l.nome,
                         ordem: l.ordem,
                         opacidade: l.opacidade,
                         cor: Some(l.cor.to_rgba()),
                         visivel: l.visivel,
-                    }).collect(),
-                    selected,
-                }
-            }
-            NodeParams::Texto(TextParams { cena, conteudo, tamanho, negrito, italico, px, py, cor, trim_inicio, trim_fim, .. }) => {
-                NodeParamsJson::Texto {
-                    cena, conteudo, tamanho, negrito, italico, px, py,
-                    cor: cor.to_rgba(), trim_inicio, trim_fim,
-                }
-            }
+                    })
+                    .collect(),
+                selected,
+            },
+            NodeParams::Texto(TextParams {
+                cena,
+                conteudo,
+                tamanho,
+                negrito,
+                italico,
+                px,
+                py,
+                cor,
+                trim_inicio,
+                trim_fim,
+                ..
+            }) => NodeParamsJson::Texto {
+                cena,
+                conteudo,
+                tamanho,
+                negrito,
+                italico,
+                px,
+                py,
+                cor: cor.to_rgba(),
+                trim_inicio,
+                trim_fim,
+            },
             NodeParams::Shape(ShapeParams {
-                cena, tipo, px, py, largura, altura, rotacao, cor,
-                seed, noise_scale, amp, veloc, trim_inicio, trim_fim, ..
-            }) => {
-                NodeParamsJson::Shape {
-                    cena, tipo, px, py, largura, altura, rotacao,
-                    cor: cor.to_rgba(), seed, noise_scale, amp, veloc,
-                    trim_inicio, trim_fim,
-                }
-            }
+                cena,
+                tipo,
+                px,
+                py,
+                largura,
+                altura,
+                rotacao,
+                cor,
+                seed,
+                noise_scale,
+                amp,
+                veloc,
+                trim_inicio,
+                trim_fim,
+                ..
+            }) => NodeParamsJson::Shape {
+                cena,
+                tipo,
+                px,
+                py,
+                largura,
+                altura,
+                rotacao,
+                cor: cor.to_rgba(),
+                seed,
+                noise_scale,
+                amp,
+                veloc,
+                trim_inicio,
+                trim_fim,
+            },
             NodeParams::Pen(PenParams {
-                cena, codigo, cor, cor_fill, pos_x, pos_y, espessura, preenchimento,
-                seed, cantos, ordem, escala_x, escala_y, trim_inicio, trim_fim, ..
-            }) => {
-                NodeParamsJson::Pen {
-                    cena, codigo,
-                    cor: cor.to_rgba(),
-                    cor_fill: Some(cor_fill.to_rgba()),
-                    pos_x, pos_y, espessura, preenchimento,
-                    seed, cantos, ordem, escala_x, escala_y,
-                    trim_inicio, trim_fim,
-                }
-            }
-            NodeParams::Ruido(RuidoParams { seed, freq, amp, veloc, alvo }) => {
-                NodeParamsJson::Ruido { seed, freq, amp, veloc, alvo }
-            }
-            NodeParams::Anim(AnimParams { alvo, loop_mode, segmentos }) => {
-                NodeParamsJson::Anim {
-                    alvo,
-                    loop_mode,
-                    segmentos: segmentos
-                        .into_iter()
-                        .map(|s| AnimSegJson {
-                            t_ini: s.t_ini,
-                            t_fim: s.t_fim,
-                            v_ini: s.v_ini,
-                            v_fim: s.v_fim,
-                            easing: s.easing.to_u8(),
-                        })
-                        .collect(),
-                }
-            }
-            NodeParams::Saida(SaidaParams { brilho, contraste, saturacao }) => {
-                NodeParamsJson::Saida { brilho, contraste, saturacao }
-            }
-            NodeParams::Canvas(c) => {
-                NodeParamsJson::Canvas {
-                    largura: c.largura,
-                    altura: c.altura,
-                    fps: c.fps,
-                    duracao_seg: c.duracao_seg,
-                    fundo: c.fundo.to_rgba(),
-                }
-            }
+                cena,
+                codigo,
+                cor,
+                cor_fill,
+                pos_x,
+                pos_y,
+                espessura,
+                preenchimento,
+                seed,
+                cantos,
+                ordem,
+                escala_x,
+                escala_y,
+                trim_inicio,
+                trim_fim,
+                ..
+            }) => NodeParamsJson::Pen {
+                cena,
+                codigo,
+                cor: cor.to_rgba(),
+                cor_fill: Some(cor_fill.to_rgba()),
+                pos_x,
+                pos_y,
+                espessura,
+                preenchimento,
+                seed,
+                cantos,
+                ordem,
+                escala_x,
+                escala_y,
+                trim_inicio,
+                trim_fim,
+            },
+            NodeParams::Ruido(RuidoParams {
+                seed,
+                freq,
+                amp,
+                veloc,
+                alvo,
+            }) => NodeParamsJson::Ruido {
+                seed,
+                freq,
+                amp,
+                veloc,
+                alvo,
+            },
+            NodeParams::Anim(AnimParams {
+                alvo,
+                loop_mode,
+                segmentos,
+            }) => NodeParamsJson::Anim {
+                alvo,
+                loop_mode,
+                segmentos: segmentos
+                    .into_iter()
+                    .map(|s| AnimSegJson {
+                        t_ini: s.t_ini,
+                        t_fim: s.t_fim,
+                        v_ini: s.v_ini,
+                        v_fim: s.v_fim,
+                        easing: s.easing.to_u8(),
+                    })
+                    .collect(),
+            },
+            NodeParams::Saida(SaidaParams {
+                brilho,
+                contraste,
+                saturacao,
+            }) => NodeParamsJson::Saida {
+                brilho,
+                contraste,
+                saturacao,
+            },
+            NodeParams::Canvas(c) => NodeParamsJson::Canvas {
+                largura: c.largura,
+                altura: c.altura,
+                fps: c.fps,
+                duracao_seg: c.duracao_seg,
+                fundo: c.fundo.to_rgba(),
+            },
         }
     }
 }
@@ -217,91 +335,209 @@ impl TryFrom<NodeParamsJson> for NodeParams {
 
     fn try_from(j: NodeParamsJson) -> Result<Self, Self::Error> {
         Ok(match j {
-            NodeParamsJson::Transform { px, py, pz, rx, ry, rz, sx, sy, sz } => {
-                NodeParams::Transform(TransformParams { px, py, pz, rx, ry, rz, sx, sy, sz })
-            }
-            NodeParamsJson::Cena { nome_cena, ativa, zoom, angulo, opacidade } => {
-                NodeParams::Cena(CenaParams { nome_cena, ativa, zoom, angulo, opacidade })
-            }
-            NodeParamsJson::Layer { cena, layers, selected } => {
-                NodeParams::Layer(LayerParams {
-                    cena,
-                    layers: layers.into_iter().enumerate().map(|(i, l)| LayerEntry {
+            NodeParamsJson::Transform {
+                px,
+                py,
+                pz,
+                rx,
+                ry,
+                rz,
+                sx,
+                sy,
+                sz,
+            } => NodeParams::Transform(TransformParams {
+                px,
+                py,
+                pz,
+                rx,
+                ry,
+                rz,
+                sx,
+                sy,
+                sz,
+            }),
+            NodeParamsJson::Cena {
+                nome_cena,
+                ativa,
+                zoom,
+                angulo,
+                opacidade,
+            } => NodeParams::Cena(CenaParams {
+                nome_cena,
+                ativa,
+                zoom,
+                angulo,
+                opacidade,
+            }),
+            NodeParamsJson::Layer {
+                cena,
+                layers,
+                selected,
+            } => NodeParams::Layer(LayerParams {
+                cena,
+                layers: layers
+                    .into_iter()
+                    .enumerate()
+                    .map(|(i, l)| LayerEntry {
                         nome: l.nome,
                         ordem: l.ordem,
                         opacidade: l.opacidade,
-                        cor: l.cor
+                        cor: l
+                            .cor
                             .map(|c| Color::from_rgba(c[0], c[1], c[2], c[3]))
                             .unwrap_or_else(|| LayerEntry::cor_por_idx(i)),
                         visivel: l.visivel,
-                    }).collect(),
-                    selected,
-                })
-            }
-            NodeParamsJson::Texto { cena, conteudo, tamanho, negrito, italico, px, py, cor, trim_inicio, trim_fim } => {
-                NodeParams::Texto(TextParams {
-                    cena, conteudo, tamanho, negrito, italico, px, py,
-                    cor: Color::from_rgba(cor[0], cor[1], cor[2], cor[3]),
-                    trim_inicio, trim_fim,
-                })
-            }
+                    })
+                    .collect(),
+                selected,
+            }),
+            NodeParamsJson::Texto {
+                cena,
+                conteudo,
+                tamanho,
+                negrito,
+                italico,
+                px,
+                py,
+                cor,
+                trim_inicio,
+                trim_fim,
+            } => NodeParams::Texto(TextParams {
+                cena,
+                conteudo,
+                tamanho,
+                negrito,
+                italico,
+                px,
+                py,
+                cor: Color::from_rgba(cor[0], cor[1], cor[2], cor[3]),
+                trim_inicio,
+                trim_fim,
+            }),
             NodeParamsJson::Shape {
-                cena, tipo, px, py, largura, altura, rotacao, cor,
-                seed, noise_scale, amp, veloc, trim_inicio, trim_fim,
-            } => {
-                NodeParams::Shape(ShapeParams {
-                    cena, tipo, px, py, largura, altura, rotacao,
-                    cor: Color::from_rgba(cor[0], cor[1], cor[2], cor[3]),
-                    seed, noise_scale, amp, veloc, trim_inicio, trim_fim,
-                })
-            }
+                cena,
+                tipo,
+                px,
+                py,
+                largura,
+                altura,
+                rotacao,
+                cor,
+                seed,
+                noise_scale,
+                amp,
+                veloc,
+                trim_inicio,
+                trim_fim,
+            } => NodeParams::Shape(ShapeParams {
+                cena,
+                tipo,
+                px,
+                py,
+                largura,
+                altura,
+                rotacao,
+                cor: Color::from_rgba(cor[0], cor[1], cor[2], cor[3]),
+                seed,
+                noise_scale,
+                amp,
+                veloc,
+                trim_inicio,
+                trim_fim,
+            }),
             NodeParamsJson::Pen {
-                cena, codigo, cor, cor_fill, pos_x, pos_y, espessura, preenchimento,
-                seed, cantos, ordem, escala_x, escala_y, trim_inicio, trim_fim,
+                cena,
+                codigo,
+                cor,
+                cor_fill,
+                pos_x,
+                pos_y,
+                espessura,
+                preenchimento,
+                seed,
+                cantos,
+                ordem,
+                escala_x,
+                escala_y,
+                trim_inicio,
+                trim_fim,
             } => {
                 let cor = Color::from_rgba(cor[0], cor[1], cor[2], cor[3]);
                 let cor_fill = cor_fill
                     .map(|c| Color::from_rgba(c[0], c[1], c[2], c[3]))
                     .unwrap_or(cor);
                 NodeParams::Pen(PenParams {
-                    cena, codigo,
-                    cor, cor_fill,
-                    pos_x, pos_y, espessura, preenchimento,
-                    seed, cantos, ordem, escala_x, escala_y,
+                    cena,
+                    codigo,
+                    cor,
+                    cor_fill,
+                    pos_x,
+                    pos_y,
+                    espessura,
+                    preenchimento,
+                    seed,
+                    cantos,
+                    ordem,
+                    escala_x,
+                    escala_y,
                     erro: None,
-                    trim_inicio, trim_fim,
+                    trim_inicio,
+                    trim_fim,
                 })
             }
-            NodeParamsJson::Ruido { seed, freq, amp, veloc, alvo } => {
-                NodeParams::Ruido(RuidoParams { seed, freq, amp, veloc, alvo })
-            }
-            NodeParamsJson::Anim { alvo, loop_mode, segmentos } => {
-                NodeParams::Anim(AnimParams {
-                    alvo,
-                    loop_mode,
-                    segmentos: segmentos
-                        .into_iter()
-                        .map(|s| crate::domain::AnimSeg {
-                            t_ini: s.t_ini,
-                            t_fim: s.t_fim,
-                            v_ini: s.v_ini,
-                            v_fim: s.v_fim,
-                            easing: crate::domain::Easing::from_u8(s.easing),
-                        })
-                        .collect(),
-                })
-            }
-            NodeParamsJson::Saida { brilho, contraste, saturacao } => {
-                NodeParams::Saida(SaidaParams { brilho, contraste, saturacao })
-            }
-            NodeParamsJson::Canvas { largura, altura, fps, duracao_seg, fundo } => {
-                NodeParams::Canvas(ProjectConfig {
-                    largura, altura, fps, duracao_seg,
-                    fundo: crate::domain::Color::from_rgba(
-                        fundo[0], fundo[1], fundo[2], fundo[3],
-                    ),
-                })
-            }
+            NodeParamsJson::Ruido {
+                seed,
+                freq,
+                amp,
+                veloc,
+                alvo,
+            } => NodeParams::Ruido(RuidoParams {
+                seed,
+                freq,
+                amp,
+                veloc,
+                alvo,
+            }),
+            NodeParamsJson::Anim {
+                alvo,
+                loop_mode,
+                segmentos,
+            } => NodeParams::Anim(AnimParams {
+                alvo,
+                loop_mode,
+                segmentos: segmentos
+                    .into_iter()
+                    .map(|s| crate::domain::AnimSeg {
+                        t_ini: s.t_ini,
+                        t_fim: s.t_fim,
+                        v_ini: s.v_ini,
+                        v_fim: s.v_fim,
+                        easing: crate::domain::Easing::from_u8(s.easing),
+                    })
+                    .collect(),
+            }),
+            NodeParamsJson::Saida {
+                brilho,
+                contraste,
+                saturacao,
+            } => NodeParams::Saida(SaidaParams {
+                brilho,
+                contraste,
+                saturacao,
+            }),
+            NodeParamsJson::Canvas {
+                largura,
+                altura,
+                fps,
+                duracao_seg,
+                fundo,
+            } => NodeParams::Canvas(ProjectConfig {
+                largura,
+                altura,
+                fps,
+                duracao_seg,
+                fundo: crate::domain::Color::from_rgba(fundo[0], fundo[1], fundo[2], fundo[3]),
+            }),
         })
     }
 }

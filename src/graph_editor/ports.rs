@@ -1,11 +1,11 @@
 #![allow(dead_code)]
 
-use eframe::egui::{Color32, Pos2, Shape, Stroke, Vec2};
 use eframe::egui::epaint::CircleShape;
+use eframe::egui::{Color32, Pos2, Shape, Stroke, Vec2};
 
+use super::types::cor_tipo_no;
 use crate::nodes::{portos, TipoNo};
 use crate::ui::node_component;
-use super::types::cor_tipo_no;
 
 pub fn port_offsets(tipo: TipoNo, half: Vec2) -> (Vec<Vec2>, Vec<Vec2>) {
     let spec = portos(tipo);
@@ -95,13 +95,19 @@ pub fn node_screen_rect(pos_screen: Pos2, half: Vec2, zoom: f32) -> eframe::egui
 
 pub fn port_in_screen(node_center: Pos2, half: Vec2, zoom: f32, tipo: TipoNo, idx: usize) -> Pos2 {
     let (ins, _) = port_offsets(tipo, half);
-    let off = ins.get(idx).copied().unwrap_or_else(|| Vec2::new(-half.x, 0.0));
+    let off = ins
+        .get(idx)
+        .copied()
+        .unwrap_or_else(|| Vec2::new(-half.x, 0.0));
     node_center + off * zoom
 }
 
 pub fn port_out_screen(node_center: Pos2, half: Vec2, zoom: f32, tipo: TipoNo, idx: usize) -> Pos2 {
     let (_, outs) = port_offsets(tipo, half);
-    let off = outs.get(idx).copied().unwrap_or_else(|| Vec2::new(half.x, 0.0));
+    let off = outs
+        .get(idx)
+        .copied()
+        .unwrap_or_else(|| Vec2::new(half.x, 0.0));
     node_center + off * zoom
 }
 

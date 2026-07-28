@@ -43,8 +43,8 @@ pub fn estrela(c: Pos2, ro: f32, ri: f32, pontas: usize, rot: f32) -> Vec<Pos2> 
     (0..total)
         .map(|i| {
             let r = if i % 2 == 0 { ro } else { ri };
-            let a = rad + i as f32 * std::f32::consts::TAU / total as f32
-                - std::f32::consts::FRAC_PI_2;
+            let a =
+                rad + i as f32 * std::f32::consts::TAU / total as f32 - std::f32::consts::FRAC_PI_2;
             Pos2::new(c.x + r * a.cos(), c.y + r * a.sin())
         })
         .collect()

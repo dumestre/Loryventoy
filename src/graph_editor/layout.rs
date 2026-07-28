@@ -10,12 +10,24 @@ impl GraphPanel {
         (screen.to_vec2() - pan - editor_rect.min.to_vec2()).to_pos2()
     }
 
-    pub fn canvas_para_screen(&self, canvas: Pos2, pan: Vec2, zoom: f32, editor_rect: Rect) -> Pos2 {
+    pub fn canvas_para_screen(
+        &self,
+        canvas: Pos2,
+        pan: Vec2,
+        zoom: f32,
+        editor_rect: Rect,
+    ) -> Pos2 {
         let center = editor_rect.center().to_vec2();
         ((canvas.to_vec2() - center) * zoom + center + pan + editor_rect.min.to_vec2()).to_pos2()
     }
 
-    pub fn node_sob_cursor(&self, p: Pos2, pan: Vec2, _zoom: f32, editor_rect: Rect) -> Option<NodeId> {
+    pub fn node_sob_cursor(
+        &self,
+        p: Pos2,
+        pan: Vec2,
+        _zoom: f32,
+        editor_rect: Rect,
+    ) -> Option<NodeId> {
         let canvas_p = self.screen_para_canvas(p, pan, editor_rect);
         for nid in self.editor_state.graph.iter_nodes() {
             if let Some(pos) = self.editor_state.node_positions.get(nid) {
@@ -29,7 +41,13 @@ impl GraphPanel {
         None
     }
 
-    pub fn sobre_cabecalho_no(&self, p: Pos2, pan: Vec2, _zoom: f32, editor_rect: Rect) -> Option<NodeId> {
+    pub fn sobre_cabecalho_no(
+        &self,
+        p: Pos2,
+        pan: Vec2,
+        _zoom: f32,
+        editor_rect: Rect,
+    ) -> Option<NodeId> {
         let canvas_p = self.screen_para_canvas(p, pan, editor_rect);
         for nid in self.editor_state.graph.iter_nodes() {
             if let Some(pos) = self.editor_state.node_positions.get(nid) {
@@ -54,7 +72,13 @@ impl GraphPanel {
         Some(ports::port_offsets(tipo, half))
     }
 
-    pub fn porta_saida_mais_proxima(&self, p: Pos2, pan: Vec2, _zoom: f32, editor_rect: Rect) -> Option<(NodeId, usize)> {
+    pub fn porta_saida_mais_proxima(
+        &self,
+        p: Pos2,
+        pan: Vec2,
+        _zoom: f32,
+        editor_rect: Rect,
+    ) -> Option<(NodeId, usize)> {
         let canvas_p = self.screen_para_canvas(p, pan, editor_rect);
         let mut melhor: Option<(NodeId, usize, f32)> = None;
         for nid in self.editor_state.graph.iter_nodes() {
@@ -75,7 +99,14 @@ impl GraphPanel {
         melhor.map(|(nid, i, _)| (nid, i))
     }
 
-    pub fn porta_entrada_mais_proxima(&self, p: Pos2, max: f32, pan: Vec2, _zoom: f32, editor_rect: Rect) -> Option<(NodeId, usize)> {
+    pub fn porta_entrada_mais_proxima(
+        &self,
+        p: Pos2,
+        max: f32,
+        pan: Vec2,
+        _zoom: f32,
+        editor_rect: Rect,
+    ) -> Option<(NodeId, usize)> {
         let canvas_p = self.screen_para_canvas(p, pan, editor_rect);
         let mut melhor: Option<(NodeId, usize, f32)> = None;
         for nid in self.editor_state.graph.iter_nodes() {
@@ -106,15 +137,33 @@ impl GraphPanel {
     }
 
     pub fn reafirmar_posicoes(&mut self) {
-        let fixar = |idx: Option<NodeId>, loc: Pos2, liberados: &std::collections::HashSet<NodeId>, positions: &mut slotmap::SecondaryMap<NodeId, Pos2>| {
+        let fixar = |idx: Option<NodeId>,
+                     loc: Pos2,
+                     liberados: &std::collections::HashSet<NodeId>,
+                     positions: &mut slotmap::SecondaryMap<NodeId, Pos2>| {
             if let Some(i) = idx {
                 if !liberados.contains(&i) {
                     positions.insert(i, loc);
                 }
             }
         };
-        fixar(self.canvas, self.canvas_loc, &self.liberados, &mut self.editor_state.node_positions);
-        fixar(self.cena, self.cena_loc, &self.liberados, &mut self.editor_state.node_positions);
-        fixar(self.master, self.master_loc, &self.liberados, &mut self.editor_state.node_positions);
+        fixar(
+            self.canvas,
+            self.canvas_loc,
+            &self.liberados,
+            &mut self.editor_state.node_positions,
+        );
+        fixar(
+            self.cena,
+            self.cena_loc,
+            &self.liberados,
+            &mut self.editor_state.node_positions,
+        );
+        fixar(
+            self.master,
+            self.master_loc,
+            &self.liberados,
+            &mut self.editor_state.node_positions,
+        );
     }
 }

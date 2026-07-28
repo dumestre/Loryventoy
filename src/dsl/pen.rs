@@ -122,8 +122,15 @@ pub fn extrair_textos(cmds: &[PathCmd]) -> Vec<PenText> {
 /// Erros de parse/avaliação com localização.
 #[derive(Debug, Clone)]
 pub enum DslError {
-    Parse { msg: String, linha: usize, coluna: usize },
-    Eval { msg: String, linha: usize },
+    Parse {
+        msg: String,
+        linha: usize,
+        coluna: usize,
+    },
+    Eval {
+        msg: String,
+        linha: usize,
+    },
 }
 
 impl std::fmt::Display for DslError {
@@ -626,13 +633,16 @@ impl<'a> Parser<'a> {
         let bytes = h.as_bytes();
         let parse2 = |s: &[u8]| {
             let txt = std::str::from_utf8(s).unwrap_or("");
-            u8::from_str_radix(txt, 16).map_err(|_| {
-                self.err(format!("dígitos hex inválidos em '{tok}'"))
-            })
+            u8::from_str_radix(txt, 16)
+                .map_err(|_| self.err(format!("dígitos hex inválidos em '{tok}'")))
         };
         let to_f = |v: u8| v as f32 / 255.0;
         match bytes.len() {
-            6 => Ok(vec![to_f(parse2(&bytes[0..2])?), to_f(parse2(&bytes[2..4])?), to_f(parse2(&bytes[4..6])?)]),
+            6 => Ok(vec![
+                to_f(parse2(&bytes[0..2])?),
+                to_f(parse2(&bytes[2..4])?),
+                to_f(parse2(&bytes[4..6])?),
+            ]),
             8 => Ok(vec![
                 to_f(parse2(&bytes[0..2])?),
                 to_f(parse2(&bytes[2..4])?),
@@ -992,13 +1002,7 @@ impl<'a> Parser<'a> {
                     return Err(self.err("esperado '{' após for"));
                 }
                 let corpo = self.parse_bloco()?;
-                Ok(self.stmt(StmtKind::For(
-                    var.to_string(),
-                    inicio,
-                    fim,
-                    passo,
-                    corpo,
-                )))
+                Ok(self.stmt(StmtKind::For(var.to_string(), inicio, fim, passo, corpo)))
             }
             "while" => {
                 let cond = self.parse_expr()?;
@@ -1270,11 +1274,7 @@ impl<'a> Parser<'a> {
         }
         if tok == "-" {
             let f = self.parse_factor()?;
-            return Ok(Expr::Bin(
-                Box::new(Expr::Num(0.0)),
-                BinOp::Sub,
-                Box::new(f),
-            ));
+            return Ok(Expr::Bin(Box::new(Expr::Num(0.0)), BinOp::Sub, Box::new(f)));
         }
         if let Ok(n) = tok.parse::<f32>() {
             return Ok(Expr::Num(n));
@@ -1402,11 +1402,13 @@ impl Eval {
 
     /// Empurra um `Move`, aplicando a transformação atual.
     fn push_move(&mut self, x: f32, y: f32) {
-        self.cmds.push(PathCmd::Move(self.xf(crate::domain::Vec2::new(x, y))));
+        self.cmds
+            .push(PathCmd::Move(self.xf(crate::domain::Vec2::new(x, y))));
     }
     /// Empurra um `Line`, aplicando a transformação atual.
     fn push_line(&mut self, x: f32, y: f32) {
-        self.cmds.push(PathCmd::Line(self.xf(crate::domain::Vec2::new(x, y))));
+        self.cmds
+            .push(PathCmd::Line(self.xf(crate::domain::Vec2::new(x, y))));
     }
     /// Empurra um `Bezier`, aplicando a transformação atual.
     fn push_bezier(&mut self, c1x: f32, c1y: f32, c2x: f32, c2y: f32, x: f32, y: f32) {
@@ -1434,7 +1436,8 @@ impl Eval {
         // funções declaradas depois no código).
         for s in stmts {
             if let StmtKind::Fn(nome, params, corpo) = &s.kind {
-                self.funcs.insert(nome.clone(), (params.clone(), corpo.clone()));
+                self.funcs
+                    .insert(nome.clone(), (params.clone(), corpo.clone()));
             }
         }
         for s in stmts {
@@ -1507,7 +1510,10 @@ impl Eval {
                 Ok(Flow::Normal)
             }
             StmtKind::Scale(sx, sy) => {
-                let (sx, sy) = (self.eval_expr_num(sx, linha)?, self.eval_expr_num(sy, linha)?);
+                let (sx, sy) = (
+                    self.eval_expr_num(sx, linha)?,
+                    self.eval_expr_num(sy, linha)?,
+                );
                 self.transform = compose(&self.transform, &[sx, 0.0, 0.0, 0.0, sy, 0.0]);
                 Ok(Flow::Normal)
             }
@@ -1532,9 +1538,12 @@ impl Eval {
                 Ok(Flow::Normal)
             }
             StmtKind::Snake(x, y, length, segments) => {
-                let (x, y, length, segments) =
-                    (self.eval_expr_num(x, linha)?, self.eval_expr_num(y, linha)?,
-                     self.eval_expr_num(length, linha)?, self.eval_expr_num(segments, linha)?);
+                let (x, y, length, segments) = (
+                    self.eval_expr_num(x, linha)?,
+                    self.eval_expr_num(y, linha)?,
+                    self.eval_expr_num(length, linha)?,
+                    self.eval_expr_num(segments, linha)?,
+                );
                 let segs = segments.max(1.0) as usize;
                 let step = length / segs as f32;
                 let amp = step * 0.5;
@@ -1693,7 +1702,8 @@ impl Eval {
                 let total = (n as usize) * 2;
                 let mut primeiro = true;
                 for k in 0..total {
-                    let ang = (k as f32) * (std::f32::consts::PI / n as f32) - std::f32::consts::FRAC_PI_2;
+                    let ang = (k as f32) * (std::f32::consts::PI / n as f32)
+                        - std::f32::consts::FRAC_PI_2;
                     let rr = if k % 2 == 0 { r1 } else { r2 };
                     let px = cx + ang.cos() * rr;
                     let py = cy + ang.sin() * rr;
@@ -1880,11 +1890,23 @@ impl Eval {
         };
         let mut first = true;
         // top-right
-        quad(x1 - r, y0 + r, -std::f32::consts::FRAC_PI_2, 0.0, &mut first);
+        quad(
+            x1 - r,
+            y0 + r,
+            -std::f32::consts::FRAC_PI_2,
+            0.0,
+            &mut first,
+        );
         // bottom-right
         quad(x1 - r, y1 - r, 0.0, std::f32::consts::FRAC_PI_2, &mut first);
         // bottom-left
-        quad(x0 + r, y1 - r, std::f32::consts::FRAC_PI_2, std::f32::consts::PI, &mut first);
+        quad(
+            x0 + r,
+            y1 - r,
+            std::f32::consts::FRAC_PI_2,
+            std::f32::consts::PI,
+            &mut first,
+        );
         // top-left
         quad(
             x0 + r,
@@ -1948,9 +1970,10 @@ impl Eval {
                     return Ok(Valor::Num((self.t / self.duracao).clamp(0.0, 1.0)));
                 }
                 // `i` vale 0 fora de repeat (já inserido no `new`).
-                self.vars.get(v).copied().ok_or_else(|| {
-                    self.eval_err(format!("variável '{v}' não definida"), linha)
-                })
+                self.vars
+                    .get(v)
+                    .copied()
+                    .ok_or_else(|| self.eval_err(format!("variável '{v}' não definida"), linha))
             }
             Expr::Bin(a, op, b) => {
                 let (a, b) = (self.eval_expr(a, linha)?, self.eval_expr(b, linha)?);
@@ -1975,12 +1998,20 @@ impl Eval {
                     BinOp::And => {
                         let av = a != 0.0;
                         let bv = b != 0.0;
-                        if av && bv { 1.0 } else { 0.0 }
+                        if av && bv {
+                            1.0
+                        } else {
+                            0.0
+                        }
                     }
                     BinOp::Or => {
                         let av = a != 0.0;
                         let bv = b != 0.0;
-                        if av || bv { 1.0 } else { 0.0 }
+                        if av || bv {
+                            1.0
+                        } else {
+                            0.0
+                        }
                     }
                 }))
             }
@@ -2029,10 +2060,7 @@ impl Eval {
                     "floor" => Ok(Valor::Num(vals[0].num(linha)?.floor())),
                     "vec2" => {
                         if vals.len() != 2 {
-                            return Err(self.eval_err(
-                                "vec2 espera 2 argumentos (x, y)",
-                                linha,
-                            ));
+                            return Err(self.eval_err("vec2 espera 2 argumentos (x, y)", linha));
                         }
                         Ok(Valor::Vec(crate::domain::Vec2::new(
                             vals[0].num(linha)?,
@@ -2044,7 +2072,11 @@ impl Eval {
                         if vals.len() != 3 {
                             return Err(self.eval_err("lerp espera 3 argumentos (a, b, t)", linha));
                         }
-                        let (a, b, t) = (vals[0].num(linha)?, vals[1].num(linha)?, vals[2].num(linha)?);
+                        let (a, b, t) = (
+                            vals[0].num(linha)?,
+                            vals[1].num(linha)?,
+                            vals[2].num(linha)?,
+                        );
                         Ok(Valor::Num(a + (b - a) * t))
                     }
                     "map" => {
@@ -2072,10 +2104,9 @@ impl Eval {
                     "ease" => {
                         // ease(x, "tipo") aplica uma curva de easing a x (0..1).
                         if vals.len() != 2 {
-                            return Err(self.eval_err(
-                                "ease espera 2 argumentos (x, \"tipo\")",
-                                linha,
-                            ));
+                            return Err(
+                                self.eval_err("ease espera 2 argumentos (x, \"tipo\")", linha)
+                            );
                         }
                         let x = vals[0].num(linha)?;
                         let tipo = match &args[1] {
@@ -2092,10 +2123,9 @@ impl Eval {
                     "osc" => {
                         // osc(freq, amp, offset) = amp * sin(2π * freq * t + offset)
                         if vals.len() != 3 {
-                            return Err(self.eval_err(
-                                "osc espera 3 argumentos (freq, amp, offset)",
-                                linha,
-                            ));
+                            return Err(
+                                self.eval_err("osc espera 3 argumentos (freq, amp, offset)", linha)
+                            );
                         }
                         let (freq, amp, off) = (
                             vals[0].num(linha)?,
@@ -2201,7 +2231,13 @@ fn ease_x(tipo: &str, x: f32) -> f32 {
         "cubic" => Box::new(|t: f32| t * t * t),
         "quart" => Box::new(|t: f32| t * t * t * t),
         "quint" => Box::new(|t: f32| t * t * t * t * t),
-        "expo" => Box::new(|t: f32| if t >= 1.0 { 1.0 } else { (2.0f32).powf(10.0 * t - 10.0) }),
+        "expo" => Box::new(|t: f32| {
+            if t >= 1.0 {
+                1.0
+            } else {
+                (2.0f32).powf(10.0 * t - 10.0)
+            }
+        }),
         "circ" => Box::new(|t: f32| 1.0 - (1.0 - t * t).sqrt()),
         "sine" | "sin" => Box::new(|t: f32| 1.0 - ((t * std::f32::consts::PI).cos())),
         "back" => Box::new(|t: f32| {
@@ -2298,7 +2334,6 @@ mod tests {
         assert!(cmds.iter().any(|c| matches!(c, PathCmd::Fill(true))));
     }
 
-
     #[test]
     fn erro_sintaxe_reporta_linha() {
         let r = Program::parse("move 1 2\nline 3\n");
@@ -2310,7 +2345,10 @@ mod tests {
         let codigo = "repeat 10 { let a = i * 36 \n line (cos(a)) (sin(a)) }";
         let p = Program::parse(codigo).unwrap();
         let cmds = p.eval(0.0, 1).unwrap();
-        let linhas = cmds.iter().filter(|c| matches!(c, PathCmd::Line(_))).count();
+        let linhas = cmds
+            .iter()
+            .filter(|c| matches!(c, PathCmd::Line(_)))
+            .count();
         assert_eq!(linhas, 10);
     }
 
@@ -2375,7 +2413,10 @@ circle 0 0 40";
         let codigo = "for k in 0..4 { line k 0 }";
         let p = Program::parse(codigo).unwrap();
         let cmds = p.eval(0.0, 1).unwrap();
-        let linhas = cmds.iter().filter(|c| matches!(c, PathCmd::Line(_))).count();
+        let linhas = cmds
+            .iter()
+            .filter(|c| matches!(c, PathCmd::Line(_)))
+            .count();
         assert_eq!(linhas, 4);
     }
 
@@ -2384,7 +2425,10 @@ circle 0 0 40";
         let codigo = "let n = 0\nwhile (n < 3) { line n 0 \n let n = n + 1 }";
         let p = Program::parse(codigo).unwrap();
         let cmds = p.eval(0.0, 1).unwrap();
-        let linhas = cmds.iter().filter(|c| matches!(c, PathCmd::Line(_))).count();
+        let linhas = cmds
+            .iter()
+            .filter(|c| matches!(c, PathCmd::Line(_)))
+            .count();
         assert_eq!(linhas, 3);
     }
 
@@ -2609,7 +2653,11 @@ color 0.78 0.47 0.08
         let p = Program::parse(codigo).expect("deve parsear");
         let cmds = p.eval(0.0, 1).unwrap();
         match &cmds[0] {
-            PathCmd::Text { alinhamento, rotacao, .. } => {
+            PathCmd::Text {
+                alinhamento,
+                rotacao,
+                ..
+            } => {
                 assert!(matches!(alinhamento, TextoAlinhamento::Center));
                 assert_eq!(*rotacao, 30.0);
             }
@@ -2631,7 +2679,10 @@ color 0.78 0.47 0.08
         // move -5 -10 também funciona
         let p = Program::parse("move -5 -10").unwrap();
         let cmds = p.eval(0.0, 1).unwrap();
-        assert!(matches!(cmds[0], PathCmd::Move(crate::domain::Vec2 { x: -5.0, y: -10.0 })));
+        assert!(matches!(
+            cmds[0],
+            PathCmd::Move(crate::domain::Vec2 { x: -5.0, y: -10.0 })
+        ));
     }
 
     #[test]
@@ -2667,7 +2718,8 @@ color 0.78 0.47 0.08
 
     #[test]
     fn lerp_e_map_funcionam() {
-        let p = Program::parse("let a = lerp(0, 100, 0.5)\nlet b = map(50, 0, 100, 0, 200)").unwrap();
+        let p =
+            Program::parse("let a = lerp(0, 100, 0.5)\nlet b = map(50, 0, 100, 0, 200)").unwrap();
         let cmds = p.eval(0.0, 1).unwrap();
         // só checamos que avaliou sem erro (lerp=50, map=100)
         let _ = cmds;
@@ -2729,7 +2781,10 @@ move 0 0";
     fn snake_gera_caminho_serpenteante() {
         let p = Program::parse("snake 0 0 200 8").unwrap();
         let cmds = p.eval(0.0, 1).unwrap();
-        let linhas = cmds.iter().filter(|c| matches!(c, PathCmd::Line(_))).count();
+        let linhas = cmds
+            .iter()
+            .filter(|c| matches!(c, PathCmd::Line(_)))
+            .count();
         assert_eq!(linhas, 8, "snake deve emitir 8 segmentos");
         assert!(matches!(cmds[0], PathCmd::Move(_)));
     }
@@ -2798,7 +2853,9 @@ line c 0";
     #[test]
     fn variaveis_implicitas_animacao() {
         // t, phase, beat, progress são implícitas e variam com o tempo.
-        let p = Program::parse("let a = t\nlet b = phase\nlet c = beat\nlet d = progress\nline 0 0").unwrap();
+        let p =
+            Program::parse("let a = t\nlet b = phase\nlet c = beat\nlet d = progress\nline 0 0")
+                .unwrap();
         let _ = p.eval(0.0, 1).unwrap();
         // progress em t=3 com duração 6 deve valer 0.5
         let cmds = p.eval_dur(3.0, 1, 6.0).unwrap();
@@ -2822,7 +2879,10 @@ line c 0";
 
     #[test]
     fn ease_tipos_conhecidos() {
-        for tipo in ["linear", "quad", "quadin", "quadout", "cubic", "sine", "expo", "bounce", "elastic", "back"] {
+        for tipo in [
+            "linear", "quad", "quadin", "quadout", "cubic", "sine", "expo", "bounce", "elastic",
+            "back",
+        ] {
             let codigo = format!("let e = ease(0.5, \"{tipo}\")\nline e 0");
             let p = Program::parse(&codigo).unwrap();
             let _ = p.eval(0.0, 1).unwrap();

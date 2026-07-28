@@ -286,7 +286,9 @@ impl<'a> Parser<'a> {
 
     /// Lê uma referência de porto `.porto` (o ponto é token à parte).
     fn le_porto(&mut self) -> Result<String, ScriptError> {
-        let t = self.proximo().ok_or_else(|| self.err("esperado '.porto'"))?;
+        let t = self
+            .proximo()
+            .ok_or_else(|| self.err("esperado '.porto'"))?;
         if t == "." {
             let nome = self
                 .proximo()
@@ -311,7 +313,12 @@ impl<'a> Parser<'a> {
             .ok_or_else(|| self.err("esperado nó de destino"))?
             .to_string();
         let entrada = self.le_porto()?;
-        Ok(Conexao { de, saida, para, entrada })
+        Ok(Conexao {
+            de,
+            saida,
+            para,
+            entrada,
+        })
     }
 
     /// Consome um bloco `{ campo valor ... }` (campos de um `add`), chamando
@@ -359,12 +366,16 @@ impl<'a> Parser<'a> {
                         .ok_or_else(|| self.err("esperado id após tipo"))?
                         .to_string();
                     let (campos, codigo) = self.parse_campos()?;
-                    out.push(PatchCmd::Add { tipo, id, campos, codigo });
+                    out.push(PatchCmd::Add {
+                        tipo,
+                        id,
+                        campos,
+                        codigo,
+                    });
                 }
                 "set" => {
                     let (id, campo) = self.le_ref()?;
-                    let campo = campo
-                        .ok_or_else(|| self.err("set espera 'id.campo'"))?;
+                    let campo = campo.ok_or_else(|| self.err("set espera 'id.campo'"))?;
                     if campo == "codigo" {
                         let code = self.bloco_texto()?;
                         out.push(PatchCmd::Set {
@@ -374,15 +385,18 @@ impl<'a> Parser<'a> {
                             codigo: Some(code),
                         });
                     } else {
-                        let valor = if campo == "color"
-                            || campo == "colour"
-                            || campo.ends_with("_color")
-                        {
-                            self.le_cor()?
-                        } else {
-                            self.le_valor()?
-                        };
-                        out.push(PatchCmd::Set { id, campo, valor, codigo: None });
+                        let valor =
+                            if campo == "color" || campo == "colour" || campo.ends_with("_color") {
+                                self.le_cor()?
+                            } else {
+                                self.le_valor()?
+                            };
+                        out.push(PatchCmd::Set {
+                            id,
+                            campo,
+                            valor,
+                            codigo: None,
+                        });
                     }
                 }
                 "remove" | "delete" => {
@@ -430,7 +444,9 @@ remove old2
         let cmds = parse_patch(src).expect("deve parsear");
         assert_eq!(cmds.len(), 6);
         match &cmds[0] {
-            PatchCmd::Add { tipo, id, campos, .. } => {
+            PatchCmd::Add {
+                tipo, id, campos, ..
+            } => {
                 assert_eq!(tipo, "pen");
                 assert_eq!(id, "p1");
                 assert!(campos.iter().any(|(k, _)| k == "scene"));

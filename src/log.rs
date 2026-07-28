@@ -26,7 +26,9 @@ static mut NIVEL_LOG: LogLevel = LogLevel::Warn;
 
 /// Define o nível mínimo de log. Mensagens abaixo deste nível são descartadas.
 pub fn definir_nivel(nivel: LogLevel) {
-    unsafe { NIVEL_LOG = nivel; }
+    unsafe {
+        NIVEL_LOG = nivel;
+    }
 }
 
 /// Retorna o nível atual de log.
@@ -107,7 +109,15 @@ fn agora() -> String {
     let h = (t % 86400) / 3600;
     let m = (t % 3600) / 60;
     let s = t % 60;
-    format!("{:02}/{:02}/{} {:02}:{:02}:{:02}", d + 1, mes + 1, y, h, m, s)
+    format!(
+        "{:02}/{:02}/{} {:02}:{:02}:{:02}",
+        d + 1,
+        mes + 1,
+        y,
+        h,
+        m,
+        s
+    )
 }
 
 #[cfg(test)]

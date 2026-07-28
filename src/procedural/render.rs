@@ -1,10 +1,10 @@
 //! Conversão de formas do domínio para `egui::Shape`.
 //! Mantém o conhecimento de rendering isolado aqui.
 
-use crate::procedural::domain::Shape;
-use eframe::egui::{Color32, Pos2, Rect, Shape as EguiShape, Stroke, Vec2};
-use eframe::egui::epaint::{EllipseShape, PathShape, RectShape};
 use crate::domain::Color;
+use crate::procedural::domain::Shape;
+use eframe::egui::epaint::{EllipseShape, PathShape, RectShape};
+use eframe::egui::{Color32, Pos2, Rect, Shape as EguiShape, Stroke, Vec2};
 
 /// Converte uma `Color` do domínio para `egui::Color32`.
 pub fn color_to_color32(c: Color) -> Color32 {
@@ -14,17 +14,28 @@ pub fn color_to_color32(c: Color) -> Color32 {
 /// Converte uma `Shape` do domínio para `egui::Shape`.
 pub fn shape_to_egui(shape: Shape) -> EguiShape {
     match shape {
-        Shape::Rect { c, tam, corner_radius, cor } => {
+        Shape::Rect {
+            c,
+            tam,
+            corner_radius,
+            cor,
+        } => {
             let rect = Rect::from_center_size(Pos2::new(c.x, c.y), Vec2::new(tam.x, tam.y));
             if corner_radius > 0 {
-                EguiShape::Rect(RectShape::filled(rect, corner_radius, color_to_color32(cor)))
+                EguiShape::Rect(RectShape::filled(
+                    rect,
+                    corner_radius,
+                    color_to_color32(cor),
+                ))
             } else {
                 EguiShape::Rect(RectShape::filled(rect, 0, color_to_color32(cor)))
             }
         }
-        Shape::Ellipse { c, rx, ry, cor } => {
-            EguiShape::Ellipse(EllipseShape::filled(Pos2::new(c.x, c.y), Vec2::new(rx, ry), color_to_color32(cor)))
-        }
+        Shape::Ellipse { c, rx, ry, cor } => EguiShape::Ellipse(EllipseShape::filled(
+            Pos2::new(c.x, c.y),
+            Vec2::new(rx, ry),
+            color_to_color32(cor),
+        )),
         Shape::Path { pts, cor } => {
             if pts.len() < 2 {
                 return EguiShape::Noop;

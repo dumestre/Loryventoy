@@ -1,9 +1,12 @@
-use super::{ParametroPorto, PortSpec, NodeParams, RuidoParams, P_RUIDO_OUT};
+use super::{NodeParams, ParametroPorto, PortSpec, RuidoParams, P_RUIDO_OUT};
 
 static SAIDAS: [ParametroPorto; 1] = [P_RUIDO_OUT];
 
 pub(crate) fn portos() -> PortSpec {
-    PortSpec { entradas: &[], saidas: &SAIDAS }
+    PortSpec {
+        entradas: &[],
+        saidas: &SAIDAS,
+    }
 }
 
 pub(crate) fn padrao() -> NodeParams {

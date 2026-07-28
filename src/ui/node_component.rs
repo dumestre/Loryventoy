@@ -1,16 +1,16 @@
 #![allow(dead_code)]
 
 use std::collections::HashMap;
-use std::sync::{OnceLock, RwLock};
 use std::string::String;
+use std::sync::{OnceLock, RwLock};
 
-use eframe::egui::{
-    Align, Color32, ComboBox, DragValue, Grid, Image, Layout, Response,
-    Sense, Stroke, TextStyle, Ui, Vec2,
-};
-use crate::graph_editor::NodeId;
 use crate::domain::{Color as DomainColor, LayerEntry};
+use crate::graph_editor::NodeId;
 use crate::nodes::{NodeParams, ProjetoConfig, ShapeParams, TipoNo};
+use eframe::egui::{
+    Align, Color32, ComboBox, DragValue, Grid, Image, Layout, Response, Sense, Stroke, TextStyle,
+    Ui, Vec2,
+};
 
 /// Ações que podem ser solicitadas pelo inspector de um nó.
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
@@ -196,8 +196,13 @@ fn icon_button(ui: &mut Ui, image: Image<'_>, size: f32) -> Response {
     v.widgets.active.bg_stroke = Stroke::NONE;
     ui.scope(|ui| {
         *ui.visuals_mut() = v;
-        ui.add(image.fit_to_exact_size(Vec2::splat(size)).sense(Sense::click()))
-    }).inner
+        ui.add(
+            image
+                .fit_to_exact_size(Vec2::splat(size))
+                .sense(Sense::click()),
+        )
+    })
+    .inner
 }
 
 fn hover_bg(ui: &Ui, resp: &Response, color: Color32) {
@@ -227,7 +232,8 @@ pub fn render_layer_header(
             ui,
             eframe::egui::include_image!("../ui/icons/add_clean.svg").into(),
             16.0,
-        ).on_hover_text("Adicionar Layer");
+        )
+        .on_hover_text("Adicionar Layer");
         hover_bg(ui, &btn, HOVER_VERDE);
         if btn.clicked() {
             acao = AcaoInspector::CriarLayerEntry;
@@ -253,24 +259,36 @@ pub fn render_layer_row(
     let is_selected = selected == i;
     ui.horizontal(|ui| {
         let (rect, _) = ui.allocate_exact_size(Vec2::new(14.0, 14.0), Sense::hover());
-        let cor32 = eframe::egui::Color32::from_rgba_unmultiplied(layers[i].cor.r, layers[i].cor.g, layers[i].cor.b, layers[i].cor.a);
+        let cor32 = eframe::egui::Color32::from_rgba_unmultiplied(
+            layers[i].cor.r,
+            layers[i].cor.g,
+            layers[i].cor.b,
+            layers[i].cor.a,
+        );
         let alpha = if layers[i].visivel { 1.0 } else { 0.35 };
-        ui.painter().circle_filled(rect.center(), 5.0, cor32.gamma_multiply(alpha));
+        ui.painter()
+            .circle_filled(rect.center(), 5.0, cor32.gamma_multiply(alpha));
         if !layers[i].visivel {
-            ui.painter().circle_stroke(rect.center(), 5.0, Stroke::new(1.0, Color32::from_rgb(80, 80, 90)));
+            ui.painter().circle_stroke(
+                rect.center(),
+                5.0,
+                Stroke::new(1.0, Color32::from_rgb(80, 80, 90)),
+            );
         }
         let vis_btn = if layers[i].visivel {
             icon_button(
                 ui,
                 eframe::egui::include_image!("../ui/icons/view_on.svg").into(),
                 14.0,
-            ).on_hover_text("Ocultar layer")
+            )
+            .on_hover_text("Ocultar layer")
         } else {
             icon_button(
                 ui,
                 eframe::egui::include_image!("../ui/icons/view_off.svg").into(),
                 14.0,
-            ).on_hover_text("Mostrar layer")
+            )
+            .on_hover_text("Mostrar layer")
         };
         hover_bg(ui, &vis_btn, HOVER_VERDE);
         if vis_btn.clicked() {
@@ -303,17 +321,21 @@ pub fn render_layer_row(
             }
         } else {
             let nome_txt = if is_selected {
-                egui::RichText::new(&layers[i].nome).strong().color(Color32::from_rgb(220, 220, 240))
+                egui::RichText::new(&layers[i].nome)
+                    .strong()
+                    .color(Color32::from_rgb(220, 220, 240))
             } else {
                 egui::RichText::new(&layers[i].nome)
             };
-            let resp = ui.scope(|ui| {
-                ui.visuals_mut().widgets.hovered.bg_fill = Color32::TRANSPARENT;
-                ui.visuals_mut().widgets.hovered.weak_bg_fill = Color32::TRANSPARENT;
-                ui.visuals_mut().widgets.active.bg_fill = Color32::TRANSPARENT;
-                ui.visuals_mut().widgets.active.weak_bg_fill = Color32::TRANSPARENT;
-                ui.add(egui::Label::new(nome_txt).sense(Sense::click()))
-            }).inner;
+            let resp = ui
+                .scope(|ui| {
+                    ui.visuals_mut().widgets.hovered.bg_fill = Color32::TRANSPARENT;
+                    ui.visuals_mut().widgets.hovered.weak_bg_fill = Color32::TRANSPARENT;
+                    ui.visuals_mut().widgets.active.bg_fill = Color32::TRANSPARENT;
+                    ui.visuals_mut().widgets.active.weak_bg_fill = Color32::TRANSPARENT;
+                    ui.add(egui::Label::new(nome_txt).sense(Sense::click()))
+                })
+                .inner;
             if resp.double_clicked() {
                 start_rename = true;
             } else if resp.clicked() {
@@ -325,7 +347,8 @@ pub fn render_layer_row(
                 ui,
                 eframe::egui::include_image!("../ui/icons/delete_clean.svg").into(),
                 13.0,
-            ).on_hover_text("Remover layer");
+            )
+            .on_hover_text("Remover layer");
             hover_bg(ui, &del_btn, HOVER_VERMELHO);
             if del_btn.clicked() {
                 acao = AcaoInspector::RemoverLayerEntry(node_id, i);
@@ -334,7 +357,8 @@ pub fn render_layer_row(
                 ui,
                 eframe::egui::include_image!("../ui/icons/arrow_down_clean.svg").into(),
                 13.0,
-            ).on_hover_text("Mover para trás");
+            )
+            .on_hover_text("Mover para trás");
             hover_bg(ui, &down_btn, HOVER_VERDE);
             if down_btn.clicked() {
                 acao = AcaoInspector::SubirLayerEntry(node_id, i);
@@ -343,7 +367,8 @@ pub fn render_layer_row(
                 ui,
                 eframe::egui::include_image!("../ui/icons/arrow_up_clean.svg").into(),
                 13.0,
-            ).on_hover_text("Mover para frente");
+            )
+            .on_hover_text("Mover para frente");
             hover_bg(ui, &up_btn, HOVER_VERDE);
             if up_btn.clicked() {
                 acao = AcaoInspector::DescerLayerEntry(node_id, i);
@@ -366,7 +391,9 @@ pub fn show_content(
     topo_tela: f32,
     zoom: f32,
 ) -> AcaoInspector {
-    let Some(params) = params else { return AcaoInspector::Nenhuma };
+    let Some(params) = params else {
+        return AcaoInspector::Nenhuma;
+    };
     // inicia a captura das posições Y das rows deste nó (para alinhar portos).
     CAPTURA.with(|c| {
         *c.borrow_mut() = Some(CapturaRows {
@@ -384,16 +411,14 @@ pub fn show_content(
             }
         }
         TipoNo::Transform => {
-            if let NodeParams::Transform(t) = params
-            {
+            if let NodeParams::Transform(t) = params {
                 grid_xyz(ui, "Posição", &mut t.px, &mut t.py, &mut t.pz);
                 grid_xyz(ui, "Rotação", &mut t.rx, &mut t.ry, &mut t.rz);
                 grid_xyz(ui, "Escala", &mut t.sx, &mut t.sy, &mut t.sz);
             }
         }
         TipoNo::Cena => {
-            if let NodeParams::Cena(cena) = params
-            {
+            if let NodeParams::Cena(cena) = params {
                 grid_texto(ui, "Cena", &mut cena.nome_cena);
                 Grid::new("cena_ativa")
                     .num_columns(2)
@@ -410,12 +435,12 @@ pub fn show_content(
                 ui.separator();
                 ui.label(egui::RichText::new("Cenas disponíveis").strong());
                 for (nome, idx) in cenas {
-                ui.horizontal(|ui| {
-                    ui.label(nome);
-                    if ui.small_button("Focar").clicked() {
-                        acao = AcaoInspector::FocarCena(*idx);
-                    }
-                });
+                    ui.horizontal(|ui| {
+                        ui.label(nome);
+                        if ui.small_button("Focar").clicked() {
+                            acao = AcaoInspector::FocarCena(*idx);
+                        }
+                    });
                 }
                 if cenas.is_empty() {
                     ui.label("(crie marcadores na timeline)");
@@ -425,15 +450,30 @@ pub fn show_content(
         TipoNo::Layer => {
             if let NodeParams::Layer(layer) = params {
                 let h = render_layer_header(ui, &mut layer.cena, cenas);
-                if h != AcaoInspector::Nenhuma { acao = h; }
+                if h != AcaoInspector::Nenhuma {
+                    acao = h;
+                }
                 let count = layer.layers.len();
                 for rev_i in 0..count {
                     let i = count - 1 - rev_i;
                     let is_renaming = *renaming_layer == Some((node_id, i));
-                    let (r, rename_changed) = render_layer_row(ui, i, &mut layer.layers, layer.selected, node_id, is_renaming);
-                    if r != AcaoInspector::Nenhuma && acao == AcaoInspector::Nenhuma { acao = r; }
+                    let (r, rename_changed) = render_layer_row(
+                        ui,
+                        i,
+                        &mut layer.layers,
+                        layer.selected,
+                        node_id,
+                        is_renaming,
+                    );
+                    if r != AcaoInspector::Nenhuma && acao == AcaoInspector::Nenhuma {
+                        acao = r;
+                    }
                     if rename_changed {
-                        *renaming_layer = if is_renaming { None } else { Some((node_id, i)) };
+                        *renaming_layer = if is_renaming {
+                            None
+                        } else {
+                            Some((node_id, i))
+                        };
                         if is_renaming {
                             acao = AcaoInspector::RenomearLayerEntry(node_id, i);
                         }
@@ -444,20 +484,20 @@ pub fn show_content(
         TipoNo::Shape => {
             if let NodeParams::Shape(shape) = params {
                 let ShapeParams {
-                cena,
-                tipo,
-                px,
-                py,
-                largura,
-                altura,
-                rotacao,
-                cor,
-                seed,
-                noise_scale,
-                amp,
-                veloc,
-                trim_inicio,
-                trim_fim,
+                    cena,
+                    tipo,
+                    px,
+                    py,
+                    largura,
+                    altura,
+                    rotacao,
+                    cor,
+                    seed,
+                    noise_scale,
+                    amp,
+                    veloc,
+                    trim_inicio,
+                    trim_fim,
                 } = shape;
                 grid_combo_cena(ui, "Cena", cena, cenas);
                 grid_combo_tipo(ui, "Tipo", tipo);
@@ -484,7 +524,9 @@ pub fn show_content(
                 // --- trim (mostrado como 0-100%) ---
                 {
                     let r = Grid::new("trim_inicio")
-                        .num_columns(2).spacing([6.0, 2.0]).show(ui, |ui| {
+                        .num_columns(2)
+                        .spacing([6.0, 2.0])
+                        .show(ui, |ui| {
                             ui.label("Trim início");
                             let mut v = *trim_inicio * 100.0;
                             if draggable_value(ui, &mut v, 0.0..=100.0, 1.0, "%", 1).changed() {
@@ -496,7 +538,9 @@ pub fn show_content(
                 }
                 {
                     let r = Grid::new("trim_fim")
-                        .num_columns(2).spacing([6.0, 2.0]).show(ui, |ui| {
+                        .num_columns(2)
+                        .spacing([6.0, 2.0])
+                        .show(ui, |ui| {
                             ui.label("Trim fim");
                             let mut v = *trim_fim * 100.0;
                             if draggable_value(ui, &mut v, 0.0..=100.0, 1.0, "%", 1).changed() {
@@ -509,8 +553,7 @@ pub fn show_content(
             }
         }
         TipoNo::Texto => {
-            if let NodeParams::Texto(texto) = params
-            {
+            if let NodeParams::Texto(texto) = params {
                 grid_combo_cena(ui, "Cena", &mut texto.cena, cenas);
                 Grid::new("texto_conteudo")
                     .num_columns(2)
@@ -543,11 +586,13 @@ pub fn show_content(
                         });
                         ui.end_row();
                     });
-                    registrar_linha("Cor", &rc.response);
+                registrar_linha("Cor", &rc.response);
                 // --- trim texto 0-100% ---
                 {
                     let r = Grid::new("texto_trim_inicio")
-                        .num_columns(2).spacing([6.0, 2.0]).show(ui, |ui| {
+                        .num_columns(2)
+                        .spacing([6.0, 2.0])
+                        .show(ui, |ui| {
                             ui.label("Trim início");
                             let mut v = texto.trim_inicio * 100.0;
                             if draggable_value(ui, &mut v, 0.0..=100.0, 1.0, "%", 1).changed() {
@@ -559,7 +604,9 @@ pub fn show_content(
                 }
                 {
                     let r = Grid::new("texto_trim_fim")
-                        .num_columns(2).spacing([6.0, 2.0]).show(ui, |ui| {
+                        .num_columns(2)
+                        .spacing([6.0, 2.0])
+                        .show(ui, |ui| {
                             ui.label("Trim fim");
                             let mut v = texto.trim_fim * 100.0;
                             if draggable_value(ui, &mut v, 0.0..=100.0, 1.0, "%", 1).changed() {
@@ -572,8 +619,7 @@ pub fn show_content(
             }
         }
         TipoNo::Pen => {
-            if let NodeParams::Pen(pen) = params
-            {
+            if let NodeParams::Pen(pen) = params {
                 grid_combo_cena(ui, "Cena", &mut pen.cena, cenas);
                 grid_xyz(ui, "Posição", &mut pen.pos_x, &mut pen.pos_y, &mut 0.0);
                 grid_2(ui, "Espessura", &mut pen.espessura, 0.0..=100.0, "px", 1);
@@ -630,8 +676,19 @@ pub fn show_content(
                 // ao final do código.
                 ui.horizontal_wrapped(|ui| {
                     let cmds = [
-                        "move", "line", "rect", "circle", "bezier", "close", "fill on",
-                        "stroke", "color", "stroke_color", "fill_color", "repeat", "if",
+                        "move",
+                        "line",
+                        "rect",
+                        "circle",
+                        "bezier",
+                        "close",
+                        "fill on",
+                        "stroke",
+                        "color",
+                        "stroke_color",
+                        "fill_color",
+                        "repeat",
+                        "if",
                     ];
                     for c in cmds {
                         if ui.small_button(c).clicked() {
@@ -679,7 +736,9 @@ pub fn show_content(
                 // --- trim pen 0-100% ---
                 {
                     let r = Grid::new("pen_trim_inicio")
-                        .num_columns(2).spacing([6.0, 2.0]).show(ui, |ui| {
+                        .num_columns(2)
+                        .spacing([6.0, 2.0])
+                        .show(ui, |ui| {
                             ui.label("Trim início");
                             let mut v = pen.trim_inicio * 100.0;
                             if draggable_value(ui, &mut v, 0.0..=100.0, 1.0, "%", 1).changed() {
@@ -691,7 +750,9 @@ pub fn show_content(
                 }
                 {
                     let r = Grid::new("pen_trim_fim")
-                        .num_columns(2).spacing([6.0, 2.0]).show(ui, |ui| {
+                        .num_columns(2)
+                        .spacing([6.0, 2.0])
+                        .show(ui, |ui| {
                             ui.label("Trim fim");
                             let mut v = pen.trim_fim * 100.0;
                             if draggable_value(ui, &mut v, 0.0..=100.0, 1.0, "%", 1).changed() {
@@ -704,8 +765,7 @@ pub fn show_content(
             }
         }
         TipoNo::Ruido => {
-            if let NodeParams::Ruido(ruido) = params
-            {
+            if let NodeParams::Ruido(ruido) = params {
                 grid_combo_alvo(ui, "Alvo", &mut ruido.alvo);
                 grid_2(ui, "Seed", &mut ruido.seed, 0.0..=9999.0, "", 0);
                 grid_2(ui, "Frequência", &mut ruido.freq, 0.01..=5.0, "", 2);
@@ -714,16 +774,14 @@ pub fn show_content(
             }
         }
         TipoNo::Anim => {
-            if let NodeParams::Anim(anim) = params
-            {
+            if let NodeParams::Anim(anim) = params {
                 grid_combo_anim_alvo(ui, "Alvo", &mut anim.alvo);
                 grid_combo_loop(ui, "Loop", &mut anim.loop_mode);
                 editor_segmentos(ui, &mut anim.segmentos);
             }
         }
         TipoNo::Saida => {
-            if let NodeParams::Saida(saida) = params
-            {
+            if let NodeParams::Saida(saida) = params {
                 grid_2(ui, "Brilho", &mut saida.brilho, 0.0..=2.0, "", 2);
                 grid_2(ui, "Contraste", &mut saida.contraste, 0.0..=2.0, "", 2);
                 grid_2(ui, "Saturação", &mut saida.saturacao, 0.0..=2.0, "", 2);
@@ -902,14 +960,42 @@ fn editor_segmentos(ui: &mut Ui, segs: &mut Vec<crate::domain::AnimSeg>) {
                 ui.end_row();
                 ui.label("de");
                 ui.horizontal(|ui| {
-                    draggable_value(ui, &mut s.v_ini[0], -f32::INFINITY..=f32::INFINITY, 0.5, "", 2);
-                    draggable_value(ui, &mut s.v_ini[1], -f32::INFINITY..=f32::INFINITY, 0.5, "", 2);
+                    draggable_value(
+                        ui,
+                        &mut s.v_ini[0],
+                        -f32::INFINITY..=f32::INFINITY,
+                        0.5,
+                        "",
+                        2,
+                    );
+                    draggable_value(
+                        ui,
+                        &mut s.v_ini[1],
+                        -f32::INFINITY..=f32::INFINITY,
+                        0.5,
+                        "",
+                        2,
+                    );
                 });
                 ui.end_row();
                 ui.label("para");
                 ui.horizontal(|ui| {
-                    draggable_value(ui, &mut s.v_fim[0], -f32::INFINITY..=f32::INFINITY, 0.5, "", 2);
-                    draggable_value(ui, &mut s.v_fim[1], -f32::INFINITY..=f32::INFINITY, 0.5, "", 2);
+                    draggable_value(
+                        ui,
+                        &mut s.v_fim[0],
+                        -f32::INFINITY..=f32::INFINITY,
+                        0.5,
+                        "",
+                        2,
+                    );
+                    draggable_value(
+                        ui,
+                        &mut s.v_fim[1],
+                        -f32::INFINITY..=f32::INFINITY,
+                        0.5,
+                        "",
+                        2,
+                    );
                 });
                 ui.end_row();
                 ui.label("curva");
@@ -1027,8 +1113,10 @@ fn grid_escala(ui: &mut Ui, x: &mut f32, y: &mut f32) {
         .num_columns(3)
         .spacing([6.0, 2.0])
         .show(ui, |ui| {
-            let img = Image::new(eframe::egui::include_image!("icons/escalapproporcional.svg"))
-                .fit_to_exact_size(Vec2::splat(14.0));
+            let img = Image::new(eframe::egui::include_image!(
+                "icons/escalapproporcional.svg"
+            ))
+            .fit_to_exact_size(Vec2::splat(14.0));
             ui.add(img).on_hover_text("Escala X / Y");
             draggable_value(ui, x, -10.0..=10.0, 0.01, "", 2);
             draggable_value(ui, y, -10.0..=10.0, 0.01, "", 2);
@@ -1101,12 +1189,7 @@ fn grid_canvas(ui: &mut Ui, cfg: &mut ProjetoConfig) {
                     cfg.fundo.a,
                 );
                 if ui.color_edit_button_srgba(&mut fundo).changed() {
-                    cfg.fundo = DomainColor::from_rgba(
-                        fundo.r(),
-                        fundo.g(),
-                        fundo.b(),
-                        fundo.a(),
-                    );
+                    cfg.fundo = DomainColor::from_rgba(fundo.r(), fundo.g(), fundo.b(), fundo.a());
                 }
                 ui.label(hex_de(fundo));
             });

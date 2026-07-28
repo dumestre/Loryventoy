@@ -2,12 +2,12 @@ use std::collections::HashMap;
 
 use eframe::egui::Pos2;
 
-use crate::domain::{Project, ProjectNode, ProjectEdge};
+use crate::domain::{Project, ProjectEdge, ProjectNode};
 use crate::nodes::{NodeParams, TipoNo};
 
-use super::GraphPanel;
-use super::ArestaInfo;
 use super::types::NodeId;
+use super::ArestaInfo;
+use super::GraphPanel;
 
 pub type SnapshotNo = (TipoNo, Pos2, NodeParams);
 pub type SnapshotAresta = (usize, usize, ArestaInfo);
@@ -17,13 +17,23 @@ pub const LIMITE_HISTORICO: usize = 50;
 impl GraphPanel {
     pub fn snapshot(&self) -> (Vec<SnapshotNo>, Vec<SnapshotAresta>) {
         let mut nos = Vec::new();
-        let mut idx_map: std::collections::HashMap<NodeId, usize> = std::collections::HashMap::new();
+        let mut idx_map: std::collections::HashMap<NodeId, usize> =
+            std::collections::HashMap::new();
 
         for (i, nid) in self.editor_state.graph.iter_nodes().enumerate() {
             let node = &self.editor_state.graph[nid];
-            let loc = self.editor_state.node_positions.get(nid).copied().unwrap_or(Pos2::ZERO);
+            let loc = self
+                .editor_state
+                .node_positions
+                .get(nid)
+                .copied()
+                .unwrap_or(Pos2::ZERO);
             idx_map.insert(nid, i);
-            let params = self.params.get(&nid).cloned().unwrap_or_else(|| node.user_data.params.clone());
+            let params = self
+                .params
+                .get(&nid)
+                .cloned()
+                .unwrap_or_else(|| node.user_data.params.clone());
             nos.push((node.user_data.tipo, loc, params));
         }
 
@@ -45,7 +55,11 @@ impl GraphPanel {
         (nos, arestas)
     }
 
-    pub fn carregar_snapshot(&mut self, nos: &[(TipoNo, Pos2, NodeParams)], arestas: &[SnapshotAresta]) {
+    pub fn carregar_snapshot(
+        &mut self,
+        nos: &[(TipoNo, Pos2, NodeParams)],
+        arestas: &[SnapshotAresta],
+    ) {
         self.editor_state.graph = super::types::MyGraph::default();
         self.editor_state.node_order.clear();
         self.editor_state.node_positions = Default::default();
@@ -68,9 +82,21 @@ impl GraphPanel {
             }
         }
 
-        self.canvas = idx_to_nid.iter().zip(nos.iter()).find(|(_, (t, _, _))| *t == TipoNo::Canvas).map(|(n, _)| *n);
-        self.master = idx_to_nid.iter().zip(nos.iter()).find(|(_, (t, _, _))| *t == TipoNo::Saida).map(|(n, _)| *n);
-        self.cena = idx_to_nid.iter().zip(nos.iter()).find(|(_, (t, _, _))| *t == TipoNo::Cena).map(|(n, _)| *n);
+        self.canvas = idx_to_nid
+            .iter()
+            .zip(nos.iter())
+            .find(|(_, (t, _, _))| *t == TipoNo::Canvas)
+            .map(|(n, _)| *n);
+        self.master = idx_to_nid
+            .iter()
+            .zip(nos.iter())
+            .find(|(_, (t, _, _))| *t == TipoNo::Saida)
+            .map(|(n, _)| *n);
+        self.cena = idx_to_nid
+            .iter()
+            .zip(nos.iter())
+            .find(|(_, (t, _, _))| *t == TipoNo::Cena)
+            .map(|(n, _)| *n);
     }
 
     pub fn empurrar_historico(&mut self) {
@@ -125,8 +151,17 @@ impl GraphPanel {
             .map(|(i, nid)| {
                 idx_map.insert(nid, i);
                 let node = &self.editor_state.graph[nid];
-                let loc = self.editor_state.node_positions.get(nid).copied().unwrap_or(Pos2::ZERO);
-                let params = self.params.get(&nid).cloned().unwrap_or_else(|| node.user_data.params.clone());
+                let loc = self
+                    .editor_state
+                    .node_positions
+                    .get(nid)
+                    .copied()
+                    .unwrap_or(Pos2::ZERO);
+                let params = self
+                    .params
+                    .get(&nid)
+                    .cloned()
+                    .unwrap_or_else(|| node.user_data.params.clone());
                 ProjectNode {
                     tipo: node.user_data.tipo,
                     pos_x: loc.x,
@@ -156,7 +191,11 @@ impl GraphPanel {
             })
             .collect();
 
-        Project { nodes, edges, script_text: String::new() }
+        Project {
+            nodes,
+            edges,
+            script_text: String::new(),
+        }
     }
 
     pub fn load_project(&mut self, proj: &Project) {
@@ -183,8 +222,20 @@ impl GraphPanel {
             }
         }
 
-        self.canvas = idx_to_nid.iter().zip(&proj.nodes).find(|(_, n)| n.tipo == TipoNo::Canvas).map(|(n, _)| *n);
-        self.master = idx_to_nid.iter().zip(&proj.nodes).find(|(_, n)| n.tipo == TipoNo::Saida).map(|(n, _)| *n);
-        self.cena = idx_to_nid.iter().zip(&proj.nodes).find(|(_, n)| n.tipo == TipoNo::Cena).map(|(n, _)| *n);
+        self.canvas = idx_to_nid
+            .iter()
+            .zip(&proj.nodes)
+            .find(|(_, n)| n.tipo == TipoNo::Canvas)
+            .map(|(n, _)| *n);
+        self.master = idx_to_nid
+            .iter()
+            .zip(&proj.nodes)
+            .find(|(_, n)| n.tipo == TipoNo::Saida)
+            .map(|(n, _)| *n);
+        self.cena = idx_to_nid
+            .iter()
+            .zip(&proj.nodes)
+            .find(|(_, n)| n.tipo == TipoNo::Cena)
+            .map(|(n, _)| *n);
     }
 }

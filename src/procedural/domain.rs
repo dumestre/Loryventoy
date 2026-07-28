@@ -1,7 +1,7 @@
 //! Tipos e avaliação procedural puros do domínio.
 //! Não depende de `egui`, apenas de `glam` e `noise`.
 
-use crate::domain::{Color, LoopMode, AnimSeg, Vec2, Pos2};
+use crate::domain::{AnimSeg, Color, LoopMode, Pos2, Vec2};
 use crate::dsl::Program;
 use noise::{NoiseFn, Simplex};
 
@@ -53,10 +53,7 @@ pub struct AnimDriver {
 
 impl AnimDriver {
     fn duracao(&self) -> f32 {
-        self.segmentos
-            .iter()
-            .map(|s| s.t_fim)
-            .fold(0.0, f32::max)
+        self.segmentos.iter().map(|s| s.t_fim).fold(0.0, f32::max)
     }
 
     pub fn valor(&self, t: f32) -> [f32; 2] {
@@ -69,7 +66,11 @@ impl AnimDriver {
             LoopMode::Repetir if dur > 0.0 => t.rem_euclid(dur),
             LoopMode::PingPong if dur > 0.0 => {
                 let m = t.rem_euclid(2.0 * dur);
-                if m <= dur { m } else { 2.0 * dur - m }
+                if m <= dur {
+                    m
+                } else {
+                    2.0 * dur - m
+                }
             }
             _ => t,
         };
@@ -288,13 +289,13 @@ impl ShapeGenerator {
                     Some(0) => center.x = vx,
                     Some(1) => center.y = vy,
                     _ => center = Vec2::new(vx, vy),
-                }
+                },
                 1 => rot = vx,
                 2 => match a.comp {
                     Some(0) => tam.x = vx,
                     Some(1) => tam.y = vy,
                     _ => tam = Vec2::new(vx, vy),
-                }
+                },
                 4 => {
                     let f = vx.clamp(0.0, 1.0);
                     cor = Color::from_rgba(
@@ -359,7 +360,12 @@ impl ShapeGenerator {
         let mut shape = match self.kind {
             ShapeKind::Retangulo => {
                 if rot.abs() < 0.01 {
-                    Shape::Rect { c, tam, corner_radius: (tam.x.min(tam.y) * 0.1).clamp(0.0, 255.0) as u8, cor }
+                    Shape::Rect {
+                        c,
+                        tam,
+                        corner_radius: (tam.x.min(tam.y) * 0.1).clamp(0.0, 255.0) as u8,
+                        cor,
+                    }
                 } else {
                     let pts = crate::domain::retangulo_rot(c, tam, rot);
                     Shape::Path { pts, cor }
@@ -421,10 +427,14 @@ impl ShapeGenerator {
                 }
                 Shape::Ellipse { c, rx, ry, .. } => {
                     let n = 48;
-                    Some((0..n).map(|i| {
-                        let a = i as f32 * std::f32::consts::TAU / n as f32;
-                        Pos2::new(c.x + rx * a.cos(), c.y + ry * a.sin())
-                    }).collect())
+                    Some(
+                        (0..n)
+                            .map(|i| {
+                                let a = i as f32 * std::f32::consts::TAU / n as f32;
+                                Pos2::new(c.x + rx * a.cos(), c.y + ry * a.sin())
+                            })
+                            .collect(),
+                    )
                 }
                 Shape::Path { pts, .. } => Some(pts.clone()),
                 _ => None,
@@ -442,9 +452,22 @@ impl ShapeGenerator {
 /// Forma gerada — descrição pura, sem dependência de renderer.
 #[derive(Debug, Clone)]
 pub enum Shape {
-    Rect { c: Pos2, tam: Vec2, corner_radius: u8, cor: Color },
-    Ellipse { c: Pos2, rx: f32, ry: f32, cor: Color },
-    Path { pts: Vec<Pos2>, cor: Color },
+    Rect {
+        c: Pos2,
+        tam: Vec2,
+        corner_radius: u8,
+        cor: Color,
+    },
+    Ellipse {
+        c: Pos2,
+        rx: f32,
+        ry: f32,
+        cor: Color,
+    },
+    Path {
+        pts: Vec<Pos2>,
+        cor: Color,
+    },
 }
 
 /// Fractal Brownian Motion (FBM).
@@ -459,7 +482,11 @@ pub fn fbm(s: &Simplex, p: [f64; 3]) -> f64 {
         freq *= 2.0;
         amp *= 0.5;
     }
-    if norm > 0.0 { soma / norm } else { soma }
+    if norm > 0.0 {
+        soma / norm
+    } else {
+        soma
+    }
 }
 
 /// Deslocamento 2D (dx, dy) de um nó Ruído no instante `t`.
@@ -481,10 +508,12 @@ fn seta(c: Pos2, tam: Vec2, rot: f32, cor: Color) -> Shape {
     let esp = (h * 0.35).max(2.0);
     let comp = w * 0.45;
     let rad = rot.to_radians();
-    let rot2 = |x: f32, y: f32| Pos2::new(
-        c.x + x * rad.cos() - y * rad.sin(),
-        c.y + x * rad.sin() + y * rad.cos(),
-    );
+    let rot2 = |x: f32, y: f32| {
+        Pos2::new(
+            c.x + x * rad.cos() - y * rad.sin(),
+            c.y + x * rad.sin() + y * rad.cos(),
+        )
+    };
     let pts = vec![
         rot2(-w / 2.0, -esp / 2.0),
         rot2(-w / 2.0 + comp, -esp / 2.0),
@@ -521,12 +550,13 @@ pub fn trim_path_pts(pts: &[Pos2], closed: bool, inicio: f32, fim: f32) -> Vec<P
         return vec![];
     }
 
-    let lerp = |a: Pos2, b: Pos2, t: f32| Pos2::new(
-        a.x + (b.x - a.x) * t,
-        a.y + (b.y - a.y) * t,
-    );
+    let lerp = |a: Pos2, b: Pos2, t: f32| Pos2::new(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t);
     let nxt = |i: usize| {
-        if closed && i + 1 >= n { 0 } else { (i + 1).min(n - 1) }
+        if closed && i + 1 >= n {
+            0
+        } else {
+            (i + 1).min(n - 1)
+        }
     };
 
     let si = (s.floor() as usize).min(segs - 1);
@@ -535,7 +565,11 @@ pub fn trim_path_pts(pts: &[Pos2], closed: bool, inicio: f32, fim: f32) -> Vec<P
     let ef = e - ei as f32;
 
     let mut result = Vec::new();
-    result.push(if sf > 0.0 { lerp(pts[si], pts[nxt(si)], sf) } else { pts[si] });
+    result.push(if sf > 0.0 {
+        lerp(pts[si], pts[nxt(si)], sf)
+    } else {
+        pts[si]
+    });
 
     if si < ei {
         for i in (si + 1)..=ei {
@@ -550,7 +584,11 @@ pub fn trim_path_pts(pts: &[Pos2], closed: bool, inicio: f32, fim: f32) -> Vec<P
         }
     }
 
-    let end_p = if ef > 0.0 { lerp(pts[ei], pts[nxt(ei)], ef) } else { pts[ei] };
+    let end_p = if ef > 0.0 {
+        lerp(pts[ei], pts[nxt(ei)], ef)
+    } else {
+        pts[ei]
+    };
     let last = *result.last().unwrap();
     if end_p.distance(last) > 0.5 {
         result.push(end_p);
@@ -578,7 +616,11 @@ mod tests {
 
     #[test]
     fn trim_sem_alteracao() {
-        let pts = vec![Pos2::new(0.0, 0.0), Pos2::new(10.0, 0.0), Pos2::new(10.0, 10.0)];
+        let pts = vec![
+            Pos2::new(0.0, 0.0),
+            Pos2::new(10.0, 0.0),
+            Pos2::new(10.0, 10.0),
+        ];
         let r = trim_path_pts(&pts, false, 0.0, 1.0);
         assert_eq!(r.len(), 3);
     }

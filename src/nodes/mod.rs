@@ -12,12 +12,8 @@ mod texto;
 mod transform;
 
 pub use crate::domain::{
-    TipoNo,
-    NodeParams,
-    ProjectConfig as ProjetoConfig,
-    TransformParams, CenaParams, LayerParams,
-    TextParams, ShapeParams, PenParams,
-    RuidoParams, AnimParams, SaidaParams,
+    AnimParams, CenaParams, LayerParams, NodeParams, PenParams, ProjectConfig as ProjetoConfig,
+    RuidoParams, SaidaParams, ShapeParams, TextParams, TipoNo, TransformParams,
 };
 
 pub fn node_params_padrao(tipo: TipoNo) -> NodeParams {
@@ -79,18 +75,54 @@ pub struct PortSpec {
 pub(crate) const COMP_XYZ: &[&str] = &["X", "Y", "Z"];
 pub(crate) const COMP_XY: &[&str] = &["X", "Y"];
 
-pub(crate) static P_CANVAS: ParametroPorto = ParametroPorto { nome: "Canvas", tipo: TipoPorto::Escalar };
-pub(crate) static P_CENA: ParametroPorto = ParametroPorto { nome: "Cena", tipo: TipoPorto::Escalar };
-pub(crate) static P_LAYER: ParametroPorto = ParametroPorto { nome: "Layer", tipo: TipoPorto::Escalar };
-pub(crate) static P_PEN: ParametroPorto = ParametroPorto { nome: "Pen", tipo: TipoPorto::Escalar };
-pub(crate) static P_POS_XY: ParametroPorto = ParametroPorto { nome: "Posição", tipo: TipoPorto::Vetor(COMP_XY) };
-pub(crate) static P_LARGURA: ParametroPorto = ParametroPorto { nome: "Largura", tipo: TipoPorto::Escalar };
-pub(crate) static P_ALTURA: ParametroPorto = ParametroPorto { nome: "Altura", tipo: TipoPorto::Escalar };
-pub(crate) static P_TAMANHO: ParametroPorto = ParametroPorto { nome: "Tamanho", tipo: TipoPorto::Escalar };
-pub(crate) static P_RUIDO_OUT: ParametroPorto = ParametroPorto { nome: "Ruído", tipo: TipoPorto::Vetor(COMP_XY) };
-pub(crate) static P_ANIM_OUT: ParametroPorto = ParametroPorto { nome: "Animação", tipo: TipoPorto::Vetor(COMP_XY) };
-pub(crate) static P_OPACIDADE: ParametroPorto = ParametroPorto { nome: "Opacidade", tipo: TipoPorto::Escalar };
-pub(crate) static P_ESC_XY: ParametroPorto = ParametroPorto { nome: "Escala", tipo: TipoPorto::Vetor(COMP_XY) };
+pub(crate) static P_CANVAS: ParametroPorto = ParametroPorto {
+    nome: "Canvas",
+    tipo: TipoPorto::Escalar,
+};
+pub(crate) static P_CENA: ParametroPorto = ParametroPorto {
+    nome: "Cena",
+    tipo: TipoPorto::Escalar,
+};
+pub(crate) static P_LAYER: ParametroPorto = ParametroPorto {
+    nome: "Layer",
+    tipo: TipoPorto::Escalar,
+};
+pub(crate) static P_PEN: ParametroPorto = ParametroPorto {
+    nome: "Pen",
+    tipo: TipoPorto::Escalar,
+};
+pub(crate) static P_POS_XY: ParametroPorto = ParametroPorto {
+    nome: "Posição",
+    tipo: TipoPorto::Vetor(COMP_XY),
+};
+pub(crate) static P_LARGURA: ParametroPorto = ParametroPorto {
+    nome: "Largura",
+    tipo: TipoPorto::Escalar,
+};
+pub(crate) static P_ALTURA: ParametroPorto = ParametroPorto {
+    nome: "Altura",
+    tipo: TipoPorto::Escalar,
+};
+pub(crate) static P_TAMANHO: ParametroPorto = ParametroPorto {
+    nome: "Tamanho",
+    tipo: TipoPorto::Escalar,
+};
+pub(crate) static P_RUIDO_OUT: ParametroPorto = ParametroPorto {
+    nome: "Ruído",
+    tipo: TipoPorto::Vetor(COMP_XY),
+};
+pub(crate) static P_ANIM_OUT: ParametroPorto = ParametroPorto {
+    nome: "Animação",
+    tipo: TipoPorto::Vetor(COMP_XY),
+};
+pub(crate) static P_OPACIDADE: ParametroPorto = ParametroPorto {
+    nome: "Opacidade",
+    tipo: TipoPorto::Escalar,
+};
+pub(crate) static P_ESC_XY: ParametroPorto = ParametroPorto {
+    nome: "Escala",
+    tipo: TipoPorto::Vetor(COMP_XY),
+};
 
 // ── NodeParams ──────────────────────────────────────────────────
 

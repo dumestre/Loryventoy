@@ -3,14 +3,14 @@
 use std::borrow::Cow;
 use std::collections::HashMap;
 
-use eframe::egui::{Align, Color32, Layout, Vec2, Ui};
-use egui_graph_edit::{
-    DataTypeTrait, NodeDataTrait, NodeResponse, NodeTemplateIter,
-    WidgetValueTrait, InputParamKind, NodeTemplateTrait, UserResponseTrait,
-};
+use eframe::egui::{Align, Color32, Layout, Ui, Vec2};
 pub use egui_graph_edit::id_type::NodeId;
+use egui_graph_edit::{
+    DataTypeTrait, InputParamKind, NodeDataTrait, NodeResponse, NodeTemplateIter,
+    NodeTemplateTrait, UserResponseTrait, WidgetValueTrait,
+};
 
-use crate::nodes::{NodeParams, TipoNo, portos};
+use crate::nodes::{portos, NodeParams, TipoNo};
 use crate::ui::node_component::AcaoInspector;
 
 pub fn cor_tipo_no(tipo: TipoNo) -> eframe::egui::Color32 {
@@ -215,15 +215,33 @@ impl NodeDataTrait for GraphNode {
         vec![]
     }
 
-    fn titlebar_color(&self, _ui: &Ui, _node_id: NodeId, _graph: &egui_graph_edit::Graph<Self, Self::DataType, Self::ValueType>, _user_state: &mut Self::UserState) -> Option<Color32> {
+    fn titlebar_color(
+        &self,
+        _ui: &Ui,
+        _node_id: NodeId,
+        _graph: &egui_graph_edit::Graph<Self, Self::DataType, Self::ValueType>,
+        _user_state: &mut Self::UserState,
+    ) -> Option<Color32> {
         Some(cor_tipo_no(self.tipo))
     }
 
-    fn border_color(&self, _ui: &Ui, _node_id: NodeId, _graph: &egui_graph_edit::Graph<Self, Self::DataType, Self::ValueType>, _user_state: &mut Self::UserState) -> Option<Color32> {
+    fn border_color(
+        &self,
+        _ui: &Ui,
+        _node_id: NodeId,
+        _graph: &egui_graph_edit::Graph<Self, Self::DataType, Self::ValueType>,
+        _user_state: &mut Self::UserState,
+    ) -> Option<Color32> {
         Some(cor_tipo_no(self.tipo))
     }
 
-    fn border_width(&self, _ui: &Ui, _node_id: NodeId, _graph: &egui_graph_edit::Graph<Self, Self::DataType, Self::ValueType>, _user_state: &mut Self::UserState) -> f32 {
+    fn border_width(
+        &self,
+        _ui: &Ui,
+        _node_id: NodeId,
+        _graph: &egui_graph_edit::Graph<Self, Self::DataType, Self::ValueType>,
+        _user_state: &mut Self::UserState,
+    ) -> f32 {
         1.5
     }
 
@@ -240,20 +258,33 @@ impl NodeDataTrait for GraphNode {
             return vec![];
         }
 
-        let is_renaming = user_state.renaming_layer == Some((node_id,
-            user_state.params.get(&node_id)
-                .and_then(|p| if let NodeParams::Layer(layer) = p {
-                    layer.layers.iter().position(|l| l.nome == param_name)
-                } else { None })
-                .unwrap_or(0),
-        ));
+        let is_renaming = user_state.renaming_layer
+            == Some((
+                node_id,
+                user_state
+                    .params
+                    .get(&node_id)
+                    .and_then(|p| {
+                        if let NodeParams::Layer(layer) = p {
+                            layer.layers.iter().position(|l| l.nome == param_name)
+                        } else {
+                            None
+                        }
+                    })
+                    .unwrap_or(0),
+            ));
 
         let params = user_state.params.get_mut(&node_id);
         if let Some(NodeParams::Layer(layer)) = params {
             if let Some(idx) = layer.layers.iter().position(|l| l.nome == param_name) {
                 ui.with_layout(Layout::left_to_right(Align::Min), |ui| {
                     let (r, rename_changed) = crate::ui::node_component::render_layer_row(
-                        ui, idx, &mut layer.layers, layer.selected, node_id, is_renaming,
+                        ui,
+                        idx,
+                        &mut layer.layers,
+                        layer.selected,
+                        node_id,
+                        is_renaming,
                     );
                     if r != AcaoInspector::Nenhuma {
                         user_state.acao_inspector = r;

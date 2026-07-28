@@ -56,8 +56,10 @@ impl BarTool {
                         ui.horizontal(|ui| {
                             ui.spacing_mut().item_spacing.x = 4.0;
 
-                            if Self::button(ui, &egui::Image::new(egui::include_image!("icons/anterior.svg")))
-                            {
+                            if Self::button(
+                                ui,
+                                &egui::Image::new(egui::include_image!("icons/anterior.svg")),
+                            ) {
                                 self.request_prev_frame = true;
                             }
 
@@ -70,13 +72,17 @@ impl BarTool {
                                 self.is_playing = !self.is_playing;
                             }
 
-                            if Self::button(ui, &egui::Image::new(egui::include_image!("icons/stop.svg")))
-                            {
+                            if Self::button(
+                                ui,
+                                &egui::Image::new(egui::include_image!("icons/stop.svg")),
+                            ) {
                                 self.request_stop = true;
                             }
 
-                            if Self::button(ui, &egui::Image::new(egui::include_image!("icons/proximo.svg")))
-                            {
+                            if Self::button(
+                                ui,
+                                &egui::Image::new(egui::include_image!("icons/proximo.svg")),
+                            ) {
                                 self.request_next_frame = true;
                             }
 

@@ -4,8 +4,8 @@ use std::path::Path;
 #[cfg(target_os = "windows")]
 mod windows_build {
     use image;
-    use winres;
     use std::path::Path;
+    use winres;
 
     pub fn build_windows_resources(icon_ico: &Path) {
         if icon_ico.exists() {
@@ -41,7 +41,7 @@ fn main() {
     // Converte .ico para .png se não existir (Linux) - roda em todas as plataformas
     #[cfg(target_os = "windows")]
     {
-        use windows_build::{convert_ico_to_png, build_windows_resources};
+        use windows_build::{build_windows_resources, convert_ico_to_png};
         convert_ico_to_png(&icon_ico, &icon_png);
         build_windows_resources(&icon_ico);
     }

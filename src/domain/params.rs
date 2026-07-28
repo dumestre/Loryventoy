@@ -1,13 +1,13 @@
-use super::ProjectConfig as ProjetoConfig;
-use super::shape_params::ShapeParams;
-use super::text_params::TextParams;
-use super::pen_params::PenParams;
-use super::saida_params::SaidaParams;
-use super::ruido_params::RuidoParams;
-use super::transform_params::TransformParams;
+use super::anim_params::AnimParams;
 use super::cena_params::CenaParams;
 use super::layer_params::LayerParams;
-use super::anim_params::AnimParams;
+use super::pen_params::PenParams;
+use super::ruido_params::RuidoParams;
+use super::saida_params::SaidaParams;
+use super::shape_params::ShapeParams;
+use super::text_params::TextParams;
+use super::transform_params::TransformParams;
+use super::ProjectConfig as ProjetoConfig;
 
 /// Parâmetros editáveis de cada tipo de nó.
 #[derive(Clone, Debug)]

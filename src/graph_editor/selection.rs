@@ -4,9 +4,9 @@ use eframe::egui::Pos2;
 
 use crate::nodes::{self, NodeParams, TipoNo};
 
-use super::GraphPanel;
+use super::groups::{Grupo, CORES_GRUPO};
 use super::types::NodeId;
-use super::groups::{CORES_GRUPO, Grupo};
+use super::GraphPanel;
 
 #[derive(Clone)]
 pub struct NoCopia {
@@ -26,9 +26,7 @@ pub enum AcaoMenu {
 
 impl GraphPanel {
     pub fn selecionados(&self) -> Vec<NodeId> {
-        self.editor_state
-            .selected_nodes
-            .clone()
+        self.editor_state.selected_nodes.clone()
     }
 
     pub fn selecionar_no(&mut self, idx: NodeId, adicionar: bool) {
@@ -38,7 +36,12 @@ impl GraphPanel {
             }
         }
         if adicionar {
-            if let Some(pos) = self.editor_state.selected_nodes.iter().position(|&n| n == idx) {
+            if let Some(pos) = self
+                .editor_state
+                .selected_nodes
+                .iter()
+                .position(|&n| n == idx)
+            {
                 self.editor_state.selected_nodes.remove(pos);
             } else {
                 self.editor_state.selected_nodes.push(idx);
@@ -95,10 +98,16 @@ impl GraphPanel {
             if tipo == TipoNo::Saida || tipo == TipoNo::Canvas {
                 continue;
             }
-            let params = self.obter_params(idx)
+            let params = self
+                .obter_params(idx)
                 .cloned()
                 .unwrap_or_else(|| nodes::node_params_padrao(tipo));
-            let loc = self.editor_state.node_positions.get(idx).copied().unwrap_or(Pos2::ZERO);
+            let loc = self
+                .editor_state
+                .node_positions
+                .get(idx)
+                .copied()
+                .unwrap_or(Pos2::ZERO);
             itens.push(NoCopia {
                 tipo,
                 params,
@@ -142,8 +151,7 @@ impl GraphPanel {
     }
 
     pub fn limpar_grupos(&mut self) {
-        let vivos: HashSet<NodeId> =
-            self.editor_state.graph.iter_nodes().collect();
+        let vivos: HashSet<NodeId> = self.editor_state.graph.iter_nodes().collect();
         for grp in &mut self.grupos {
             grp.nos.retain(|i| vivos.contains(i));
         }

@@ -1,14 +1,13 @@
 #![allow(dead_code)]
 
-use eframe::egui::{
-    Color32, CornerRadius, FontFamily, FontId, Pos2, Rect, Shape, Stroke,
-    StrokeKind, Vec2,
-};
 use eframe::egui::epaint::{CubicBezierShape, RectShape, TextShape};
+use eframe::egui::{
+    Color32, CornerRadius, FontFamily, FontId, Pos2, Rect, Shape, Stroke, StrokeKind, Vec2,
+};
 
+use super::types::cor_tipo_no;
 use crate::nodes::TipoNo;
 use crate::ui::node_component;
-use super::types::cor_tipo_no;
 
 const NODE_RADIUS: u8 = 8;
 
@@ -45,8 +44,10 @@ pub fn desenhar_card(
     )));
 
     let header_h = zoom * node_component::CABECALHO_H;
-    let header_rect =
-        Rect::from_min_max(node_rect.min, Pos2::new(node_rect.max.x, node_rect.min.y + header_h));
+    let header_rect = Rect::from_min_max(
+        node_rect.min,
+        Pos2::new(node_rect.max.x, node_rect.min.y + header_h),
+    );
     let mut cr = CornerRadius::same(NODE_RADIUS);
     cr.sw = 0;
     cr.se = 0;
@@ -68,7 +69,11 @@ pub fn desenhar_card(
         header_rect.center().x - galley.size().x / 2.0,
         header_rect.center().y - galley.size().y / 2.0,
     );
-    painter.add(TextShape::new(label_pos, galley, Color32::from_rgb(20, 20, 26)));
+    painter.add(TextShape::new(
+        label_pos,
+        galley,
+        Color32::from_rgb(20, 20, 26),
+    ));
 }
 
 pub fn desenhar_sombra(painter: &egui::Painter, node_rect: Rect) {
@@ -82,11 +87,7 @@ pub fn desenhar_sombra(painter: &egui::Painter, node_rect: Rect) {
     ));
 }
 
-pub fn bezier_entre(
-    p0: Pos2,
-    p3: Pos2,
-    selected: bool,
-) -> Shape {
+pub fn bezier_entre(p0: Pos2, p3: Pos2, selected: bool) -> Shape {
     let dx = ((p3.x - p0.x).abs() * 0.5).max(30.0);
     let p1 = Pos2::new(p0.x + dx, p0.y);
     let p2 = Pos2::new(p3.x - dx, p3.y);
@@ -98,13 +99,8 @@ pub fn bezier_entre(
     };
     let stroke = Stroke::new(2.0, cor);
 
-    CubicBezierShape::from_points_stroke(
-        [p0, p1, p2, p3],
-        false,
-        Color32::TRANSPARENT,
-        stroke,
-    )
-    .into()
+    CubicBezierShape::from_points_stroke([p0, p1, p2, p3], false, Color32::TRANSPARENT, stroke)
+        .into()
 }
 
 pub fn desenhar_grade(painter: &egui::Painter, rect: Rect, pan: Vec2, zoom: f32) {
@@ -119,13 +115,19 @@ pub fn desenhar_grade(painter: &egui::Painter, rect: Rect, pan: Vec2, zoom: f32)
     let mut x = ((origin_screen.x - rect.left()) % step + step) % step;
     while x < rect.width() {
         let sx = rect.left() + x;
-        painter.line_segment([Pos2::new(sx, rect.top()), Pos2::new(sx, rect.bottom())], stroke);
+        painter.line_segment(
+            [Pos2::new(sx, rect.top()), Pos2::new(sx, rect.bottom())],
+            stroke,
+        );
         x += step;
     }
     let mut y = ((origin_screen.y - rect.top()) % step + step) % step;
     while y < rect.height() {
         let sy = rect.top() + y;
-        painter.line_segment([Pos2::new(rect.left(), sy), Pos2::new(rect.right(), sy)], stroke);
+        painter.line_segment(
+            [Pos2::new(rect.left(), sy), Pos2::new(rect.right(), sy)],
+            stroke,
+        );
         y += step;
     }
 }

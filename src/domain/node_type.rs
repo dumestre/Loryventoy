@@ -60,7 +60,9 @@ impl TipoNo {
             (TipoNo::Shape, TipoNo::Cena) => true,
             (TipoNo::Texto, TipoNo::Cena) => true,
             (TipoNo::Pen, TipoNo::Cena) => true,
-            (TipoNo::Ruido, TipoNo::Transform | TipoNo::Shape | TipoNo::Texto | TipoNo::Pen) => true,
+            (TipoNo::Ruido, TipoNo::Transform | TipoNo::Shape | TipoNo::Texto | TipoNo::Pen) => {
+                true
+            }
             (TipoNo::Anim, TipoNo::Transform | TipoNo::Shape | TipoNo::Texto | TipoNo::Pen) => true,
             (
                 o @ (TipoNo::Transform | TipoNo::Shape | TipoNo::Texto | TipoNo::Pen),

@@ -31,10 +31,18 @@ impl Color {
     }
 
     // Métodos compatíveis com Color32
-    pub fn r(self) -> u8 { self.r }
-    pub fn g(self) -> u8 { self.g }
-    pub fn b(self) -> u8 { self.b }
-    pub fn a(self) -> u8 { self.a }
+    pub fn r(self) -> u8 {
+        self.r
+    }
+    pub fn g(self) -> u8 {
+        self.g
+    }
+    pub fn b(self) -> u8 {
+        self.b
+    }
+    pub fn a(self) -> u8 {
+        self.a
+    }
 }
 
 /// Re-export glam::Vec2 para uso no domínio (biblioteca matemática pura).

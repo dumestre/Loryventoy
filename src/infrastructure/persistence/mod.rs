@@ -2,4 +2,4 @@ mod format;
 mod migrations;
 mod repository;
 
-pub use repository::{load_project, save_project, load_from_str, PersistenceError};
+pub use repository::{load_from_str, load_project, save_project, PersistenceError};

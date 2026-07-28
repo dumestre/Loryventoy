@@ -40,7 +40,11 @@ impl Easing {
                 }
             }
             Easing::Step => {
-                if x >= 1.0 { 1.0 } else { 0.0 }
+                if x >= 1.0 {
+                    1.0
+                } else {
+                    0.0
+                }
             }
         }
     }

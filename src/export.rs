@@ -17,8 +17,8 @@ use eframe::egui::epaint::{
 use eframe::egui::{Color32, ColorImage, Pos2, Rect, Shape, Vec2};
 
 use crate::log::aviso;
-use crate::procedural::{CenaPreview, PenPath, PreviewData, TextoItem};
 use crate::procedural::render::{color_to_color32, shape_to_egui};
+use crate::procedural::{CenaPreview, PenPath, PreviewData, TextoItem};
 use crate::ui::preview::PreviewPanel;
 use crate::ui::text_raster::TextRaster;
 
@@ -225,7 +225,13 @@ fn renderizar_cena(img: &mut ColorImage, cena: &CenaPreview, t: f32, off: Vec2) 
         // ---- Textos (rasterizados via cosmic-text) ----
         let mut raster = TextRaster::new();
         for txt in &layer.textos {
-            desenhar_texto(img, &mut raster, txt, opac * txt.opac_em(t) * txt.trim_em(t), t);
+            desenhar_texto(
+                img,
+                &mut raster,
+                txt,
+                opac * txt.opac_em(t) * txt.trim_em(t),
+                t,
+            );
         }
     }
 }
@@ -262,7 +268,13 @@ fn pen_para_shapes(pen: &PenPath, t: f32, off: Vec2) -> Vec<Shape> {
 }
 
 /// Rasteriza `txt` e o desenha no buffer.
-fn desenhar_texto(img: &mut ColorImage, raster: &mut TextRaster, txt: &TextoItem, opac: f32, t: f32) {
+fn desenhar_texto(
+    img: &mut ColorImage,
+    raster: &mut TextRaster,
+    txt: &TextoItem,
+    opac: f32,
+    t: f32,
+) {
     // Export é 1:1 (px de projeto), então escala = 1.0.
     let txt_r = match raster.raster(
         &txt.conteudo,
@@ -391,14 +403,8 @@ pub fn exportar_png(data: &PreviewData, t: f32, caminho: &Path) -> Result<(), St
     }
 
     let rgba = color_image_para_rgba(&img);
-    image::save_buffer(
-        caminho,
-        &rgba,
-        w,
-        h,
-        image::ColorType::Rgba8,
-    )
-    .map_err(|e| format!("falha ao salvar PNG {}: {e}", caminho.display()))?;
+    image::save_buffer(caminho, &rgba, w, h, image::ColorType::Rgba8)
+        .map_err(|e| format!("falha ao salvar PNG {}: {e}", caminho.display()))?;
     Ok(())
 }
 
@@ -429,8 +435,8 @@ pub fn exportar_frames(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::procedural::{CenaPreview, LayerPreview, PenPath, PreviewData};
     use crate::dsl::Program;
+    use crate::procedural::{CenaPreview, LayerPreview, PenPath, PreviewData};
     use eframe::egui::Color32;
 
     #[test]

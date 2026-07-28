@@ -42,8 +42,10 @@ impl Biblioteca {
                 let path = entry.path();
                 if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
                     let ext = ext.to_lowercase();
-                    if ["svg", "png", "jpg", "jpeg", "mp4", "mov", "webm", "gif", "bmp", "tiff"]
-                        .contains(&ext.as_str())
+                    if [
+                        "svg", "png", "jpg", "jpeg", "mp4", "mov", "webm", "gif", "bmp", "tiff",
+                    ]
+                    .contains(&ext.as_str())
                     {
                         if let Some(nome) = path.file_name().and_then(|n| n.to_str()) {
                             self.arquivos.push((nome.to_string(), ext));

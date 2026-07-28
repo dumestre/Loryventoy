@@ -1,17 +1,17 @@
 mod app;
-mod playback;
 mod biblioteca;
 mod domain;
-mod error;
-mod nodes;
-mod procedural;
 mod dsl;
+mod error;
+mod export;
 mod graph_editor;
 mod infrastructure;
+mod log;
+mod nodes;
+mod playback;
+mod procedural;
 mod theme;
 mod ui;
-mod export;
-mod log;
 
 /// Lê `app.ico` e converte para `eframe::IconData` (RGBA + tamanho). Retorna
 /// `None` se o arquivo não existir ou falhar ao decodificar.
@@ -51,11 +51,6 @@ fn main() -> eframe::Result<()> {
     eframe::run_native(
         "Loryventoy",
         options,
-        Box::new(move |cc| {
-            Ok(Box::new(
-                app::Loryventoy::new(cc, start_project)
-            ))
-        }),
+        Box::new(move |cc| Ok(Box::new(app::Loryventoy::new(cc, start_project)))),
     )
 }
-

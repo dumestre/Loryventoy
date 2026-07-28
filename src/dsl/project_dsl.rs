@@ -355,7 +355,9 @@ impl<'a> Parser<'a> {
             if self.vazias_consecutivas() >= 2 {
                 return Ok(());
             }
-            let tok = self.proximo().ok_or_else(|| self.err("bloco não fechado"))?;
+            let tok = self
+                .proximo()
+                .ok_or_else(|| self.err("bloco não fechado"))?;
             if tok == "}" {
                 break;
             }
@@ -631,4 +633,3 @@ pen p1 {
         assert_eq!(c, eframe::egui::Color32::from_rgb(0xeb, 0x96, 0x78));
     }
 }
-

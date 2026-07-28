@@ -96,7 +96,11 @@ impl TextRaster {
         cor: Color32,
     ) -> Option<TextoRaster> {
         let family = Family::SansSerif;
-        let weight = if negrito { Weight::BOLD } else { Weight::NORMAL };
+        let weight = if negrito {
+            Weight::BOLD
+        } else {
+            Weight::NORMAL
+        };
         let style = if italic {
             cosmic_text::Style::Italic
         } else {
@@ -133,7 +137,11 @@ impl TextRaster {
                 min_y = min_y.min(y);
                 max_x = max_x.max(x);
                 max_y = max_y.max(y);
-                pixels.push((x, y, Color32::from_rgba_unmultiplied(c.r(), c.g(), c.b(), c.a())));
+                pixels.push((
+                    x,
+                    y,
+                    Color32::from_rgba_unmultiplied(c.r(), c.g(), c.b(), c.a()),
+                ));
             },
         );
 

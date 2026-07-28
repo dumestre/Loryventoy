@@ -1,12 +1,21 @@
-use super::{ParametroPorto, TipoPorto, PortSpec, NodeParams, ShapeParams, P_LAYER, P_POS_XY, P_LARGURA, P_ALTURA};
+use super::{
+    NodeParams, ParametroPorto, PortSpec, ShapeParams, TipoPorto, P_ALTURA, P_LARGURA, P_LAYER,
+    P_POS_XY,
+};
 use crate::domain::Color;
 
-static P_ROT: ParametroPorto = ParametroPorto { nome: "Rotação", tipo: TipoPorto::Escalar };
+static P_ROT: ParametroPorto = ParametroPorto {
+    nome: "Rotação",
+    tipo: TipoPorto::Escalar,
+};
 static ENTRADAS: [ParametroPorto; 5] = [P_LAYER, P_POS_XY, P_LARGURA, P_ALTURA, P_ROT];
 static SAIDAS: [ParametroPorto; 4] = [P_POS_XY, P_LARGURA, P_ALTURA, P_ROT];
 
 pub(crate) fn portos() -> PortSpec {
-    PortSpec { entradas: &ENTRADAS, saidas: &SAIDAS }
+    PortSpec {
+        entradas: &ENTRADAS,
+        saidas: &SAIDAS,
+    }
 }
 
 pub(crate) fn padrao() -> NodeParams {

@@ -42,8 +42,10 @@ pub fn save_project<P: AsRef<Path>>(caminho: P, projeto: &Project) -> Result<(),
 }
 
 pub fn load_from_str(texto: &str) -> Result<Project, PersistenceError> {
-    let mut arquivo: ProjetoArquivo = serde_json::from_str(texto)
-        .map_err(|e| PersistenceError::Parse(e.to_string()))?;
+    let mut arquivo: ProjetoArquivo =
+        serde_json::from_str(texto).map_err(|e| PersistenceError::Parse(e.to_string()))?;
     migrations::migrate(&mut arquivo);
-    arquivo.to_project().map_err(PersistenceError::InvalidProject)
+    arquivo
+        .to_project()
+        .map_err(PersistenceError::InvalidProject)
 }

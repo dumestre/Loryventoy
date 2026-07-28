@@ -10,17 +10,13 @@ use crate::domain::Project;
 use crate::infrastructure::persistence::{load_from_str, save_project, PersistenceError};
 
 use crate::ui::{
-    graph::GraphPanel,
-    preview::PreviewPanel,
-    splitter::VerticalSplitter,
+    bartool::BarTool, graph::GraphPanel, preview::PreviewPanel, splitter::VerticalSplitter,
     timeline::TimelinePanel,
-    bartool::BarTool,
 };
 
 use crate::playback::PlaybackState;
 
 pub struct Loryventoy {
-
     preview: PreviewPanel,
     timeline: TimelinePanel,
     graph: GraphPanel,
@@ -54,16 +50,8 @@ pub struct Loryventoy {
     biblioteca: crate::biblioteca::Biblioteca,
 }
 
-
-
 impl Loryventoy {
-
-
-    pub fn new(
-        cc: &eframe::CreationContext<'_>,
-        start_project: Option<String>
-    ) -> Self {
-
+    pub fn new(cc: &eframe::CreationContext<'_>, start_project: Option<String>) -> Self {
         theme::apply_theme(&cc.egui_ctx);
         egui_extras::install_image_loaders(&cc.egui_ctx);
 
@@ -110,64 +98,35 @@ impl Loryventoy {
         app
     }
 
-
-
-    fn resize_preview_graph(
-        &mut self,
-        delta: f32,
-    ) {
-
+    fn resize_preview_graph(&mut self, delta: f32) {
         self.preview_height += delta;
 
         self.graph_height -= delta;
 
-
         self.clamp_sizes();
     }
 
-
-
-
-    fn clamp_sizes(
-        &mut self
-    ) {
-
+    fn clamp_sizes(&mut self) {
         let min = self.min_panel_height;
 
-
         if self.preview_height < min {
-
-            let diff =
-                min - self.preview_height;
-
+            let diff = min - self.preview_height;
 
             self.preview_height = min;
 
             self.graph_height -= diff;
         }
 
-
-
         if self.graph_height < min {
-
-            let diff =
-                min - self.graph_height;
-
+            let diff = min - self.graph_height;
 
             self.graph_height = min;
 
             self.preview_height -= diff;
         }
-
     }
 
-
-
-    fn adjust_to_available_height(
-        &mut self,
-        available_height: f32,
-        item_spacing_y: f32,
-    ) {
+    fn adjust_to_available_height(&mut self, available_height: f32, item_spacing_y: f32) {
         let total_fixed = self.timeline_height + 2.0 * self.splitter_size + 4.0 * item_spacing_y;
         let total_resizable = (available_height - total_fixed).max(2.0 * self.min_panel_height);
 
@@ -243,8 +202,7 @@ impl Loryventoy {
     fn salvar_projeto(&mut self) {
         let mut proj = self.graph.to_project();
         proj.script_text = self.script_text.clone();
-        let dir = std::env::current_dir()
-            .unwrap_or_else(|_| std::path::PathBuf::from("."));
+        let dir = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
         let caminho = dir.join("projeto.lory");
         match save_project(&caminho, &proj) {
             Ok(()) => {
@@ -266,8 +224,7 @@ impl Loryventoy {
     }
 
     fn carregar_projeto(&mut self) {
-        let dir = std::env::current_dir()
-            .unwrap_or_else(|_| std::path::PathBuf::from("."));
+        let dir = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
         let caminho = dir.join("projeto.lory");
         match crate::infrastructure::persistence::load_project(&caminho) {
             Ok(proj) => {
@@ -293,354 +250,287 @@ impl Loryventoy {
         self.script_text = proj.script_text.clone();
         self.script_erro = None;
     }
-
 }
 
-
-
-
 impl eframe::App for Loryventoy {
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        ui.ctx()
+            .send_viewport_cmd(egui::ViewportCommand::Title("Loryventoy".into()));
 
-
-    fn ui(
-        &mut self,
-        ui: &mut egui::Ui,
-        _frame: &mut eframe::Frame,
-    ) {
-
-        ui.ctx().send_viewport_cmd(egui::ViewportCommand::Title("Loryventoy".into()));
-
-        egui::CentralPanel::default()
-            .show(ui, |ui| {
-
-                egui::MenuBar::new().ui(ui, |ui| {
-                    ui.menu_button("Arquivo", |ui| {
-                        if ui.button("Novo").clicked() {
-                            self.graph.empurrar_historico();
-                            self.graph = GraphPanel::new();
-                            self.projeto_aviso = None;
-                        }
-                        let _ = ui.button("Abrir");
-                        if ui.button("Salvar").clicked() {
-                            self.salvar_pendente = true;
-                        }
-                        if ui.button("Carregar").clicked() {
-                            self.carregar_pendente = true;
-                        }
-                        if ui.button("Hub (projetos)").clicked() {
-                            if let Ok(exe) = std::env::current_exe() {
-                                if let Some(dir) = exe.parent() {
-                                    for target in &["target/debug", "target/release"] {
-                                        let hub_exe = dir.parent().and_then(|p| p.parent()).map(|p| p.join(target).join("lory-hub.exe"));
-                                        if let Some(h) = hub_exe.filter(|p| p.exists()) {
-                                            let _ = std::process::Command::new(&h).spawn();
-                                            break;
-                                        }
+        egui::CentralPanel::default().show(ui, |ui| {
+            egui::MenuBar::new().ui(ui, |ui| {
+                ui.menu_button("Arquivo", |ui| {
+                    if ui.button("Novo").clicked() {
+                        self.graph.empurrar_historico();
+                        self.graph = GraphPanel::new();
+                        self.projeto_aviso = None;
+                    }
+                    let _ = ui.button("Abrir");
+                    if ui.button("Salvar").clicked() {
+                        self.salvar_pendente = true;
+                    }
+                    if ui.button("Carregar").clicked() {
+                        self.carregar_pendente = true;
+                    }
+                    if ui.button("Hub (projetos)").clicked() {
+                        if let Ok(exe) = std::env::current_exe() {
+                            if let Some(dir) = exe.parent() {
+                                for target in &["target/debug", "target/release"] {
+                                    let hub_exe = dir
+                                        .parent()
+                                        .and_then(|p| p.parent())
+                                        .map(|p| p.join(target).join("lory-hub.exe"));
+                                    if let Some(h) = hub_exe.filter(|p| p.exists()) {
+                                        let _ = std::process::Command::new(&h).spawn();
+                                        break;
                                     }
                                 }
                             }
                         }
-                        if ui.button("Script (DSL)").clicked() {
-                            self.script_open = true;
-                        }
-                        if ui.button("Biblioteca").clicked() {
-                            self.biblioteca.toggle();
-                        }
-                        if ui.button("Sair").clicked() {
-                            ui.ctx().send_viewport_cmd(
-                                egui::ViewportCommand::Close
-                            );
-                        }
-                    });
-
-                    ui.menu_button("Editar", |ui| {
-                        if ui
-                            .add_enabled(self.graph.pode_undo(), egui::Button::new("Desfazer"))
-                            .clicked()
-                        {
-                            if !self.graph.undo() {
-                                self.projeto_aviso = Some("nada para desfazer".to_string());
-                            }
-                        }
-                        if ui
-                            .add_enabled(self.graph.pode_redo(), egui::Button::new("Refazer"))
-                            .clicked()
-                        {
-                            if !self.graph.redo() {
-                                self.projeto_aviso = Some("nada para refazer".to_string());
-                            }
-                        }
-                    });
-
-                    ui.menu_button("Ajuda", |ui| {
-                        ui.label("Loryventoy Editor");
-                    });
+                    }
+                    if ui.button("Script (DSL)").clicked() {
+                        self.script_open = true;
+                    }
+                    if ui.button("Biblioteca").clicked() {
+                        self.biblioteca.toggle();
+                    }
+                    if ui.button("Sair").clicked() {
+                        ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
+                    }
                 });
 
-                // ---- SALVAR / CARREGAR PROJETO (após o menu, fora do closure) ----
-                if self.salvar_pendente {
-                    self.salvar_pendente = false;
-                    self.salvar_projeto();
-                }
-                if self.carregar_pendente {
-                    self.carregar_pendente = false;
-                    self.carregar_projeto();
-                }
-                let aviso = self.projeto_aviso.clone();
-                if let Some(aviso) = aviso {
-                    let limpar = ui.horizontal(|ui| {
+                ui.menu_button("Editar", |ui| {
+                    if ui
+                        .add_enabled(self.graph.pode_undo(), egui::Button::new("Desfazer"))
+                        .clicked()
+                    {
+                        if !self.graph.undo() {
+                            self.projeto_aviso = Some("nada para desfazer".to_string());
+                        }
+                    }
+                    if ui
+                        .add_enabled(self.graph.pode_redo(), egui::Button::new("Refazer"))
+                        .clicked()
+                    {
+                        if !self.graph.redo() {
+                            self.projeto_aviso = Some("nada para refazer".to_string());
+                        }
+                    }
+                });
+
+                ui.menu_button("Ajuda", |ui| {
+                    ui.label("Loryventoy Editor");
+                });
+            });
+
+            // ---- SALVAR / CARREGAR PROJETO (após o menu, fora do closure) ----
+            if self.salvar_pendente {
+                self.salvar_pendente = false;
+                self.salvar_projeto();
+            }
+            if self.carregar_pendente {
+                self.carregar_pendente = false;
+                self.carregar_projeto();
+            }
+            let aviso = self.projeto_aviso.clone();
+            if let Some(aviso) = aviso {
+                let limpar = ui
+                    .horizontal(|ui| {
                         ui.colored_label(
                             egui::Color32::from_rgb(140, 220, 160),
                             format!("Projeto: {aviso}"),
                         );
                         ui.button("OK").clicked()
-                    }).inner;
-                    if limpar {
-                        self.projeto_aviso = None;
+                    })
+                    .inner;
+                if limpar {
+                    self.projeto_aviso = None;
+                }
+            }
+
+            ui.separator();
+
+            let available = ui.available_size();
+
+            self.adjust_to_available_height(available.y, ui.spacing().item_spacing.y);
+
+            // PREVIEW
+
+            // resolução do projeto (nó Canvas) reflete no canvas do preview
+            let cfg_preview = self.graph.projeto();
+            self.preview.set_resolucao(
+                cfg_preview.largura,
+                cfg_preview.altura,
+                egui::Color32::from_rgba_unmultiplied(
+                    cfg_preview.fundo.r,
+                    cfg_preview.fundo.g,
+                    cfg_preview.fundo.b,
+                    cfg_preview.fundo.a,
+                ),
+            );
+
+            // sistema procedural: cenas (formas + textos) vêm do grafo; o
+            // tempo vem da timeline (frame / fps) para a animação acompanhar
+            // o play/pause e o scrub da linha do tempo.
+            if let Some(data) = self.graph.formas_para_preview() {
+                self.preview.set_preview(data);
+            }
+            let tempo = self.timeline.current_frame as f32 / cfg_preview.fps.max(0.01);
+            self.preview.set_tempo(tempo);
+
+            let _t0 = Instant::now();
+            let preview_response =
+                ui.allocate_ui(Vec2::new(available.x, self.preview_height), |ui| {
+                    self.preview.show(ui);
+                });
+            let dt = _t0.elapsed().as_secs_f64() * 1000.0;
+            self.perf_preview_ms = self.perf_preview_ms * 0.9 + dt * 0.1;
+
+            // BARTOOL (flutuante na base do preview)
+            self.bartool.show(ui, preview_response.response.rect);
+
+            // Processa pedidos da barra de transporte
+            if self.bartool.request_prev_frame {
+                self.timeline.current_frame = self.timeline.current_frame.saturating_sub(1);
+            }
+            if self.bartool.request_next_frame {
+                self.timeline.current_frame = self.timeline.current_frame.saturating_add(1);
+            }
+            if self.bartool.request_stop {
+                self.bartool.is_playing = false;
+            }
+
+            // SPLITTER 1
+
+            let splitter1 = VerticalSplitter::new(self.splitter_size).show(ui);
+
+            if splitter1.dragged() {
+                self.resize_preview_graph(splitter1.drag_delta().y);
+            }
+
+            // TIMELINE
+
+            let _t2 = Instant::now();
+            let _timeline_response =
+                ui.allocate_ui(Vec2::new(available.x, self.timeline_height), |ui| {
+                    self.timeline
+                        .show(ui, self.bartool.loop_enabled, self.bartool.is_playing);
+                });
+            let dt = _t2.elapsed().as_secs_f64() * 1000.0;
+            self.perf_timeline_ms = self.perf_timeline_ms * 0.9 + dt * 0.1;
+
+            if self.timeline.markers_modificados {
+                self.graph
+                    .sincronizar_marcadores_com_cenas(&self.timeline.markers);
+                self.timeline.markers_modificados = false;
+            }
+
+            // SPLITTER 2
+
+            let splitter2 = VerticalSplitter::new(self.splitter_size).show(ui);
+
+            if splitter2.dragged() {
+                self.resize_preview_graph(splitter2.drag_delta().y);
+            }
+
+            // GRAPH
+
+            let _t1 = Instant::now();
+            let _graph_response =
+                ui.allocate_ui(Vec2::new(available.x, ui.available_height()), |ui| {
+                    self.graph.show(ui);
+
+                    // sincroniza a timeline com o nó Canvas do grafo
+                    let cfg = self.graph.projeto();
+                    crate::ui::timeline::definir_fps(cfg.fps);
+                    self.timeline.content_seconds = cfg.duracao_seg;
+                    self.timeline.loop_end = cfg.duracao_seg;
+                    self.timeline.duracao_frames =
+                        (cfg.duracao_seg * cfg.fps).round().max(1.0) as u32;
+                    if (self.timeline.current_frame as f32) >= self.timeline.duracao_frames as f32 {
+                        self.timeline.current_frame =
+                            self.timeline.duracao_frames.saturating_sub(1);
                     }
-                }
+                });
+            let dt = _t1.elapsed().as_secs_f64() * 1000.0;
+            self.perf_graph_ms = self.perf_graph_ms * 0.9 + dt * 0.1;
 
-                ui.separator();
+            // ---- INPUT (play/pause e navegação de keyframes) ----
+            let ctx = ui.ctx();
+            let now = ctx.input(|i| i.time);
 
-                let available =
-                    ui.available_size();
-
-                self.adjust_to_available_height(
-                    available.y,
-                    ui.spacing().item_spacing.y,
-                );
-
-
-
-                // PREVIEW
-
-                // resolução do projeto (nó Canvas) reflete no canvas do preview
-                let cfg_preview = self.graph.projeto();
-                self.preview.set_resolucao(
-                    cfg_preview.largura,
-                    cfg_preview.altura,
-                    egui::Color32::from_rgba_unmultiplied(
-                        cfg_preview.fundo.r,
-                        cfg_preview.fundo.g,
-                        cfg_preview.fundo.b,
-                        cfg_preview.fundo.a,
-                    ),
-                );
-
-                // sistema procedural: cenas (formas + textos) vêm do grafo; o
-                // tempo vem da timeline (frame / fps) para a animação acompanhar
-                // o play/pause e o scrub da linha do tempo.
-                if let Some(data) = self.graph.formas_para_preview() {
-                    self.preview.set_preview(data);
-                }
-                let tempo = self.timeline.current_frame as f32 / cfg_preview.fps.max(0.01);
-                self.preview.set_tempo(tempo);
-
-                let _t0 = Instant::now();
-                let preview_response = ui.allocate_ui(
-                    Vec2::new(
-                        available.x,
-                        self.preview_height,
-                    ),
-                    |ui| {
-
-                        self.preview.show(ui);
-
-                    },
-                );
-                let dt = _t0.elapsed().as_secs_f64() * 1000.0;
-                self.perf_preview_ms = self.perf_preview_ms * 0.9 + dt * 0.1;
-
-                // BARTOOL (flutuante na base do preview)
-                self.bartool.show(ui, preview_response.response.rect);
-
-                // Processa pedidos da barra de transporte
-                if self.bartool.request_prev_frame {
-                    self.timeline.current_frame = self.timeline.current_frame.saturating_sub(1);
-                }
-                if self.bartool.request_next_frame {
-                    self.timeline.current_frame = self.timeline.current_frame.saturating_add(1);
-                }
-                if self.bartool.request_stop {
-                    self.bartool.is_playing = false;
-                }
-
-
-
-                // SPLITTER 1
-
-                let splitter1 =
-                    VerticalSplitter::new(
-                        self.splitter_size
-                    )
-                    .show(ui);
-
-
-
-                if splitter1.dragged() {
-
-                    self.resize_preview_graph(
-                        splitter1.drag_delta().y
-                    );
-                }
-
-
-
-                // TIMELINE
-
-                let _t2 = Instant::now();
-                let _timeline_response = ui.allocate_ui(
-                    Vec2::new(
-                        available.x,
-                        self.timeline_height,
-                    ),
-                    |ui| {
-
-                        self.timeline.show(ui, self.bartool.loop_enabled, self.bartool.is_playing);
-
-                    },
-                );
-                let dt = _t2.elapsed().as_secs_f64() * 1000.0;
-                self.perf_timeline_ms = self.perf_timeline_ms * 0.9 + dt * 0.1;
-
-                if self.timeline.markers_modificados {
-                    self.graph.sincronizar_marcadores_com_cenas(&self.timeline.markers);
-                    self.timeline.markers_modificados = false;
-                }
-
-
-
-                // SPLITTER 2
-
-                let splitter2 =
-                    VerticalSplitter::new(
-                        self.splitter_size
-                    )
-                    .show(ui);
-
-
-
-                if splitter2.dragged() {
-
-                    self.resize_preview_graph(
-                        splitter2.drag_delta().y
-                    );
-                }
-
-
-
-                // GRAPH
-
-                let _t1 = Instant::now();
-                let _graph_response = ui.allocate_ui(
-                    Vec2::new(
-                        available.x,
-                        ui.available_height(),
-                    ),
-                    |ui| {
-
-                        self.graph.show(ui);
-
-                // sincroniza a timeline com o nó Canvas do grafo
-                let cfg = self.graph.projeto();
-                crate::ui::timeline::definir_fps(cfg.fps);
-                self.timeline.content_seconds = cfg.duracao_seg;
-                self.timeline.loop_end = cfg.duracao_seg;
-                self.timeline.duracao_frames =
-                    (cfg.duracao_seg * cfg.fps).round().max(1.0) as u32;
-                if (self.timeline.current_frame as f32)
-                    >= self.timeline.duracao_frames as f32
-                {
-                    self.timeline.current_frame =
-                        self.timeline.duracao_frames.saturating_sub(1);
-                }
-
-                    },
-                );
-                let dt = _t1.elapsed().as_secs_f64() * 1000.0;
-                self.perf_graph_ms = self.perf_graph_ms * 0.9 + dt * 0.1;
-
-
-                // ---- INPUT (play/pause e navegação de keyframes) ----
-                let ctx = ui.ctx();
-                let now = ctx.input(|i| i.time);
-
-                if !ctx.egui_wants_keyboard_input() {
-                    let input = ctx.input(|i| (
+            if !ctx.egui_wants_keyboard_input() {
+                let input = ctx.input(|i| {
+                    (
                         i.key_pressed(egui::Key::Space),
                         i.key_pressed(egui::Key::ArrowRight),
                         i.key_pressed(egui::Key::ArrowLeft),
-                    ));
+                    )
+                });
 
-                    // Espaço: play/pause (funciona com ou sem ponteiro sobre editor)
-                    if input.0 {
-                        self.bartool.is_playing = !self.bartool.is_playing;
-                        ctx.request_repaint();
-                    }
-
-                    // Setas: agulha para o próximo / anterior keyframe
-                    if input.1 {
-                        self.timeline.current_frame =
-                            self.timeline.current_frame.saturating_add(1);
-                    }
-                    if input.2 {
-                        self.timeline.current_frame =
-                            self.timeline.current_frame.saturating_sub(1);
-                    }
-
-                    // Ctrl+Z: desfazer; Ctrl+Y ou Ctrl+Shift+Z: refazer
-                    let (undo, redo) = ctx.input(|i| {
-                        let ctrl = i.modifiers.ctrl;
-                        let shift = i.modifiers.shift;
-                        let undo = ctrl && !shift && i.key_pressed(egui::Key::Z);
-                        let redo_y = ctrl && !shift && i.key_pressed(egui::Key::Y);
-                        let redo_shift = ctrl && shift && i.key_pressed(egui::Key::Z);
-                        (undo, redo_y || redo_shift)
-                    });
-                    if undo {
-                        if !self.graph.undo() {
-                            self.projeto_aviso = Some("nada para desfazer".to_string());
-                        }
-                        ctx.request_repaint();
-                    }
-                    if redo {
-                        if !self.graph.redo() {
-                            self.projeto_aviso = Some("nada para refazer".to_string());
-                        }
-                        ctx.request_repaint();
-                    }
-                }
-
-
-                // ---- AVANÇO DE PLAY ----
-                let advance = self.playback.update(now, self.bartool.is_playing);
-                if advance > 0 {
-                    self.timeline.current_frame =
-                        self.timeline.current_frame.saturating_add(advance);
-
-                    // Volta ao início do loop APENAS se o loop estiver ativo
-                    if self.bartool.loop_enabled
-                        && (self.timeline.current_frame as f32)
-                            >= self.timeline.loop_end * crate::ui::timeline::fps_atual()
-                    {
-                        self.timeline.current_frame =
-                            self.timeline.loop_start as u32;
-                    }
-
+                // Espaço: play/pause (funciona com ou sem ponteiro sobre editor)
+                if input.0 {
+                    self.bartool.is_playing = !self.bartool.is_playing;
                     ctx.request_repaint();
                 }
 
-                self.perf_frame += 1;
-                if self.perf_frame % 60 == 0 {
-                    diag(&format!(
-                        "preview={:.1}ms  graph={:.1}ms  timeline={:.1}ms",
-                        preview = self.perf_preview_ms,
-                        graph = self.perf_graph_ms,
-                        tl = self.perf_timeline_ms,
-                    ));
+                // Setas: agulha para o próximo / anterior keyframe
+                if input.1 {
+                    self.timeline.current_frame = self.timeline.current_frame.saturating_add(1);
+                }
+                if input.2 {
+                    self.timeline.current_frame = self.timeline.current_frame.saturating_sub(1);
                 }
 
-            });
+                // Ctrl+Z: desfazer; Ctrl+Y ou Ctrl+Shift+Z: refazer
+                let (undo, redo) = ctx.input(|i| {
+                    let ctrl = i.modifiers.ctrl;
+                    let shift = i.modifiers.shift;
+                    let undo = ctrl && !shift && i.key_pressed(egui::Key::Z);
+                    let redo_y = ctrl && !shift && i.key_pressed(egui::Key::Y);
+                    let redo_shift = ctrl && shift && i.key_pressed(egui::Key::Z);
+                    (undo, redo_y || redo_shift)
+                });
+                if undo {
+                    if !self.graph.undo() {
+                        self.projeto_aviso = Some("nada para desfazer".to_string());
+                    }
+                    ctx.request_repaint();
+                }
+                if redo {
+                    if !self.graph.redo() {
+                        self.projeto_aviso = Some("nada para refazer".to_string());
+                    }
+                    ctx.request_repaint();
+                }
+            }
+
+            // ---- AVANÇO DE PLAY ----
+            let advance = self.playback.update(now, self.bartool.is_playing);
+            if advance > 0 {
+                self.timeline.current_frame = self.timeline.current_frame.saturating_add(advance);
+
+                // Volta ao início do loop APENAS se o loop estiver ativo
+                if self.bartool.loop_enabled
+                    && (self.timeline.current_frame as f32)
+                        >= self.timeline.loop_end * crate::ui::timeline::fps_atual()
+                {
+                    self.timeline.current_frame = self.timeline.loop_start as u32;
+                }
+
+                ctx.request_repaint();
+            }
+
+            self.perf_frame += 1;
+            if self.perf_frame % 60 == 0 {
+                diag(&format!(
+                    "preview={:.1}ms  graph={:.1}ms  timeline={:.1}ms",
+                    preview = self.perf_preview_ms,
+                    graph = self.perf_graph_ms,
+                    tl = self.perf_timeline_ms,
+                ));
+            }
+        });
 
         // ---- JANELA DE SCRIPT (DSL de projeto) ----
         if self.script_open {
@@ -656,9 +546,7 @@ impl eframe::App for Loryventoy {
                 .min_height(160.0);
             if self.script_primeira_vez {
                 if let Some(r) = self.script_rect {
-                    janela = janela
-                        .default_pos(r.min)
-                        .default_size(r.size());
+                    janela = janela.default_pos(r.min).default_size(r.size());
                 } else {
                     janela = janela.default_width(560.0).default_height(460.0);
                 }
@@ -1036,7 +924,9 @@ fn titulo_exemplo(texto: &str) -> String {
 fn caneta_para_projeto(codigo_caneta: &str) -> String {
     let c = codigo_caneta.trim();
     let mut proj = String::new();
-    proj.push_str("project \"Exemplo\" { width 1920 height 1080 fps 30 duration 8 background #1e1e26 }\n\n");
+    proj.push_str(
+        "project \"Exemplo\" { width 1920 height 1080 fps 30 duration 8 background #1e1e26 }\n\n",
+    );
     proj.push_str("scene s1 { name \"Cena 1\" opacity 1.0 }\n\n");
     proj.push_str("layer l1 { scene s1 name \"Formas\" }\n\n");
     proj.push_str("pen p1 {\n");
@@ -1067,8 +957,8 @@ fn exemplos() -> &'static [ScriptExemplo] {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dsl::Program;
     use crate::dsl::project_dsl::parse_script;
+    use crate::dsl::Program;
 
     /// Garante que todos os exemplos de `docs/exemplos.md` parseiam sem erro
     /// (canetas via `Program`, projetos via `parse_script`). Quebra se o
@@ -1095,7 +985,9 @@ mod tests {
     fn exemplos_nao_contem_separador() {
         for ex in exemplos().iter() {
             assert!(
-                !ex.codigo.lines().any(|l| l.trim() == "---" || l.trim() == "==="),
+                !ex.codigo
+                    .lines()
+                    .any(|l| l.trim() == "---" || l.trim() == "==="),
                 "exemplo '{}' contém o separador no código",
                 ex.nome
             );

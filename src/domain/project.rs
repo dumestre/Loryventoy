@@ -1,4 +1,4 @@
-use super::{TipoNo, NodeParams, ProjectConfig};
+use super::{NodeParams, ProjectConfig, TipoNo};
 
 /// Nó do projeto — dados puros, sem referência ao grafo visual.
 #[derive(Clone, Debug)]

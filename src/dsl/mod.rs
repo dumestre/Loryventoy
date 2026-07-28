@@ -10,7 +10,7 @@
 mod pen;
 pub use pen::*;
 
-pub mod project_dsl;
-pub mod patch_dsl;
 pub mod application;
 pub mod evaluator;
+pub mod patch_dsl;
+pub mod project_dsl;

@@ -1,11 +1,17 @@
-use super::{ParametroPorto, PortSpec, NodeParams, TextParams, P_LAYER, P_POS_XY, P_TAMANHO, P_OPACIDADE, P_ESC_XY};
+use super::{
+    NodeParams, ParametroPorto, PortSpec, TextParams, P_ESC_XY, P_LAYER, P_OPACIDADE, P_POS_XY,
+    P_TAMANHO,
+};
 use crate::domain::Color;
 
 static ENTRADAS: [ParametroPorto; 5] = [P_LAYER, P_POS_XY, P_TAMANHO, P_OPACIDADE, P_ESC_XY];
 static SAIDAS: [ParametroPorto; 2] = [P_POS_XY, P_TAMANHO];
 
 pub(crate) fn portos() -> PortSpec {
-    PortSpec { entradas: &ENTRADAS, saidas: &SAIDAS }
+    PortSpec {
+        entradas: &ENTRADAS,
+        saidas: &SAIDAS,
+    }
 }
 
 pub(crate) fn padrao() -> NodeParams {

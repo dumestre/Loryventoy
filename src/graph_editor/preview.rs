@@ -19,7 +19,9 @@ impl GraphPanel {
 
         // Pre-popula cache de pen DSL
         {
-            let pen_codes: Vec<(NodeId, String)> = self.params.iter()
+            let pen_codes: Vec<(NodeId, String)> = self
+                .params
+                .iter()
                 .filter_map(|(&nid, p)| {
                     if let NodeParams::Pen(pen) = p {
                         Some((nid, pen.codigo.clone()))
@@ -79,23 +81,26 @@ impl GraphPanel {
             };
 
             // Collect Layer nodes belonging to this scene
-            let layer_nids: Vec<NodeId> = layer_to_cena.iter()
+            let layer_nids: Vec<NodeId> = layer_to_cena
+                .iter()
                 .filter(|(_, c)| *c == nome_cena)
                 .map(|(&nid, _)| nid)
                 .collect();
 
             // For each Layer node, iterate its internal layer entries
             for &layer_nid in &layer_nids {
-                let entries: Vec<(usize, String, f32, f32, bool)> = match self.params.get(&layer_nid) {
-                    Some(NodeParams::Layer(layer)) => {
-                        layer.layers.iter().enumerate()
+                let entries: Vec<(usize, String, f32, f32, bool)> =
+                    match self.params.get(&layer_nid) {
+                        Some(NodeParams::Layer(layer)) => layer
+                            .layers
+                            .iter()
+                            .enumerate()
                             .map(|(i, e)| (i, e.nome.clone(), e.ordem, e.opacidade, e.visivel))
-                            .collect()
-                    }
-                    _ => continue,
-                };
+                            .collect(),
+                        _ => continue,
+                    };
 
-for (_entry_idx, nome, _ordem, opac, visivel) in &entries {
+                for (_entry_idx, nome, _ordem, opac, visivel) in &entries {
                     if !visivel {
                         continue;
                     }
@@ -109,7 +114,9 @@ for (_entry_idx, nome, _ordem, opac, visivel) in &entries {
 
                     // Find all nodes connected to this layer entry's output port
                     let output_port_name = layer_preview.nome.clone();
-                    let output_id = self.editor_state.graph[layer_nid].outputs.iter()
+                    let output_id = self.editor_state.graph[layer_nid]
+                        .outputs
+                        .iter()
                         .find(|(name, _)| *name == output_port_name)
                         .map(|(_, id)| *id);
 
@@ -118,7 +125,9 @@ for (_entry_idx, nome, _ordem, opac, visivel) in &entries {
                     if let Some(oid) = output_id {
                         for (&nid, params) in &self.params {
                             match params {
-                                NodeParams::Shape(..) | NodeParams::Texto(..) | NodeParams::Pen(..) => {
+                                NodeParams::Shape(..)
+                                | NodeParams::Texto(..)
+                                | NodeParams::Pen(..) => {
                                     let graph = &self.editor_state.graph;
                                     let node = &graph[nid];
                                     for (_, input_id) in &node.inputs {
@@ -127,17 +136,23 @@ for (_entry_idx, nome, _ordem, opac, visivel) in &entries {
                                                 has_connections = true;
                                                 match params {
                                                     NodeParams::Shape(..) => {
-                                                        if let Some(gen) = self.build_shape_generator(nid, params) {
+                                                        if let Some(gen) =
+                                                            self.build_shape_generator(nid, params)
+                                                        {
                                                             layer_preview.formas.push(gen);
                                                         }
                                                     }
                                                     NodeParams::Texto(..) => {
-                                                        if let Some(item) = self.build_texto_item(nid, params) {
+                                                        if let Some(item) =
+                                                            self.build_texto_item(nid, params)
+                                                        {
                                                             layer_preview.textos.push(item);
                                                         }
                                                     }
                                                     NodeParams::Pen(..) => {
-                                                        if let Some(pp) = self.build_pen_path(nid, params) {
+                                                        if let Some(pp) =
+                                                            self.build_pen_path(nid, params)
+                                                        {
                                                             layer_preview.pen.push(pp);
                                                         }
                                                     }
@@ -156,7 +171,9 @@ for (_entry_idx, nome, _ordem, opac, visivel) in &entries {
                     if !has_connections && entries.len() <= 1 {
                         for (&nid, params) in &self.params {
                             match params {
-                                NodeParams::Shape(..) | NodeParams::Texto(..) | NodeParams::Pen(..) => {
+                                NodeParams::Shape(..)
+                                | NodeParams::Texto(..)
+                                | NodeParams::Pen(..) => {
                                     let node_cena = match params {
                                         NodeParams::Shape(shape) => shape.cena.as_str(),
                                         NodeParams::Texto(texto) => texto.cena.as_str(),
@@ -166,12 +183,16 @@ for (_entry_idx, nome, _ordem, opac, visivel) in &entries {
                                     if node_cena == nome_cena {
                                         match params {
                                             NodeParams::Shape(..) => {
-                                                if let Some(gen) = self.build_shape_generator(nid, params) {
+                                                if let Some(gen) =
+                                                    self.build_shape_generator(nid, params)
+                                                {
                                                     layer_preview.formas.push(gen);
                                                 }
                                             }
                                             NodeParams::Texto(..) => {
-                                                if let Some(item) = self.build_texto_item(nid, params) {
+                                                if let Some(item) =
+                                                    self.build_texto_item(nid, params)
+                                                {
                                                     layer_preview.textos.push(item);
                                                 }
                                             }
@@ -309,9 +330,7 @@ for (_entry_idx, nome, _ordem, opac, visivel) in &entries {
 
     fn build_pen_path(&self, _nid: NodeId, params: &NodeParams) -> Option<PenPath> {
         if let NodeParams::Pen(pen) = params {
-            let program = self.pen_cache.get(&pen.codigo)
-                .cloned()
-                .unwrap_or_default();
+            let program = self.pen_cache.get(&pen.codigo).cloned().unwrap_or_default();
 
             let ruido = self.find_connected_ruido(_nid);
             let anim = self.find_connected_anim(_nid);

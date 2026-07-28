@@ -1,8 +1,11 @@
-use super::{PortSpec, NodeParams, LayerParams};
+use super::{LayerParams, NodeParams, PortSpec};
 use crate::domain::LayerEntry;
 
 pub(crate) fn portos() -> PortSpec {
-    PortSpec { entradas: &[], saidas: &[] }
+    PortSpec {
+        entradas: &[],
+        saidas: &[],
+    }
 }
 
 pub(crate) fn padrao() -> NodeParams {

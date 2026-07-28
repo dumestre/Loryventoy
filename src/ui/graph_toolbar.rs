@@ -1,5 +1,5 @@
-use eframe::egui::{self, Color32, Image, Popup, Rect, Stroke, Ui, Vec2};
 use crate::nodes::TipoNo;
+use eframe::egui::{self, Color32, Image, Popup, Rect, Stroke, Ui, Vec2};
 
 /// Ação solicitada pela toolbar ao painel do grafo.
 pub enum AcaoToolbar {
@@ -28,9 +28,17 @@ impl GraphToolbar {
 
     /// Desenha um botão de ação (texto) habilitado/desabilitado conforme
     /// `ativo`. Retorna `Some(acao)` ao clicar.
-    fn botao_acao(ui: &mut Ui, rotulo: &str, ativo: bool, acao: AcaoToolbar) -> Option<AcaoToolbar> {
+    fn botao_acao(
+        ui: &mut Ui,
+        rotulo: &str,
+        ativo: bool,
+        acao: AcaoToolbar,
+    ) -> Option<AcaoToolbar> {
         if ui
-            .add_enabled(ativo, egui::Button::new(rotulo).min_size(egui::Vec2::new(30.0, 22.0)))
+            .add_enabled(
+                ativo,
+                egui::Button::new(rotulo).min_size(egui::Vec2::new(30.0, 22.0)),
+            )
             .clicked()
         {
             Some(acao)
@@ -72,9 +80,7 @@ impl GraphToolbar {
                             .desired_width(150.0)
                             .hint_text("buscar…"),
                     );
-                    if resp.has_focus()
-                        && ui.input(|i| i.key_pressed(egui::Key::Enter))
-                    {
+                    if resp.has_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)) {
                         self.focus_search = true;
                     }
 
@@ -93,61 +99,89 @@ impl GraphToolbar {
                     let acao = &mut self.acao;
                     Popup::menu(&r).show(|ui| {
                         if ui
-                            .button(egui::RichText::new("Master").color(Color32::from_rgb(120, 220, 140)))
+                            .button(
+                                egui::RichText::new("Master")
+                                    .color(Color32::from_rgb(120, 220, 140)),
+                            )
                             .clicked()
                         {
                             *acao = Some(AcaoToolbar::Adicionar(TipoNo::Saida));
                         }
                         if ui
-                            .button(egui::RichText::new("Transform").color(Color32::from_rgb(235, 185, 95)))
+                            .button(
+                                egui::RichText::new("Transform")
+                                    .color(Color32::from_rgb(235, 185, 95)),
+                            )
                             .clicked()
                         {
                             *acao = Some(AcaoToolbar::Adicionar(TipoNo::Transform));
                         }
                         if ui
-                            .button(egui::RichText::new("Canvas").color(Color32::from_rgb(170, 120, 235)))
+                            .button(
+                                egui::RichText::new("Canvas")
+                                    .color(Color32::from_rgb(170, 120, 235)),
+                            )
                             .clicked()
                         {
                             *acao = Some(AcaoToolbar::Adicionar(TipoNo::Canvas));
                         }
                         if ui
-                            .button(egui::RichText::new("Cena").color(Color32::from_rgb(90, 190, 190)))
+                            .button(
+                                egui::RichText::new("Cena").color(Color32::from_rgb(90, 190, 190)),
+                            )
                             .clicked()
                         {
                             *acao = Some(AcaoToolbar::Adicionar(TipoNo::Cena));
                         }
                         if ui
-                            .button(egui::RichText::new("Layers").color(Color32::from_rgb(120, 170, 235)))
+                            .button(
+                                egui::RichText::new("Layers")
+                                    .color(Color32::from_rgb(120, 170, 235)),
+                            )
                             .clicked()
                         {
                             *acao = Some(AcaoToolbar::Adicionar(TipoNo::Layer));
                         }
                         if ui
-                            .button(egui::RichText::new("Shape").color(Color32::from_rgb(235, 150, 120)))
+                            .button(
+                                egui::RichText::new("Shape")
+                                    .color(Color32::from_rgb(235, 150, 120)),
+                            )
                             .clicked()
                         {
                             *acao = Some(AcaoToolbar::Adicionar(TipoNo::Shape));
                         }
                         if ui
-                            .button(egui::RichText::new("Texto").color(Color32::from_rgb(150, 200, 120)))
+                            .button(
+                                egui::RichText::new("Texto")
+                                    .color(Color32::from_rgb(150, 200, 120)),
+                            )
                             .clicked()
                         {
                             *acao = Some(AcaoToolbar::Adicionar(TipoNo::Texto.instancia()));
                         }
                         if ui
-                            .button(egui::RichText::new("Pen").color(Color32::from_rgb(200, 120, 220)))
+                            .button(
+                                egui::RichText::new("Pen").color(Color32::from_rgb(200, 120, 220)),
+                            )
                             .clicked()
                         {
                             *acao = Some(AcaoToolbar::Adicionar(TipoNo::Pen.instancia()));
                         }
                         if ui
-                            .button(egui::RichText::new("Ruído").color(Color32::from_rgb(120, 200, 220)))
+                            .button(
+                                egui::RichText::new("Ruído")
+                                    .color(Color32::from_rgb(120, 200, 220)),
+                            )
                             .clicked()
                         {
                             *acao = Some(AcaoToolbar::Adicionar(TipoNo::Ruido.instancia()));
                         }
                         if ui
-                            .button(egui::RichText::new("Animação").color(Color32::from_rgb(230, 130, 170)))
+                            .button(
+                                egui::RichText::new("Animação")
+                                    .color(Color32::from_rgb(230, 130, 170)),
+                            )
                             .clicked()
                         {
                             *acao = Some(AcaoToolbar::Adicionar(TipoNo::Anim.instancia()));
@@ -163,10 +197,7 @@ impl GraphToolbar {
                             (5u8, "Zoom In", Color32::from_rgb(150, 200, 120)),
                         ];
                         for (id, nome, cor) in modelos {
-                            if ui
-                                .button(egui::RichText::new(nome).color(cor))
-                                .clicked()
-                            {
+                            if ui.button(egui::RichText::new(nome).color(cor)).clicked() {
                                 *acao = Some(AcaoToolbar::ModeloAnimTexto(id));
                             }
                         }

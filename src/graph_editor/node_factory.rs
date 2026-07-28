@@ -1,6 +1,6 @@
 use eframe::egui::{Pos2, Vec2};
 
-use crate::nodes::{self, portos, TipoNo, NodeParams};
+use crate::nodes::{self, portos, NodeParams, TipoNo};
 
 use super::types::{GraphNode, NodeId};
 use super::GraphPanel;
@@ -55,9 +55,14 @@ impl GraphPanel {
             params: nodes::node_params_padrao(tipo),
         };
         let label = tipo.nome().to_string();
-        let nid = self.editor_state.graph.add_node(label, user_data, |_g, _id| {});
+        let nid = self
+            .editor_state
+            .graph
+            .add_node(label, user_data, |_g, _id| {});
         self.editor_state.node_positions.insert(nid, loc);
-        self.editor_state.node_orientations.insert(nid, egui_graph_edit::NodeOrientation::LeftToRight);
+        self.editor_state
+            .node_orientations
+            .insert(nid, egui_graph_edit::NodeOrientation::LeftToRight);
         if !self.editor_state.node_order.contains(&nid) {
             self.editor_state.node_order.push(nid);
         }
@@ -65,18 +70,34 @@ impl GraphPanel {
         let spec = portos(tipo);
         for p in spec.entradas.iter() {
             let (dt, vt) = if p.is_vetor() {
-                (super::types::GraphDataType::Vec2, super::types::GraphValueType::Vec2(Vec2::ZERO))
+                (
+                    super::types::GraphDataType::Vec2,
+                    super::types::GraphValueType::Vec2(Vec2::ZERO),
+                )
             } else {
-                (super::types::GraphDataType::Scalar, super::types::GraphValueType::Scalar(0.0))
+                (
+                    super::types::GraphDataType::Scalar,
+                    super::types::GraphValueType::Scalar(0.0),
+                )
             };
             self.editor_state.graph.add_input_param(
-                nid, p.nome.to_string(), dt, vt,
-                egui_graph_edit::InputParamKind::ConnectionOrConstant, true,
+                nid,
+                p.nome.to_string(),
+                dt,
+                vt,
+                egui_graph_edit::InputParamKind::ConnectionOrConstant,
+                true,
             );
         }
         for p in spec.saidas.iter() {
-            let dt = if p.is_vetor() { super::types::GraphDataType::Vec2 } else { super::types::GraphDataType::Scalar };
-            self.editor_state.graph.add_output_param(nid, p.nome.to_string(), dt);
+            let dt = if p.is_vetor() {
+                super::types::GraphDataType::Vec2
+            } else {
+                super::types::GraphDataType::Scalar
+            };
+            self.editor_state
+                .graph
+                .add_output_param(nid, p.nome.to_string(), dt);
         }
 
         self.params.insert(nid, nodes::node_params_padrao(tipo));
@@ -84,8 +105,14 @@ impl GraphPanel {
         let cena_preferida = self.cena_ativa.and_then(|ci| {
             self.params.get(&ci).and_then(|p| {
                 if let NodeParams::Cena(cena) = p {
-                    if !cena.nome_cena.is_empty() { Some(cena.nome_cena.clone()) } else { None }
-                } else { None }
+                    if !cena.nome_cena.is_empty() {
+                        Some(cena.nome_cena.clone())
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
             })
         });
         self.normalizar_cena(nid, &cenas, cena_preferida);
@@ -93,7 +120,9 @@ impl GraphPanel {
     }
 
     pub fn adicionar_no(&mut self, tipo: TipoNo) {
-        if tipo == TipoNo::Saida && self.master.is_some() { return; }
+        if tipo == TipoNo::Saida && self.master.is_some() {
+            return;
+        }
         let col = (self.contador % 3) as f32;
         let lin = (self.contador / 3) as f32;
         let loc = Pos2::new(40.0 + col * 260.0, 40.0 + lin * 150.0);

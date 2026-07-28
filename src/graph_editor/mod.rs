@@ -1,32 +1,29 @@
 use std::collections::{HashMap, HashSet};
 
-use eframe::egui::{
-    self, Button, Key,
-    Pos2, Rect, Sense, Stroke, Ui,
-};
 use eframe::egui::epaint::{CircleShape, TextShape};
 use eframe::egui::Popup;
+use eframe::egui::{self, Button, Key, Pos2, Rect, Sense, Stroke, Ui};
 
 use crate::dsl::application::Application;
 use crate::dsl::project_dsl::ProjectBlock;
-use crate::nodes::{self, NodeParams, ProjetoConfig, TipoNo, portos};
-use crate::ui::graph_toolbar::{GraphToolbar, AcaoToolbar};
+use crate::nodes::{self, portos, NodeParams, ProjetoConfig, TipoNo};
+use crate::ui::graph_toolbar::{AcaoToolbar, GraphToolbar};
 use crate::ui::inspector;
 
-use types::{MyEditorState, UserState, AllNodeTemplates, cor_tipo_no};
 pub use types::NodeId;
+use types::{cor_tipo_no, AllNodeTemplates, MyEditorState, UserState};
 
-pub mod types;
-pub mod ports;
-pub mod rendering;
-pub mod selection;
 pub mod groups;
-pub mod save;
-pub mod preview;
-pub mod node_factory;
 pub mod layer_ops;
 pub mod layout;
+pub mod node_factory;
+pub mod ports;
+pub mod preview;
+pub mod rendering;
+pub mod save;
 pub mod search;
+pub mod selection;
+pub mod types;
 
 #[allow(dead_code)]
 const ZOOM_MIN: f32 = 0.2;
@@ -128,7 +125,13 @@ impl GraphPanel {
         }
     }
 
-    pub fn conectar_por_nome(&mut self, src: NodeId, saida_nome: &str, dst: NodeId, entrada_nome: &str) {
+    pub fn conectar_por_nome(
+        &mut self,
+        src: NodeId,
+        saida_nome: &str,
+        dst: NodeId,
+        entrada_nome: &str,
+    ) {
         let output_id = self.find_output(src, saida_nome);
         let input_id = self.find_input(dst, entrada_nome);
         if let (Some(out), Some(inp)) = (output_id, input_id) {
@@ -137,25 +140,36 @@ impl GraphPanel {
     }
 
     fn find_output(&self, node: NodeId, name: &str) -> Option<egui_graph_edit::OutputId> {
-        self.editor_state.graph[node].outputs.iter()
+        self.editor_state.graph[node]
+            .outputs
+            .iter()
             .find(|(n, _)| n == name)
             .map(|(_, id)| *id)
     }
 
     fn find_input(&self, node: NodeId, name: &str) -> Option<egui_graph_edit::InputId> {
-        self.editor_state.graph[node].inputs.iter()
+        self.editor_state.graph[node]
+            .inputs
+            .iter()
             .find(|(n, _)| n == name)
             .map(|(_, id)| *id)
     }
 
     fn obter_tipo(&self, idx: NodeId) -> TipoNo {
-        self.editor_state.graph.nodes.get(idx)
+        self.editor_state
+            .graph
+            .nodes
+            .get(idx)
             .map(|n| n.user_data.tipo)
             .unwrap_or(TipoNo::Transform)
     }
 
     fn tipo_do_node(&self, idx: NodeId) -> Option<TipoNo> {
-        self.editor_state.graph.nodes.get(idx).map(|n| n.user_data.tipo)
+        self.editor_state
+            .graph
+            .nodes
+            .get(idx)
+            .map(|n| n.user_data.tipo)
     }
 
     fn is_master(&self, idx: NodeId) -> bool {
@@ -189,13 +203,25 @@ impl GraphPanel {
     }
 
     fn obter_label(&self, idx: NodeId) -> String {
-        self.editor_state.graph.nodes.get(idx).map(|n| n.user_data.tipo.nome().to_string()).unwrap_or_default()
+        self.editor_state
+            .graph
+            .nodes
+            .get(idx)
+            .map(|n| n.user_data.tipo.nome().to_string())
+            .unwrap_or_default()
     }
 
     pub fn projeto(&self) -> ProjetoConfig {
-        self.canvas.and_then(|c| self.params.get(&c)).and_then(|p| {
-            if let NodeParams::Canvas(cfg) = p { Some(cfg.clone()) } else { None }
-        }).unwrap_or_else(ProjetoConfig::default)
+        self.canvas
+            .and_then(|c| self.params.get(&c))
+            .and_then(|p| {
+                if let NodeParams::Canvas(cfg) = p {
+                    Some(cfg.clone())
+                } else {
+                    None
+                }
+            })
+            .unwrap_or_else(ProjetoConfig::default)
     }
 
     #[allow(dead_code)]
@@ -213,7 +239,9 @@ impl GraphPanel {
     }
 
     pub fn garantir_master(&mut self) {
-        let mestres: Vec<NodeId> = self.params.iter()
+        let mestres: Vec<NodeId> = self
+            .params
+            .iter()
             .filter(|(_, p)| matches!(p, NodeParams::Saida(..)))
             .map(|(&idx, _)| idx)
             .collect();
@@ -240,17 +268,27 @@ impl GraphPanel {
     pub fn show(&mut self, ui: &mut Ui) {
         let editor_rect = ui.max_rect();
 
-        ui.painter().rect_filled(editor_rect, 8.0, eframe::egui::Color32::from_rgb(22, 22, 30));
+        ui.painter().rect_filled(
+            editor_rect,
+            8.0,
+            eframe::egui::Color32::from_rgb(22, 22, 30),
+        );
 
         let pan = self.editor_state.pan_zoom.pan;
         let zoom = self.editor_state.pan_zoom.zoom;
 
-        rendering::desenhar_grade(&ui.painter().with_clip_rect(editor_rect), editor_rect, pan, zoom);
+        rendering::desenhar_grade(
+            &ui.painter().with_clip_rect(editor_rect),
+            editor_rect,
+            pan,
+            zoom,
+        );
 
         let (_, response) = ui.allocate_exact_size(editor_rect.size(), Sense::hover());
 
         self.reafirmar_posicoes();
-        self.toolbar.show(ui, editor_rect, self.pode_undo(), self.pode_redo());
+        self.toolbar
+            .show(ui, editor_rect, self.pode_undo(), self.pode_redo());
 
         if let Some(acao) = self.toolbar.acao.take() {
             match acao {
@@ -262,8 +300,12 @@ impl GraphPanel {
                     self.empurrar_historico();
                     self.aplicar_modelo_anim_texto(id);
                 }
-                AcaoToolbar::Undo => { self.undo(); }
-                AcaoToolbar::Redo => { self.redo(); }
+                AcaoToolbar::Undo => {
+                    self.undo();
+                }
+                AcaoToolbar::Redo => {
+                    self.redo();
+                }
             }
         }
 
@@ -293,7 +335,15 @@ impl GraphPanel {
         self.params = user_state.params;
         self.renaming_layer = user_state.renaming_layer;
 
-        if ui.ctx().input(|i| i.pointer.any_down() || i.events.iter().any(|e| matches!(e, eframe::egui::Event::Key { .. } | eframe::egui::Event::Text { .. }))) {
+        if ui.ctx().input(|i| {
+            i.pointer.any_down()
+                || i.events.iter().any(|e| {
+                    matches!(
+                        e,
+                        eframe::egui::Event::Key { .. } | eframe::egui::Event::Text { .. }
+                    )
+                })
+        }) {
             self.preview_dirty = true;
             self.dirty_repaint = true;
         }
@@ -318,7 +368,10 @@ impl GraphPanel {
                         self.marcar_sujo();
                     }
                 }
-                egui_graph_edit::NodeResponse::MoveNode { node, drag_delta: _ } => {
+                egui_graph_edit::NodeResponse::MoveNode {
+                    node,
+                    drag_delta: _,
+                } => {
                     self.liberados.insert(*node);
                     self.dirty_repaint = true;
                 }
@@ -337,9 +390,15 @@ impl GraphPanel {
                     let cenas = self.cenas_disponiveis();
                     let cena_preferida = self.cena_ativa.and_then(|ci| {
                         self.params.get(&ci).and_then(|p| {
-                if let NodeParams::Cena(cena) = p {
-                    if !cena.nome_cena.is_empty() { Some(cena.nome_cena.clone()) } else { None }
-                } else { None }
+                            if let NodeParams::Cena(cena) = p {
+                                if !cena.nome_cena.is_empty() {
+                                    Some(cena.nome_cena.clone())
+                                } else {
+                                    None
+                                }
+                            } else {
+                                None
+                            }
                         })
                     });
                     self.normalizar_cena(*nid, &cenas, cena_preferida);
@@ -363,18 +422,25 @@ impl GraphPanel {
             let sel: Vec<NodeId> = self.editor_state.selected_nodes.iter().cloned().collect();
             if let Some(idx) = sel.first() {
                 if let Some(pos) = self.editor_state.node_positions.get(*idx) {
-                    self.editor_state.pan_zoom.pan = (editor_rect.center().to_vec2() - pos.to_vec2()) * zoom - editor_rect.min.to_vec2();
+                    self.editor_state.pan_zoom.pan =
+                        (editor_rect.center().to_vec2() - pos.to_vec2()) * zoom
+                            - editor_rect.min.to_vec2();
                 }
             }
         }
 
-        if ui.ctx().input(|i| i.modifiers.ctrl && i.key_pressed(Key::G)) {
+        if ui
+            .ctx()
+            .input(|i| i.modifiers.ctrl && i.key_pressed(Key::G))
+        {
             self.agrupar_selecionados();
             self.marcar_sujo();
         }
 
         if self.renaming_layer.is_none()
-            && ui.ctx().input(|i| i.key_pressed(Key::Delete) || i.key_pressed(Key::Backspace))
+            && ui
+                .ctx()
+                .input(|i| i.key_pressed(Key::Delete) || i.key_pressed(Key::Backspace))
         {
             let sel: Vec<NodeId> = self.editor_state.selected_nodes.iter().cloned().collect();
             if !sel.is_empty() {
@@ -389,10 +455,16 @@ impl GraphPanel {
             }
         }
 
-        if ui.ctx().input(|i| i.modifiers.ctrl && i.key_pressed(Key::Z)) {
+        if ui
+            .ctx()
+            .input(|i| i.modifiers.ctrl && i.key_pressed(Key::Z))
+        {
             self.undo();
         }
-        if ui.ctx().input(|i| i.modifiers.ctrl && i.key_pressed(Key::Y)) {
+        if ui
+            .ctx()
+            .input(|i| i.modifiers.ctrl && i.key_pressed(Key::Y))
+        {
             self.redo();
         }
 
@@ -403,9 +475,9 @@ impl GraphPanel {
             && p_screen.map_or(false, |p| editor_rect.contains(p));
 
         if abrir_menu {
-            self.menu_canvas = p_screen.map(|p| {
-                self.screen_para_canvas(p, pan, editor_rect)
-            }).unwrap_or_default();
+            self.menu_canvas = p_screen
+                .map(|p| self.screen_para_canvas(p, pan, editor_rect))
+                .unwrap_or_default();
         }
 
         Popup::menu(&response)
@@ -417,7 +489,10 @@ impl GraphPanel {
             .at_pointer_fixed()
             .show(|ui| {
                 ui.set_min_width(120.0);
-                if ui.add_enabled(sel_count >= 1, Button::new("Copiar")).clicked() {
+                if ui
+                    .add_enabled(sel_count >= 1, Button::new("Copiar"))
+                    .clicked()
+                {
                     acao_menu = Some(selection::AcaoMenu::Copiar);
                     ui.close();
                 }
@@ -425,11 +500,17 @@ impl GraphPanel {
                     acao_menu = Some(selection::AcaoMenu::Colar);
                     ui.close();
                 }
-                if ui.add_enabled(sel_count >= 1, Button::new("Duplicar")).clicked() {
+                if ui
+                    .add_enabled(sel_count >= 1, Button::new("Duplicar"))
+                    .clicked()
+                {
                     acao_menu = Some(selection::AcaoMenu::Duplicar);
                     ui.close();
                 }
-                if ui.add_enabled(sel_count >= 1, Button::new("Deletar")).clicked() {
+                if ui
+                    .add_enabled(sel_count >= 1, Button::new("Deletar"))
+                    .clicked()
+                {
                     acao_menu = Some(selection::AcaoMenu::Deletar);
                     ui.close();
                 }
@@ -443,16 +524,56 @@ impl GraphPanel {
                 ui.separator();
                 ui.menu_button("Adicionar nó", |ui| {
                     let tipos: [(TipoNo, &str, eframe::egui::Color32); 10] = [
-                        (TipoNo::Saida, "Master", eframe::egui::Color32::from_rgb(120, 220, 140)),
-                        (TipoNo::Transform, "Transform", eframe::egui::Color32::from_rgb(235, 185, 95)),
-                        (TipoNo::Canvas, "Canvas", eframe::egui::Color32::from_rgb(170, 120, 235)),
-                        (TipoNo::Cena, "Cena", eframe::egui::Color32::from_rgb(90, 190, 190)),
-                        (TipoNo::Shape, "Shape", eframe::egui::Color32::from_rgb(235, 150, 120)),
-                        (TipoNo::Texto, "Texto", eframe::egui::Color32::from_rgb(150, 200, 120)),
-                        (TipoNo::Pen, "Pen", eframe::egui::Color32::from_rgb(200, 120, 220)),
-                        (TipoNo::Ruido, "Ruído", eframe::egui::Color32::from_rgb(120, 200, 220)),
-                        (TipoNo::Anim, "Animação", eframe::egui::Color32::from_rgb(230, 130, 170)),
-                        (TipoNo::Layer, "Layers", eframe::egui::Color32::from_rgb(120, 170, 235)),
+                        (
+                            TipoNo::Saida,
+                            "Master",
+                            eframe::egui::Color32::from_rgb(120, 220, 140),
+                        ),
+                        (
+                            TipoNo::Transform,
+                            "Transform",
+                            eframe::egui::Color32::from_rgb(235, 185, 95),
+                        ),
+                        (
+                            TipoNo::Canvas,
+                            "Canvas",
+                            eframe::egui::Color32::from_rgb(170, 120, 235),
+                        ),
+                        (
+                            TipoNo::Cena,
+                            "Cena",
+                            eframe::egui::Color32::from_rgb(90, 190, 190),
+                        ),
+                        (
+                            TipoNo::Shape,
+                            "Shape",
+                            eframe::egui::Color32::from_rgb(235, 150, 120),
+                        ),
+                        (
+                            TipoNo::Texto,
+                            "Texto",
+                            eframe::egui::Color32::from_rgb(150, 200, 120),
+                        ),
+                        (
+                            TipoNo::Pen,
+                            "Pen",
+                            eframe::egui::Color32::from_rgb(200, 120, 220),
+                        ),
+                        (
+                            TipoNo::Ruido,
+                            "Ruído",
+                            eframe::egui::Color32::from_rgb(120, 200, 220),
+                        ),
+                        (
+                            TipoNo::Anim,
+                            "Animação",
+                            eframe::egui::Color32::from_rgb(230, 130, 170),
+                        ),
+                        (
+                            TipoNo::Layer,
+                            "Layers",
+                            eframe::egui::Color32::from_rgb(120, 170, 235),
+                        ),
                     ];
                     for (t, nome, cor) in &tipos {
                         if ui.button(egui::RichText::new(*nome).color(*cor)).clicked() {
@@ -490,7 +611,9 @@ impl GraphPanel {
         match user_state.acao_inspector {
             inspector::AcaoInspector::FocarCena(ci) => {
                 if let Some(pos) = self.editor_state.node_positions.get(ci) {
-                    self.editor_state.pan_zoom.pan = (editor_rect.center().to_vec2() - pos.to_vec2()) * zoom - editor_rect.min.to_vec2();
+                    self.editor_state.pan_zoom.pan =
+                        (editor_rect.center().to_vec2() - pos.to_vec2()) * zoom
+                            - editor_rect.min.to_vec2();
                 }
                 self.cena_ativa = Some(ci);
             }
@@ -528,19 +651,25 @@ impl GraphPanel {
             }
         }
 
-        let p_canvas = p_screen.map(|p| {
-            self.screen_para_canvas(p, pan, editor_rect)
-        });
+        let p_canvas = p_screen.map(|p| self.screen_para_canvas(p, pan, editor_rect));
 
-        if let Some(gi) = self.grupo_header_sob(p_screen.unwrap_or_default(), pan, zoom, editor_rect) {
+        if let Some(gi) =
+            self.grupo_header_sob(p_screen.unwrap_or_default(), pan, zoom, editor_rect)
+        {
             ui.ctx().set_cursor_icon(eframe::egui::CursorIcon::Move);
-            if ui.ctx().input(|i| i.pointer.button_pressed(eframe::egui::PointerButton::Primary)) {
+            if ui.ctx().input(|i| {
+                i.pointer
+                    .button_pressed(eframe::egui::PointerButton::Primary)
+            }) {
                 self.empurrar_historico();
                 self.arrastando_grupo = Some((gi, p_canvas.unwrap_or_default()));
             }
         }
         if let Some((gi, prev)) = self.arrastando_grupo {
-            if ui.ctx().input(|i| i.pointer.button_down(eframe::egui::PointerButton::Primary)) {
+            if ui
+                .ctx()
+                .input(|i| i.pointer.button_down(eframe::egui::PointerButton::Primary))
+            {
                 if let Some(pc) = p_canvas {
                     let delta = pc - prev;
                     self.arrastando_grupo = Some((gi, pc));
@@ -578,13 +707,18 @@ impl GraphPanel {
                     }
                 }
             }
-            let hovered_dot = dots.iter().find(|(_, c, _)| {
-                p_screen.map_or(false, |pp| pp.distance(*c) <= raio_dot + 3.0)
-            }).map(|(idx, _, _)| *idx);
+            let hovered_dot = dots
+                .iter()
+                .find(|(_, c, _)| p_screen.map_or(false, |pp| pp.distance(*c) <= raio_dot + 3.0))
+                .map(|(idx, _, _)| *idx);
             let mut click_target: Option<NodeId> = None;
             if let Some(idx) = hovered_dot {
-                ui.ctx().set_cursor_icon(eframe::egui::CursorIcon::PointingHand);
-                if ui.ctx().input(|i| i.pointer.button_pressed(eframe::egui::PointerButton::Primary)) {
+                ui.ctx()
+                    .set_cursor_icon(eframe::egui::CursorIcon::PointingHand);
+                if ui.ctx().input(|i| {
+                    i.pointer
+                        .button_pressed(eframe::egui::PointerButton::Primary)
+                }) {
                     click_target = Some(idx);
                 }
             }
@@ -617,11 +751,17 @@ impl GraphPanel {
                     editor_rect.center().x - galley.size().x / 2.0,
                     editor_rect.max.y - galley.size().y - 6.0,
                 );
-                painter.add(TextShape::new(pos, galley, eframe::egui::Color32::from_rgb(220, 220, 230)));
+                painter.add(TextShape::new(
+                    pos,
+                    galley,
+                    eframe::egui::Color32::from_rgb(220, 220, 230),
+                ));
             }
             if let Some(idx) = click_target {
                 if let Some(pos) = self.editor_state.node_positions.get(idx) {
-                    self.editor_state.pan_zoom.pan = (editor_rect.center().to_vec2() - pos.to_vec2()) * zoom - editor_rect.min.to_vec2();
+                    self.editor_state.pan_zoom.pan =
+                        (editor_rect.center().to_vec2() - pos.to_vec2()) * zoom
+                            - editor_rect.min.to_vec2();
                 }
             }
         }
@@ -629,7 +769,14 @@ impl GraphPanel {
         let precisa = self.dirty_repaint
             || ui.ctx().input(|i| i.pointer.any_down())
             || ui.ctx().input(|i| i.pointer.any_pressed())
-            || ui.ctx().input(|i| i.events.iter().any(|e| matches!(e, eframe::egui::Event::Key { .. } | eframe::egui::Event::Text { .. })));
+            || ui.ctx().input(|i| {
+                i.events.iter().any(|e| {
+                    matches!(
+                        e,
+                        eframe::egui::Event::Key { .. } | eframe::egui::Event::Text { .. }
+                    )
+                })
+            });
         if precisa {
             ui.ctx().request_repaint();
         }
@@ -647,13 +794,7 @@ impl GraphPanel {
         Pos2::new(0.0, max_y + 160.0)
     }
 
-    fn remover_aresta_entre(
-        &mut self,
-        src: NodeId,
-        saida: usize,
-        dst: NodeId,
-        entrada: usize,
-    ) {
+    fn remover_aresta_entre(&mut self, src: NodeId, saida: usize, dst: NodeId, entrada: usize) {
         let output_id = self.editor_state.graph[src]
             .outputs
             .get(saida)
@@ -706,7 +847,13 @@ impl Application for GraphPanel {
         self.editor_state.graph.nodes.keys().collect()
     }
 
-    fn conectar_por_nome(&mut self, src: NodeId, saida_nome: &str, dst: NodeId, entrada_nome: &str) {
+    fn conectar_por_nome(
+        &mut self,
+        src: NodeId,
+        saida_nome: &str,
+        dst: NodeId,
+        entrada_nome: &str,
+    ) {
         self.conectar_por_nome(src, saida_nome, dst, entrada_nome);
     }
 

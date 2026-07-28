@@ -22,9 +22,27 @@ pub trait Application {
     fn iterar_nos(&self) -> Vec<Self::NodeId>;
 
     // ===== Conexões =====
-    fn conectar_por_nome(&mut self, src: Self::NodeId, saida_nome: &str, dst: Self::NodeId, entrada_nome: &str);
-    fn conectar_por_idx(&mut self, src: Self::NodeId, saida_idx: usize, dst: Self::NodeId, entrada_idx: usize);
-    fn remover_aresta(&mut self, src: Self::NodeId, saida_idx: usize, dst: Self::NodeId, entrada_idx: usize);
+    fn conectar_por_nome(
+        &mut self,
+        src: Self::NodeId,
+        saida_nome: &str,
+        dst: Self::NodeId,
+        entrada_nome: &str,
+    );
+    fn conectar_por_idx(
+        &mut self,
+        src: Self::NodeId,
+        saida_idx: usize,
+        dst: Self::NodeId,
+        entrada_idx: usize,
+    );
+    fn remover_aresta(
+        &mut self,
+        src: Self::NodeId,
+        saida_idx: usize,
+        dst: Self::NodeId,
+        entrada_idx: usize,
+    );
 
     // ===== Histórico / transação =====
     fn empurrar_historico(&mut self);
@@ -50,10 +68,7 @@ pub trait Application {
 }
 
 /// Aplica um script DSL completo ao projeto via trait Application.
-pub fn aplicar_script<A: Application>(
-    app: &mut A,
-    codigo: &str,
-) -> Result<(), ScriptError> {
+pub fn aplicar_script<A: Application>(app: &mut A, codigo: &str) -> Result<(), ScriptError> {
     let blocos = crate::dsl::project_dsl::parse_script(codigo)?;
 
     app.empurrar_historico();
@@ -109,10 +124,7 @@ pub fn aplicar_script<A: Application>(
 }
 
 /// Aplica patch DSL incremental.
-pub fn aplicar_patch<A: Application>(
-    app: &mut A,
-    codigo: &str,
-) -> Result<(), ScriptError> {
+pub fn aplicar_patch<A: Application>(app: &mut A, codigo: &str) -> Result<(), ScriptError> {
     let cmds = crate::dsl::patch_dsl::parse_patch(codigo)?;
 
     // Simulate to validate - just track keys in a HashSet
@@ -315,12 +327,8 @@ fn aplicar_campos<A: Application>(
                     "scene" => cena_nome = Some(v.as_str()),
                     "content" => texto.conteudo = v.as_str(),
                     "size" => texto.tamanho = v.as_num(),
-                    "bold" => {
-                        texto.negrito = v.as_str() == "true" || v.as_str() == "on"
-                    }
-                    "italic" => {
-                        texto.italico = v.as_str() == "true" || v.as_str() == "on"
-                    }
+                    "bold" => texto.negrito = v.as_str() == "true" || v.as_str() == "on",
+                    "italic" => texto.italico = v.as_str() == "true" || v.as_str() == "on",
                     "pos" => {
                         if let Expr::Vec2(a, b) = v {
                             texto.px = *a;
@@ -352,9 +360,7 @@ fn aplicar_campos<A: Application>(
                         }
                     }
                     "stroke" => pen.espessura = v.as_num(),
-                    "fill" => {
-                        pen.preenchimento = v.as_str() != "off" && v.as_str() != "false"
-                    }
+                    "fill" => pen.preenchimento = v.as_str() != "off" && v.as_str() != "false",
                     "color" | "colour" => {
                         let h = v.as_hex();
                         let c = crate::domain::Color::from_rgba(h.r(), h.g(), h.b(), h.a());
@@ -441,7 +447,9 @@ fn merge_layers<A: Application>(app: &mut A) -> Result<(), ScriptError> {
                 }
             }
             // Now merge into primary
-            if let Some(crate::nodes::NodeParams::Layer(primary_params)) = app.obter_params_mut(primary) {
+            if let Some(crate::nodes::NodeParams::Layer(primary_params)) =
+                app.obter_params_mut(primary)
+            {
                 for entry in entries_to_merge {
                     if !primary_params.layers.iter().any(|e| e.nome == entry.nome) {
                         primary_params.layers.push(entry);
@@ -458,16 +466,15 @@ fn merge_layers<A: Application>(app: &mut A) -> Result<(), ScriptError> {
     Ok(())
 }
 
-fn conectar_edge<A: Application>(
-    app: &mut A,
-    e: &EdgeDef,
-) -> Result<(), ScriptError> {
-    let src = *app.dsl_ids().get(&e.de).ok_or_else(|| {
-        ScriptError::Apply(format!("nó '{}' não existe", e.de))
-    })?;
-    let dst = *app.dsl_ids().get(&e.para).ok_or_else(|| {
-        ScriptError::Apply(format!("nó '{}' não existe", e.para))
-    })?;
+fn conectar_edge<A: Application>(app: &mut A, e: &EdgeDef) -> Result<(), ScriptError> {
+    let src = *app
+        .dsl_ids()
+        .get(&e.de)
+        .ok_or_else(|| ScriptError::Apply(format!("nó '{}' não existe", e.de)))?;
+    let dst = *app
+        .dsl_ids()
+        .get(&e.para)
+        .ok_or_else(|| ScriptError::Apply(format!("nó '{}' não existe", e.para)))?;
 
     let src_tipo = app.obter_tipo(src);
     let dst_tipo = app.obter_tipo(dst);
@@ -505,16 +512,15 @@ fn conectar_edge<A: Application>(
     Ok(())
 }
 
-fn conectar_patch<A: Application>(
-    app: &mut A,
-    c: &Conexao,
-) -> Result<(), ScriptError> {
-    let src = *app.dsl_ids().get(&c.de).ok_or_else(|| {
-        ScriptError::Apply(format!("nó '{}' não existe", c.de))
-    })?;
-    let dst = *app.dsl_ids().get(&c.para).ok_or_else(|| {
-        ScriptError::Apply(format!("nó '{}' não existe", c.para))
-    })?;
+fn conectar_patch<A: Application>(app: &mut A, c: &Conexao) -> Result<(), ScriptError> {
+    let src = *app
+        .dsl_ids()
+        .get(&c.de)
+        .ok_or_else(|| ScriptError::Apply(format!("nó '{}' não existe", c.de)))?;
+    let dst = *app
+        .dsl_ids()
+        .get(&c.para)
+        .ok_or_else(|| ScriptError::Apply(format!("nó '{}' não existe", c.para)))?;
 
     let src_tipo = app.obter_tipo(src);
     let dst_tipo = app.obter_tipo(dst);
@@ -537,16 +543,15 @@ fn conectar_patch<A: Application>(
     Ok(())
 }
 
-fn desconectar_patch<A: Application>(
-    app: &mut A,
-    c: &Conexao,
-) -> Result<(), ScriptError> {
-    let src = *app.dsl_ids().get(&c.de).ok_or_else(|| {
-        ScriptError::Apply(format!("nó '{}' não existe", c.de))
-    })?;
-    let dst = *app.dsl_ids().get(&c.para).ok_or_else(|| {
-        ScriptError::Apply(format!("nó '{}' não existe", c.para))
-    })?;
+fn desconectar_patch<A: Application>(app: &mut A, c: &Conexao) -> Result<(), ScriptError> {
+    let src = *app
+        .dsl_ids()
+        .get(&c.de)
+        .ok_or_else(|| ScriptError::Apply(format!("nó '{}' não existe", c.de)))?;
+    let dst = *app
+        .dsl_ids()
+        .get(&c.para)
+        .ok_or_else(|| ScriptError::Apply(format!("nó '{}' não existe", c.para)))?;
 
     let src_tipo = app.obter_tipo(src);
     let dst_tipo = app.obter_tipo(dst);
@@ -565,12 +570,14 @@ fn resolver_conexao<A: Application>(
     app: &A,
     c: &Conexao,
 ) -> Result<(A::NodeId, A::NodeId, usize, usize), ScriptError> {
-    let src = *app.dsl_ids().get(&c.de).ok_or_else(|| {
-        ScriptError::Apply(format!("nó '{}' não existe", c.de))
-    })?;
-    let dst = *app.dsl_ids().get(&c.para).ok_or_else(|| {
-        ScriptError::Apply(format!("nó '{}' não existe", c.para))
-    })?;
+    let src = *app
+        .dsl_ids()
+        .get(&c.de)
+        .ok_or_else(|| ScriptError::Apply(format!("nó '{}' não existe", c.de)))?;
+    let dst = *app
+        .dsl_ids()
+        .get(&c.para)
+        .ok_or_else(|| ScriptError::Apply(format!("nó '{}' não existe", c.para)))?;
     let src_tipo = app.obter_tipo(src);
     let dst_tipo = app.obter_tipo(dst);
     let saida_i = app
