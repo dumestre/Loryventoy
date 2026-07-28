@@ -7,7 +7,8 @@ use crate::log::{diag, erro, info};
 use crate::theme;
 
 use crate::domain::Project;
-use crate::infrastructure::persistence::{load_from_str, save_project, PersistenceError};
+use crate::error::AppError;
+use crate::infrastructure::persistence::{load_from_str, save_project};
 
 use crate::ui::{
     bartool::BarTool, graph::GraphPanel, preview::PreviewPanel, splitter::VerticalSplitter,
@@ -210,13 +211,9 @@ impl Loryventoy {
                 info(&msg);
                 self.projeto_aviso = Some(msg);
             }
-            Err(PersistenceError::Parse(e)) => {
-                let msg = format!("falha ao serializar: {e}");
-                erro(&msg);
-                self.projeto_aviso = Some(msg);
-            }
             Err(e) => {
-                let msg = format!("não foi possível salvar {}: {e}", caminho.display());
+                let app_err = AppError::from(e);
+                let msg = format!("não foi possível salvar {}: {app_err}", caminho.display());
                 erro(&msg);
                 self.projeto_aviso = Some(msg);
             }
@@ -237,7 +234,8 @@ impl Loryventoy {
                 self.projeto_aviso = Some(msg);
             }
             Err(e) => {
-                let msg = format!("não foi possível carregar: {e}");
+                let app_err = AppError::from(e);
+                let msg = format!("não foi possível carregar: {app_err}");
                 erro(&msg);
                 self.projeto_aviso = Some(msg);
             }
