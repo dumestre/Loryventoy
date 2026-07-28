@@ -1293,7 +1293,7 @@ O coordenador recebe a ação e decide como aplicá-la.
 
 ---
 
-## Fase 10 — Refatorar `MovimentoApp`
+## Fase 10 — Refatorar `Loryventoy`
 
 ### Objetivo
 
