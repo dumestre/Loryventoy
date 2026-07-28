@@ -1,7 +1,7 @@
 use crate::domain::Color;
 
 /// Dados persistentes de uma layer.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct LayerEntry {
     pub nome: String,
     pub ordem: f32,

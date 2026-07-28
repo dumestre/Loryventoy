@@ -437,7 +437,6 @@ impl ShapeGenerator {
                     )
                 }
                 Shape::Path { pts, .. } => Some(pts.clone()),
-                _ => None,
             };
             if let Some(mut pts) = pts {
                 pts = trim_path_pts(&pts, true, trim_inicio, trim_fim);

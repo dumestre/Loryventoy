@@ -523,11 +523,9 @@ impl eframe::App for Loryventoy {
 
             self.perf_frame += 1;
             if self.perf_frame % 60 == 0 {
-                diag(&format!(
+                diag(format!(
                     "preview={:.1}ms  graph={:.1}ms  timeline={:.1}ms",
-                    preview = self.perf_preview_ms,
-                    graph = self.perf_graph_ms,
-                    tl = self.perf_timeline_ms,
+                    self.perf_preview_ms, self.perf_graph_ms, self.perf_timeline_ms,
                 ));
             }
         });

@@ -10,7 +10,7 @@ use super::transform_params::TransformParams;
 use super::ProjectConfig as ProjetoConfig;
 
 /// Parâmetros editáveis de cada tipo de nó.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum NodeParams {
     Transform(TransformParams),
     Cena(CenaParams),

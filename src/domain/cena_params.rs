@@ -1,4 +1,4 @@
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct CenaParams {
     pub nome_cena: String,
     pub ativa: bool,

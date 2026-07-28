@@ -5,6 +5,7 @@ mod dsl;
 mod error;
 mod export;
 mod graph_editor;
+mod history;
 mod infrastructure;
 mod log;
 mod nodes;

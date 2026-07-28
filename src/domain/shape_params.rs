@@ -1,7 +1,7 @@
 use crate::domain::Color;
 
 /// Parâmetros persistentes do nó Shape.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ShapeParams {
     pub cena: String,
     pub tipo: u8,

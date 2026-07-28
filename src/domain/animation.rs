@@ -67,7 +67,7 @@ impl LoopMode {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct AnimSeg {
     pub t_ini: f32,
     pub t_fim: f32,

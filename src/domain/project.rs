@@ -1,7 +1,7 @@
 use super::{NodeParams, ProjectConfig, TipoNo};
 
 /// Nó do projeto — dados puros, sem referência ao grafo visual.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ProjectNode {
     pub tipo: TipoNo,
     pub pos_x: f32,
@@ -10,7 +10,7 @@ pub struct ProjectNode {
 }
 
 /// Aresta do projeto — índices dos nós e portos.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ProjectEdge {
     pub from: usize,
     pub to: usize,
@@ -21,7 +21,7 @@ pub struct ProjectEdge {
 }
 
 /// Projeto completo — única fonte de verdade persistível.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Project {
     pub script_text: String,
     pub nodes: Vec<ProjectNode>,

@@ -1,7 +1,7 @@
 use crate::domain::Color;
 
 /// Parâmetros persistentes do nó Texto.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct TextParams {
     pub cena: String,
     pub conteudo: String,

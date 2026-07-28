@@ -1,6 +1,6 @@
 use crate::domain::Color;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct PenParams {
     pub cena: String,
     pub codigo: String,

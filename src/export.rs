@@ -16,7 +16,6 @@ use eframe::egui::epaint::{
 };
 use eframe::egui::{Color32, ColorImage, Pos2, Rect, Shape, Vec2};
 
-use crate::log::aviso;
 use crate::procedural::render::{color_to_color32, shape_to_egui};
 use crate::procedural::{CenaPreview, PenPath, PreviewData, TextoItem};
 use crate::ui::preview::PreviewPanel;
@@ -435,6 +434,7 @@ pub fn exportar_frames(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::log::aviso;
     use crate::dsl::Program;
     use crate::procedural::{CenaPreview, LayerPreview, PenPath, PreviewData};
     use eframe::egui::Color32;

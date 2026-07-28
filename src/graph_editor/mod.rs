@@ -4,8 +4,10 @@ use eframe::egui::epaint::{CircleShape, TextShape};
 use eframe::egui::Popup;
 use eframe::egui::{self, Button, Key, Pos2, Rect, Sense, Stroke, Ui};
 
+use crate::domain::Project;
 use crate::dsl::application::Application;
 use crate::dsl::project_dsl::ProjectBlock;
+use crate::history::History;
 use crate::nodes::{self, portos, NodeParams, ProjetoConfig, TipoNo};
 use crate::ui::graph_toolbar::{AcaoToolbar, GraphToolbar};
 use crate::ui::inspector;
@@ -61,8 +63,8 @@ pub struct GraphPanel {
     clipboard: Vec<selection::NoCopia>,
     menu_canvas: Pos2,
     arrastando_grupo: Option<(usize, Pos2)>,
-    undo_stack: Vec<(Vec<save::SnapshotNo>, Vec<save::SnapshotAresta>)>,
-    redo_stack: Vec<(Vec<save::SnapshotNo>, Vec<save::SnapshotAresta>)>,
+    history: History<Project>,
+    script_text: String,
     dsl_ids: HashMap<String, NodeId>,
     renaming_layer: Option<(NodeId, usize)>,
     dirty_repaint: bool,
@@ -102,8 +104,8 @@ impl GraphPanel {
             clipboard: Vec::new(),
             menu_canvas: Pos2::ZERO,
             arrastando_grupo: None,
-            undo_stack: Vec::new(),
-            redo_stack: Vec::new(),
+            history: History::new(save::LIMITE_HISTORICO),
+            script_text: String::new(),
             dsl_ids: HashMap::new(),
             renaming_layer: None,
             dirty_repaint: false,

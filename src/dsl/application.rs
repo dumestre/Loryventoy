@@ -488,7 +488,7 @@ fn conectar_edge<A: Application>(app: &mut A, e: &EdgeDef) -> Result<(), ScriptE
                     e.entrada, e.para
                 ))
             })?;
-        let port_name = app.tipo_portos(dst_tipo).entradas[entrada_i].nome.clone();
+        let port_name = app.tipo_portos(dst_tipo).entradas[entrada_i].nome;
         app.conectar_por_nome(src, &e.saida, dst, &port_name);
     } else {
         let saida_i = app
@@ -534,7 +534,7 @@ fn conectar_patch<A: Application>(app: &mut A, c: &Conexao) -> Result<(), Script
                     c.entrada, c.para
                 ))
             })?;
-        let port_name = app.tipo_portos(dst_tipo).entradas[entrada_i].nome.clone();
+        let port_name = app.tipo_portos(dst_tipo).entradas[entrada_i].nome;
         app.conectar_por_nome(src, &c.saida, dst, &port_name);
     } else {
         let (src2, dst2, saida_i, entrada_i) = resolver_conexao(app, c)?;
@@ -554,7 +554,7 @@ fn desconectar_patch<A: Application>(app: &mut A, c: &Conexao) -> Result<(), Scr
         .ok_or_else(|| ScriptError::Apply(format!("nó '{}' não existe", c.para)))?;
 
     let src_tipo = app.obter_tipo(src);
-    let dst_tipo = app.obter_tipo(dst);
+    let _dst_tipo = app.obter_tipo(dst);
 
     if src_tipo == TipoNo::Layer {
         // Layer disconnect is complex - delegate to concrete impl
