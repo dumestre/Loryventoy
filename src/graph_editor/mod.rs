@@ -11,7 +11,7 @@ use crate::dsl::application::Application;
 use crate::dsl::project_dsl::ProjectBlock;
 use crate::nodes::{self, NodeParams, ProjetoConfig, TipoNo, portos};
 use crate::ui::graph_toolbar::{GraphToolbar, AcaoToolbar};
-use crate::ui::node_component;
+use crate::ui::inspector;
 
 use types::{MyEditorState, UserState, AllNodeTemplates, cor_tipo_no};
 pub use types::NodeId;
@@ -279,7 +279,7 @@ impl GraphPanel {
         let mut user_state = UserState {
             params: self.params.clone(),
             cenas: self.cenas_disponiveis_com_indice(),
-            acao_inspector: crate::ui::node_component::AcaoInspector::Nenhuma,
+            acao_inspector: crate::ui::inspector::AcaoInspector::Nenhuma,
             renaming_layer: self.renaming_layer,
         };
 
@@ -488,37 +488,37 @@ impl GraphPanel {
         }
 
         match user_state.acao_inspector {
-            node_component::AcaoInspector::FocarCena(ci) => {
+            inspector::AcaoInspector::FocarCena(ci) => {
                 if let Some(pos) = self.editor_state.node_positions.get(ci) {
                     self.editor_state.pan_zoom.pan = (editor_rect.center().to_vec2() - pos.to_vec2()) * zoom - editor_rect.min.to_vec2();
                 }
                 self.cena_ativa = Some(ci);
             }
-            node_component::AcaoInspector::CriarLayerEntry => {
+            inspector::AcaoInspector::CriarLayerEntry => {
                 self.criar_layer_para_cena_atual();
                 self.marcar_sujo();
             }
-            node_component::AcaoInspector::RemoverLayerEntry(nid, entry_idx) => {
+            inspector::AcaoInspector::RemoverLayerEntry(nid, entry_idx) => {
                 self.remover_layer_entry(nid, entry_idx);
                 self.marcar_sujo();
             }
-            node_component::AcaoInspector::SubirLayerEntry(nid, entry_idx) => {
+            inspector::AcaoInspector::SubirLayerEntry(nid, entry_idx) => {
                 self.mover_layer_entry(nid, entry_idx, -1);
                 self.marcar_sujo();
             }
-            node_component::AcaoInspector::DescerLayerEntry(nid, entry_idx) => {
+            inspector::AcaoInspector::DescerLayerEntry(nid, entry_idx) => {
                 self.mover_layer_entry(nid, entry_idx, 1);
                 self.marcar_sujo();
             }
-            node_component::AcaoInspector::SelecionarLayer(nid, entry_idx) => {
+            inspector::AcaoInspector::SelecionarLayer(nid, entry_idx) => {
                 if let Some(NodeParams::Layer(layer)) = self.params.get_mut(&nid) {
                     layer.selected = entry_idx;
                     self.marcar_sujo();
                 }
             }
-            node_component::AcaoInspector::Nenhuma => {}
-            node_component::AcaoInspector::ToggleVisivelLayer(_, _) => {}
-            node_component::AcaoInspector::RenomearLayerEntry(nid, entry_idx) => {
+            inspector::AcaoInspector::Nenhuma => {}
+            inspector::AcaoInspector::ToggleVisivelLayer(_, _) => {}
+            inspector::AcaoInspector::RenomearLayerEntry(nid, entry_idx) => {
                 if let Some(NodeParams::Layer(layer)) = self.params.get_mut(&nid) {
                     if let Some(_layer) = layer.layers.get_mut(entry_idx) {
                         self.sync_layer_ports();

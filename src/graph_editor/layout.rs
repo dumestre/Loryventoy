@@ -35,7 +35,7 @@ impl GraphPanel {
             if let Some(pos) = self.editor_state.node_positions.get(nid) {
                 let label = self.obter_label(nid);
                 let half = ports::tamanho(&label);
-                let header_h = super::node_component::CABECALHO_H;
+                let header_h = crate::ui::node_component::CABECALHO_H;
                 if (canvas_p.x - pos.x).abs() <= half.x
                     && (canvas_p.y - pos.y).abs() <= half.y
                     && (pos.y - half.y + header_h - canvas_p.y) >= 0.0

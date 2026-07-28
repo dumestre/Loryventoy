@@ -1219,9 +1219,34 @@ cargo test --all  OK — 68 testes
 
 ## Fase 9 — Dividir o inspector
 
-### Objetivo
+### Status: INICIADA 🟡
 
-Tornar cada editor de nó independente.
+Criado o módulo `src/ui/inspector/` como wrapper fino sobre `node_component.rs`.
+O mesmo código é reexportado sem alteração de comportamento; a divisão em arquivos
+individuais (canvas.rs, scene.rs, layer.rs, shape.rs, text.rs, pen.rs, etc.) será
+feita nas próximas iterações, mantendo o projeto compilando a cada passo.
+
+```text
+src/ui/
+├── node_component.rs    ← implementação original (mantido)
+├── inspector/
+│   └── mod.rs           ← re-exports finos de node_component
+└── inspector.rs (futuro)
+```
+
+### Próximos passos
+- Cada editor de nó (Canvas, Transform, Cena, Layer, Shape, Texto, Pen, Ruido, Anim, Saída) vira um arquivo próprio em `inspector/`
+- `mod.rs` do inspector coordena a chamada por tipo de nó
+- helpers comuns (`grid_xyz`, `grid_2`, etc.) vão para `common.rs`
+
+### Validação
+
+```text
+cargo check       OK
+cargo test --all   OK — 68 testes
+```
+
+---
 
 ### Estrutura
 
