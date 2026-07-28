@@ -503,6 +503,7 @@ pub fn tipo_da_dsl(s: &str) -> Option<crate::nodes::TipoNo> {
 /// Resolve o índice de um porto pelo nome para um dado `TipoNo`.
 /// `out=true` busca nas saídas; `false` nas entradas. Aceita "out"/"in"
 /// como atalho do índice 0, além de aliases curtos (pos, color, rot...).
+#[allow(dead_code)] // reservado para patch DSL / conexões por nome
 pub fn indice_porto(tipo: crate::nodes::TipoNo, nome: &str, out: bool) -> Option<usize> {
     use crate::nodes::portos;
     let spec = portos(tipo);
@@ -522,6 +523,7 @@ pub fn indice_porto(tipo: crate::nodes::TipoNo, nome: &str, out: bool) -> Option
 }
 
 /// Traduz um nome curto da DSL para o nome de porto real (em português).
+#[allow(dead_code)]
 fn alias_porto(nome: &str) -> String {
     let real = match nome {
         "pos" | "position" => "Posição",

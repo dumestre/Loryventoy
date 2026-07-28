@@ -785,7 +785,8 @@ impl GraphPanel {
         self.dirty_repaint = false;
     }
 
-    // Métodos auxiliares para Application trait
+    // Métodos auxiliares para Application trait (patch DSL)
+    #[allow(dead_code)]
     fn proxima_pos_livre(&self) -> Pos2 {
         let mut max_y = 0.0f32;
         for nid in self.editor_state.graph.iter_nodes() {
@@ -796,6 +797,7 @@ impl GraphPanel {
         Pos2::new(0.0, max_y + 160.0)
     }
 
+    #[allow(dead_code)]
     fn remover_aresta_entre(&mut self, src: NodeId, saida: usize, dst: NodeId, entrada: usize) {
         let output_id = self.editor_state.graph[src]
             .outputs

@@ -1,3 +1,6 @@
+//! Erros unificados da aplicação (Fase 11 — padronização pendente).
+#![allow(dead_code)]
+
 use thiserror::Error;
 
 #[derive(Error, Debug)]

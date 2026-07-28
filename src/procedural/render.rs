@@ -49,6 +49,7 @@ pub fn shape_to_egui(shape: Shape) -> EguiShape {
 }
 
 /// Converte um `ShapeGenerator` do domínio para `egui::Shape` no tempo `t`.
+#[allow(dead_code)] // atalho de conveniência para callers futuros
 pub fn generate_shape_egui(gen: &crate::procedural::domain::ShapeGenerator, t: f32) -> EguiShape {
     shape_to_egui(gen.generate(t))
 }

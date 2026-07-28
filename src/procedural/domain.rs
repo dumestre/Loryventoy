@@ -176,6 +176,7 @@ pub struct PenPath {
     pub escala_y: f32,
     pub ruido: Option<RuidoDriver>,
     pub anim: Option<AnimDriver>,
+    #[allow(dead_code)] // exibição de erro de eval PenDSL (Fase 11)
     pub erro_eval: Option<String>,
     pub trim_inicio: f32,
     pub trim_fim: f32,
