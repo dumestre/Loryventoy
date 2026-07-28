@@ -15,17 +15,16 @@ use crate::ui::{
     bartool::BarTool,
 };
 
-pub struct MovimentoApp {
+use crate::playback::PlaybackState;
+
+pub struct Loryventoy {
 
     preview: PreviewPanel,
     timeline: TimelinePanel,
     graph: GraphPanel,
     bartool: BarTool,
 
-    was_playing: bool,
-    play_fps: f32,
-    frame_accum: f32,
-    last_time: f64,
+    playback: PlaybackState,
 
     preview_height: f32,
     timeline_height: f32,
@@ -55,7 +54,7 @@ pub struct MovimentoApp {
 
 
 
-impl MovimentoApp {
+impl Loryventoy {
 
 
     pub fn new(
@@ -72,10 +71,7 @@ impl MovimentoApp {
             graph: GraphPanel::new(),
             bartool: BarTool::new(),
 
-            was_playing: false,
-            play_fps: 24.0,
-            frame_accum: 0.0,
-            last_time: 0.0,
+            playback: PlaybackState::new(),
 
             preview_height: 400.0,
             timeline_height: 80.0,
@@ -251,17 +247,17 @@ impl MovimentoApp {
         match save_project(&caminho, &proj) {
             Ok(()) => {
                 let msg = format!("salvo em {}", caminho.display());
-                eprintln!("[Movimento] {msg}");
+                eprintln!("[Loryventoy] {msg}");
                 self.projeto_aviso = Some(msg);
             }
             Err(PersistenceError::Parse(e)) => {
                 let msg = format!("falha ao serializar: {e}");
-                eprintln!("[Movimento] {msg}");
+                eprintln!("[Loryventoy] {msg}");
                 self.projeto_aviso = Some(msg);
             }
             Err(e) => {
                 let msg = format!("não foi possível salvar {}: {e}", caminho.display());
-                eprintln!("[Movimento] {msg}");
+                eprintln!("[Loryventoy] {msg}");
                 self.projeto_aviso = Some(msg);
             }
         }
@@ -278,12 +274,12 @@ impl MovimentoApp {
                 self.script_text = proj.script_text.clone();
                 self.script_erro = None;
                 let msg = format!("carregado de {}", caminho.display());
-                eprintln!("[Movimento] {msg}");
+                eprintln!("[Loryventoy] {msg}");
                 self.projeto_aviso = Some(msg);
             }
             Err(e) => {
                 let msg = format!("não foi possível carregar: {e}");
-                eprintln!("[Movimento] {msg}");
+                eprintln!("[Loryventoy] {msg}");
                 self.projeto_aviso = Some(msg);
             }
         }
@@ -301,7 +297,7 @@ impl MovimentoApp {
 
 
 
-impl eframe::App for MovimentoApp {
+impl eframe::App for Loryventoy {
 
 
     fn ui(
@@ -577,8 +573,6 @@ impl eframe::App for MovimentoApp {
                     // Espaço: play/pause (funciona com ou sem ponteiro sobre editor)
                     if input.0 {
                         self.bartool.is_playing = !self.bartool.is_playing;
-                        self.last_time = now;
-                        self.frame_accum = 0.0;
                         ctx.request_repaint();
                     }
 
@@ -617,19 +611,8 @@ impl eframe::App for MovimentoApp {
 
 
                 // ---- AVANÇO DE PLAY ----
-                // Sincroniza a base de tempo ao (re)iniciar a reprodução
-                if self.bartool.is_playing && !self.was_playing {
-                    self.last_time = now;
-                    self.frame_accum = 0.0;
-                }
-                self.was_playing = self.bartool.is_playing;
-
-                if self.bartool.is_playing {
-                    let dt = (now - self.last_time) as f32;
-                    self.last_time = now;
-                    self.frame_accum += dt * self.play_fps;
-                    let advance = self.frame_accum.floor() as u32;
-                    self.frame_accum -= advance as f32;
+                let advance = self.playback.update(now, self.bartool.is_playing);
+                if advance > 0 {
                     self.timeline.current_frame =
                         self.timeline.current_frame.saturating_add(advance);
 

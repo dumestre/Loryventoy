@@ -1293,53 +1293,44 @@ O coordenador recebe a ação e decide como aplicá-la.
 
 ---
 
-## Fase 10 — Refatorar `Loryventoy`
+## Fase 10 — Refatorar `Loryventoy` ### CONCLUÍDA
 
-### Objetivo
+### O que foi feito
+- Criado `src/playback.rs` com `PlaybackState` — struct dedicada ao estado de reprodução (play/pause, FPS, acumulador de frames, timestamp) com método `update()` que encapsula toda a lógica de avanço de frame.
+- Renomeado `MovimentoApp` → `Loryventoy` em `src/app.rs` e `src/main.rs`.
+- Renomeado prefixo de log `[Movimento]` → `[Loryventoy]` em `src/app.rs`.
+- `MovimentoApp`/`Loryventoy` agora contém apenas composição da interface (painéis, menus, janelas DSL, layout), delegando playback para `self.playback.update()`.
 
-Deixar a aplicação principal responsável apenas pela composição da interface.
-
-### Estado recomendado
-
+### Estado recomendado (concluído)
 ```rust
-pub struct AppState {
-    pub project: Project,
-    pub selection: SelectionState,
-    pub playback: PlaybackState,
-    pub windows: WindowState,
-    pub notifications: NotificationState,
+pub struct Loryventoy {
+    preview: PreviewPanel,
+    timeline: TimelinePanel,
+    graph: GraphPanel,
+    bartool: BarTool,
+    playback: PlaybackState,  // substitui was_playing, play_fps, frame_accum, last_time
+    preview_height: f32,
+    timeline_height: f32,
+    graph_height: f32,
+    min_panel_height: f32,
+    splitter_size: f32,
+    script_open: bool,
+    script_text: String,
+    script_erro: Option<String>,
+    script_logs: Vec<String>,
+    script_mostrar_exemplos: bool,
+    script_rect: Option<egui::Rect>,
+    perf_frame: u64,
+    perf_preview_ms: f64,
+    perf_graph_ms: f64,
+    perf_timeline_ms: f64,
+    script_primeira_vez: bool,
+    salvar_pendente: bool,
+    carregar_pendente: bool,
+    projeto_aviso: Option<String>,
+    biblioteca: crate::biblioteca::Biblioteca,
 }
 ```
-
-### Separar de `app.rs`
-
-- inicialização;
-- comandos de menu;
-- playback;
-- janela DSL;
-- ações de arquivo;
-- layout dos painéis;
-- métricas de performance;
-- notificações.
-
-### Playback
-
-O playback deve possuir uma unidade própria:
-
-```rust
-pub struct PlaybackState {
-    pub playing: bool,
-    pub current_frame: u32,
-    pub fps: f32,
-    pub loop_range: Option<FrameRange>,
-}
-```
-
-O `App` apenas coleta o tempo do `egui` e chama o serviço de playback.
-
-### Critério de conclusão
-
-O `App` não deve conter regras específicas de nós, parsing de DSL ou serialização.
 
 ---
 

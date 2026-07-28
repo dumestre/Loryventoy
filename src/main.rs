@@ -1,4 +1,5 @@
 mod app;
+mod playback;
 mod biblioteca;
 mod domain;
 mod nodes;
@@ -51,7 +52,7 @@ fn main() -> eframe::Result<()> {
         options,
         Box::new(move |cc| {
             Ok(Box::new(
-                app::MovimentoApp::new(cc, start_project)
+                app::Loryventoy::new(cc, start_project)
             ))
         }),
     )

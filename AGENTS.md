@@ -3,7 +3,7 @@
 ## Project Overview
 Rust application with `eframe/egui`, node-based graph editor, procedural timeline, custom DSL, JSON serialization.
 
-## Completed Phases (Fases 2–8)
+## Completed Phases (Fases 2–10)
 
 ### Fase 2/3 — Domain Extraction & Project as Source of Truth
 - Created `src/domain/` with domain-independent types:
