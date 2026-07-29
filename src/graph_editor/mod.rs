@@ -876,4 +876,20 @@ impl Application for GraphPanel {
     fn tipo_portos(&self, tipo: TipoNo) -> crate::nodes::PortSpec {
         portos(tipo)
     }
+
+    fn limpar_tudo(&mut self) {
+        self.editor_state.graph.nodes.clear();
+        self.editor_state.graph.connections.clear();
+        self.editor_state.node_order.clear();
+        self.editor_state.node_positions.clear();
+        self.editor_state.node_orientations.clear();
+        self.editor_state.selected_nodes.clear();
+        self.params.clear();
+        self.liberados.clear();
+        self.dsl_ids.clear();
+        self.cena_ativa = None;
+        self.canvas = None;
+        self.master = None;
+        self.cena = None;
+    }
 }

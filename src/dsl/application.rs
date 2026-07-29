@@ -52,6 +52,9 @@ pub trait Application {
     fn porto_saida_por_nome(&self, tipo: TipoNo, nome: &str) -> Option<usize>;
     fn porto_entrada_por_nome(&self, tipo: TipoNo, nome: &str) -> Option<usize>;
     fn tipo_portos(&self, tipo: TipoNo) -> crate::nodes::PortSpec;
+
+    // ===== Limpeza total =====
+    fn limpar_tudo(&mut self);
 }
 
 /// Aplica um script DSL completo ao projeto via trait Application.
@@ -59,6 +62,7 @@ pub fn aplicar_script<A: Application>(app: &mut A, codigo: &str) -> Result<(), A
     let blocos = crate::dsl::project_dsl::parse_script(codigo)?;
 
     app.empurrar_historico();
+    app.limpar_tudo();
     app.dsl_ids_mut().clear();
 
     // 1. Canvas + Master
@@ -96,17 +100,65 @@ pub fn aplicar_script<A: Application>(app: &mut A, codigo: &str) -> Result<(), A
         }
     }
 
-    // 4. Merge layers from same scene
+    // 4. Resolve scene DSL IDs to display names
+    {
+        let owned: Vec<(String, A::NodeId)> =
+            app.dsl_ids().iter().map(|(k, &v)| (k.clone(), v)).collect();
+        let mut mapa_cenas: HashMap<String, String> = HashMap::new();
+        for (_id, nid) in &owned {
+            if let Some(p) = app.obter_params_mut(*nid) {
+                if let NodeParams::Cena(cena) = p {
+                    if !cena.nome_cena.is_empty() {
+                        mapa_cenas.insert(_id.clone(), cena.nome_cena.clone());
+                    }
+                }
+            }
+        }
+        for (_id, nid) in &owned {
+            if let Some(p) = app.obter_params_mut(*nid) {
+                let cena_raw = match p {
+                    NodeParams::Pen(pen) if mapa_cenas.contains_key(&pen.cena) => {
+                        Some(pen.cena.clone())
+                    }
+                    NodeParams::Shape(shape) if mapa_cenas.contains_key(&shape.cena) => {
+                        Some(shape.cena.clone())
+                    }
+                    NodeParams::Texto(texto) if mapa_cenas.contains_key(&texto.cena) => {
+                        Some(texto.cena.clone())
+                    }
+                    NodeParams::Layer(layer) if mapa_cenas.contains_key(&layer.cena) => {
+                        Some(layer.cena.clone())
+                    }
+                    _ => None,
+                };
+                if let Some(cena_raw) = cena_raw {
+                    if let Some(nome) = mapa_cenas.get(&cena_raw) {
+                        match p {
+                            NodeParams::Pen(pen) => pen.cena = nome.clone(),
+                            NodeParams::Shape(shape) => shape.cena = nome.clone(),
+                            NodeParams::Texto(texto) => texto.cena = nome.clone(),
+                            NodeParams::Layer(layer) => layer.cena = nome.clone(),
+                            _ => {}
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 5. Merge layers from same scene
     merge_layers(app)?;
 
-    // 5. Connect edges
+    // 6. Sync layer ports so edges can connect
+    app.sync_layer_ports();
+
+    // 7. Connect edges
     for bloco in &blocos {
         if let TopLevel::Edge(e) = bloco {
             conectar_edge(app, e)?;
         }
     }
 
-    app.sync_layer_ports();
     Ok(())
 }
 
@@ -571,6 +623,11 @@ mod tests {
         }
         fn tipo_portos(&self, tipo: TipoNo) -> PortSpec {
             crate::nodes::portos(tipo)
+        }
+
+        fn limpar_tudo(&mut self) {
+            self.nodes.clear();
+            self.dsl_ids.clear();
         }
     }
 

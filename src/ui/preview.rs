@@ -41,6 +41,8 @@ pub struct PreviewPanel {
     // cache de shapes do preview (por frame) — evita lyon tessellation + DSL eval
     // quando o tempo de animação não mudou entre frames consecutivos
     ultimo_tempo: f32,
+    ultimo_offset: Vec2,
+    ultimo_zoom: f32,
     cache_shapes: Vec<Shape>,
     cache_pen_erros: Vec<String>,
 }
@@ -58,6 +60,8 @@ impl PreviewPanel {
             pen_erros: Vec::new(),
             tex_cache: HashMap::new(),
             ultimo_tempo: -1.0,
+            ultimo_offset: Vec2::ZERO,
+            ultimo_zoom: 1.0,
             cache_shapes: Vec::new(),
             cache_pen_erros: Vec::new(),
         }
@@ -67,6 +71,7 @@ impl PreviewPanel {
     pub fn set_preview(&mut self, data: PreviewData) {
         self.data = data;
         self.tex_cache.clear();
+        self.cache_shapes.clear();
     }
 
     /// Define o instante de animação (segundos) do sistema procedural.
@@ -214,11 +219,15 @@ impl PreviewPanel {
         let para_tela = move |p: Pos2| -> Pos2 { canvas_min + p.to_vec2() * escala };
         let para_tela_v = move |v: Vec2| -> Vec2 { v * escala };
 
-        let precisa_rebuild =
-            self.cache_shapes.is_empty() || (self.tempo - self.ultimo_tempo).abs() > f32::EPSILON;
+        let precisa_rebuild = self.cache_shapes.is_empty()
+            || (self.tempo - self.ultimo_tempo).abs() > f32::EPSILON
+            || (self.offset - self.ultimo_offset).length_sq() > 0.5
+            || (self.zoom - self.ultimo_zoom).abs() > 0.001;
 
         if precisa_rebuild {
             self.ultimo_tempo = self.tempo;
+            self.ultimo_offset = self.offset;
+            self.ultimo_zoom = self.zoom;
             self.cache_shapes.clear();
 
             let mut tex_idx = 0usize;
