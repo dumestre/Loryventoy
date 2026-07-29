@@ -858,11 +858,17 @@ impl Application for GraphPanel {
     }
 
     fn porto_saida_por_nome(&self, tipo: TipoNo, nome: &str) -> Option<usize> {
+        if nome == "out" {
+            return self.tipo_portos(tipo).saidas.first().map(|_| 0);
+        }
         let specs = portos(tipo);
         specs.saidas.iter().position(|p| p.nome == nome)
     }
 
     fn porto_entrada_por_nome(&self, tipo: TipoNo, nome: &str) -> Option<usize> {
+        if nome == "in" {
+            return self.tipo_portos(tipo).entradas.first().map(|_| 0);
+        }
         let specs = portos(tipo);
         specs.entradas.iter().position(|p| p.nome == nome)
     }
