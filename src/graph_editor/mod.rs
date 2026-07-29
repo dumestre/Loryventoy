@@ -790,7 +790,14 @@ impl Application for GraphPanel {
     type NodeId = NodeId;
 
     fn criar_no(&mut self, tipo: TipoNo, pos: Pos2) -> NodeId {
-        self.adicionar_no_em(tipo, pos)
+        let nid = self.adicionar_no_em(tipo, pos);
+        match tipo {
+            TipoNo::Canvas => self.canvas = Some(nid),
+            TipoNo::Saida => self.master = Some(nid),
+            TipoNo::Cena => self.cena = Some(nid),
+            _ => {}
+        }
+        nid
     }
 
     fn remover_no(&mut self, idx: NodeId) {
