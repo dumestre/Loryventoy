@@ -17,7 +17,7 @@ Rust application with `eframe/egui`, node-based graph editor, procedural timelin
 | 6 | Separar persistência e migrações | ✅ Concluída |
 | 7 | Separar DSL de aplicação | ✅ Concluída |
 | 8 | Separar avaliação procedural e renderização | ✅ Concluída |
-| 9 | Dividir o inspector | 🟡 Iniciada (wrapper fino em `ui/inspector/mod.rs`) |
+| 9 | Dividir o inspector | ✅ Concluída |
 | 10 | Refatorar `Loryventoy` | ✅ Concluída (`PlaybackState`, rename `MovimentoApp` → `Loryventoy`) |
 | 11 | Padronizar erros, logs e diagnósticos | 🟡 Parcial (`AppError` existe mas não integrada; 4 tipos de erro independentes) |
 | 12 | Testes de regressão adicionais | ❌ Pendente |
@@ -101,11 +101,19 @@ Split into specialized submodules:
 
 ## In Progress Phases
 
-### Fase 9 — Dividir o inspector (INICIADA 🟡)
-- Created `src/ui/inspector/mod.rs` as a thin re-export wrapper (3 lines)
-- `mod.rs` re-exports `AcaoInspector` from `node_component` without behavioral change
-- `node_component.rs` (1,155 lines) still contains ALL inspector logic in a single file
-- Next steps: split into per-node-type files (`canvas.rs`, `scene.rs`, `layer.rs`, `shape.rs`, `text.rs`, `pen.rs`, `noise.rs`, `animation.rs`, `transform.rs`, `output.rs`), keeping the project compiling at each step
+### Fase 9 — Dividir o inspector (CONCLUÍDA ✅)
+- `src/ui/node_component.rs` reduced to 6-line re-export wrapper
+- `src/ui/inspector/` split into per-node-type files:
+  - `canvas.rs` (76 lines) — resolução/presets
+  - `scene.rs` (39 lines) — parâmetros de cena
+  - `layer.rs` (207 lines) — layers, header, rows, rename
+  - `shape.rs` (74 lines) — parâmetros de forma
+  - `text.rs` (70 lines) — parâmetros de texto
+  - `pen.rs` (131 lines) — editor Pen DSL
+  - `noise.rs` (11 lines) — parâmetros de ruído
+  - `animation.rs` (80 lines) — segmentos de animação
+  - `transform.rs` (15 lines) — transform/output
+- `mod.rs` (527 lines) — `show_content()` dispatch + helpers compartilhados
 
 ### Fase 11 — Padronizar erros, logs e diagnósticos (PARCIAL 🟡)
 - `thiserror` added to `Cargo.toml`
@@ -137,7 +145,7 @@ Split into specialized submodules:
 - `cargo fmt --check` — 4 preexistent diffs: import order (`evaluator.rs`, `export.rs`) + trailing newlines (`save.rs`, `history.rs`)
 - `src/app.rs` — 885 lines
 - `src/graph_editor/mod.rs` — 851 lines
-- `src/ui/node_component.rs` — 1,155 lines
+- `src/ui/node_component.rs` — 6 lines (re-export)
 - `src/dsl/pen.rs` — 2,766 lines (largest file)
 - **Total**: 74 `.rs` files, ~15,076 lines of Rust
 
@@ -196,4 +204,4 @@ The following infrastructure exists but is not yet wired into the application fl
 See [`docs/PLANO_REFATORACAO_PROFISSIONAL.md`](docs/PLANO_REFATORACAO_PROFISSIONAL.md) for the full architecture target, phase plan, contracts, and quality criteria.
 
 ## Next Recommended Step
-**Finish Fase 9** — split `node_component.rs` (1,155 lines) into individual inspector editors per node type, keeping the project compiling at each step. After that, wire `AppError` into the app flow (Fase 11) to eliminate the 4 independent error types.
+**Finish Fase 11** — wire `AppError` into the app flow to eliminate the 4 independent error types (`AppError`, `PersistenceError`, `ScriptError`, raw strings). After that, Fase 12 (regression tests).
