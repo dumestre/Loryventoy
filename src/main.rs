@@ -14,11 +14,18 @@ mod procedural;
 mod theme;
 mod ui;
 
-/// Lê `app.ico` e converte para `eframe::IconData` (RGBA + tamanho). Retorna
-/// `None` se o arquivo não existir ou falhar ao decodificar.
+/// Carrega o ícone da janela. Tenta `app.png` primeiro (formato universal),
+/// depois `app.ico` como fallback. Retorna `None` se ambos falharem.
 fn load_icon() -> Option<std::sync::Arc<eframe::egui::IconData>> {
-    let bytes = std::fs::read("app.ico").ok()?;
-    let img = image::load(std::io::Cursor::new(bytes), image::ImageFormat::Ico).ok()?;
+    let (bytes, fmt) = std::fs::read("app.png")
+        .ok()
+        .map(|b| (b, image::ImageFormat::Png))
+        .or_else(|| {
+            std::fs::read("app.ico")
+                .ok()
+                .map(|b| (b, image::ImageFormat::Ico))
+        })?;
+    let img = image::load(std::io::Cursor::new(bytes), fmt).ok()?;
     let rgba = img.to_rgba8();
     let (w, h) = rgba.dimensions();
     Some(std::sync::Arc::new(eframe::egui::IconData {

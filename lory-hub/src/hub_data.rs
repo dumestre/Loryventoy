@@ -49,26 +49,17 @@ pub const VERSOES: &[Versao] = &[
     Versao {
         numero: "12.3",
         titulo: "Ícones e UI",
-        itens: &[
-            "Novos ícones SVG",
-            "Painel de grupos de nós",
-        ],
+        itens: &["Novos ícones SVG", "Painel de grupos de nós"],
     },
     Versao {
         numero: "12.2",
         titulo: "Timeline",
-        itens: &[
-            "Scrub de keyframes",
-            "Loop configurável por trecho",
-        ],
+        itens: &["Scrub de keyframes", "Loop configurável por trecho"],
     },
     Versao {
         numero: "12.1",
         titulo: "Editor de Script (DSL)",
-        itens: &[
-            "Janela de script com exemplos",
-            "Aplicar via Ctrl+Enter",
-        ],
+        itens: &["Janela de script com exemplos", "Aplicar via Ctrl+Enter"],
     },
     Versao {
         numero: "12",
@@ -232,9 +223,7 @@ impl HubState {
             }
         }
 
-        let child = std::process::Command::new(&exe)
-            .arg(caminho)
-            .spawn();
+        let child = std::process::Command::new(&exe).arg(caminho).spawn();
 
         if child.is_ok() {
             std::process::exit(0);
@@ -242,7 +231,11 @@ impl HubState {
     }
 
     pub fn create_project(&mut self, nome: &str) {
-        let base = if nome.trim().is_empty() { "projeto" } else { nome.trim() };
+        let base = if nome.trim().is_empty() {
+            "projeto"
+        } else {
+            nome.trim()
+        };
         let nome_file = format!("{base}.lory");
         let path = PathBuf::from(&self.pasta_projetos).join(&nome_file);
         if path.exists() {
@@ -259,7 +252,7 @@ impl HubState {
             Err(_) => return,
         };
         let _ = fs::write(&path, json);
-        
+
         // Abre o projeto e sai
         self.open_project(path.to_str().unwrap_or(""));
     }
@@ -292,7 +285,9 @@ fn fmt_time(t: std::time::SystemTime) -> String {
     let mut r = d as i64;
     loop {
         let leap = (y % 4 == 0 && y % 100 != 0) || y % 400 == 0;
-        if r < if leap { 366 } else { 365 } { break; }
+        if r < if leap { 366 } else { 365 } {
+            break;
+        }
         r -= if leap { 366 } else { 365 };
         y += 1;
     }
@@ -302,7 +297,9 @@ fn fmt_time(t: std::time::SystemTime) -> String {
     let mut d = r;
     loop {
         let max = dim[m] + if m == 1 && leap { 1 } else { 0 };
-        if d < max { break; }
+        if d < max {
+            break;
+        }
         d -= max;
         m += 1;
     }
@@ -312,7 +309,11 @@ fn fmt_time(t: std::time::SystemTime) -> String {
 }
 
 pub fn format_size(bytes: u64) -> String {
-    if bytes < 1024 { format!("{bytes} B") }
-    else if bytes < 1024 * 1024 { format!("{:.1} KB", bytes as f64 / 1024.0) }
-    else { format!("{:.1} MB", bytes as f64 / (1024.0 * 1024.0)) }
+    if bytes < 1024 {
+        format!("{bytes} B")
+    } else if bytes < 1024 * 1024 {
+        format!("{:.1} KB", bytes as f64 / 1024.0)
+    } else {
+        format!("{:.1} MB", bytes as f64 / (1024.0 * 1024.0))
+    }
 }
