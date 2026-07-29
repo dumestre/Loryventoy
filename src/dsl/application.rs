@@ -610,3 +610,210 @@ fn resolver_conexao<A: Application>(
         })?;
     Ok((src, dst, saida_i, entrada_i))
 }
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+    use eframe::egui::Pos2;
+    use crate::domain::{NodeParams, TipoNo};
+    use crate::nodes::{AnimParams, CenaParams, LayerParams, PenParams, RuidoParams, SaidaParams, ShapeParams, TextParams, TransformParams};
+    use crate::nodes::PortSpec;
+    use super::*;
+
+    /// Mock simples que implementa `Application` armazenando nós num vetor.
+    struct MockApp {
+        nodes: Vec<(TipoNo, NodeParams, Pos2)>,
+        dsl_ids: HashMap<String, usize>,
+        history_count: usize,
+    }
+
+    impl MockApp {
+        fn new() -> Self {
+            Self {
+                nodes: Vec::new(),
+                dsl_ids: HashMap::new(),
+                history_count: 0,
+            }
+        }
+    }
+
+    impl Application for MockApp {
+        type NodeId = usize;
+
+        fn criar_no(&mut self, tipo: TipoNo, pos: Pos2) -> usize {
+            let params = match tipo {
+                TipoNo::Canvas => NodeParams::Canvas(crate::domain::ProjectConfig::default()),
+                TipoNo::Cena => NodeParams::Cena(CenaParams {
+                    nome_cena: String::new(), ativa: true, zoom: 1.0, angulo: 0.0, opacidade: 1.0,
+                }),
+                TipoNo::Layer => NodeParams::Layer(LayerParams {
+                    cena: String::new(), layers: vec![], selected: 0,
+                }),
+                TipoNo::Shape => NodeParams::Shape(ShapeParams {
+                    cena: String::new(), tipo: 0, px: 0.0, py: 0.0,
+                    largura: 100.0, altura: 100.0, rotacao: 0.0,
+                    cor: crate::domain::Color::WHITE, seed: 0.0,
+                    noise_scale: 0.0, amp: 0.0, veloc: 0.0,
+                    trim_inicio: 0.0, trim_fim: 1.0,
+                }),
+                TipoNo::Texto => NodeParams::Texto(TextParams {
+                    cena: String::new(), conteudo: String::new(), tamanho: 32.0,
+                    negrito: false, italico: false, px: 0.0, py: 0.0,
+                    cor: crate::domain::Color::WHITE, trim_inicio: 0.0, trim_fim: 1.0,
+                }),
+                TipoNo::Pen => NodeParams::Pen(PenParams {
+                    cena: String::new(), codigo: String::new(), pos_x: 0.0, pos_y: 0.0,
+                    espessura: 1.0, preenchimento: false, cantos: 0.0, ordem: 0.0,
+                    escala_x: 1.0, escala_y: 1.0, seed: 0.0,
+                    cor: crate::domain::Color::from_rgb(0,0,0),
+                    cor_fill: crate::domain::Color::from_rgb(0,0,0),
+                    erro: None, trim_inicio: 0.0, trim_fim: 1.0,
+                }),
+                TipoNo::Ruido => NodeParams::Ruido(RuidoParams {
+                    alvo: 0, seed: 0.0, freq: 0.1, amp: 10.0, veloc: 1.0,
+                }),
+                TipoNo::Anim => NodeParams::Anim(AnimParams {
+                    alvo: 0, loop_mode: 0, segmentos: vec![],
+                }),
+                TipoNo::Saida => NodeParams::Saida(SaidaParams {
+                    brilho: 1.0, contraste: 1.0, saturacao: 1.0,
+                }),
+                TipoNo::Transform => NodeParams::Transform(TransformParams {
+                    px: 0.0, py: 0.0, pz: 0.0,
+                    rx: 0.0, ry: 0.0, rz: 0.0,
+                    sx: 1.0, sy: 1.0, sz: 1.0,
+                }),
+            };
+            let id = self.nodes.len();
+            self.nodes.push((tipo, params, pos));
+            id
+        }
+
+        fn remover_no(&mut self, idx: usize) {
+            if idx < self.nodes.len() {
+                self.nodes.remove(idx);
+            }
+        }
+
+        fn obter_tipo(&self, idx: usize) -> TipoNo {
+            self.nodes.get(idx).map(|n| n.0).unwrap_or(TipoNo::Saida)
+        }
+
+        fn obter_params_mut(&mut self, idx: usize) -> Option<&mut NodeParams> {
+            self.nodes.get_mut(idx).map(|n| &mut n.1)
+        }
+
+        fn posicao_no(&self, idx: usize) -> Option<Pos2> {
+            self.nodes.get(idx).map(|n| n.2)
+        }
+
+        fn iterar_nos(&self) -> Vec<usize> {
+            (0..self.nodes.len()).collect()
+        }
+
+        fn conectar_por_nome(
+            &mut self,
+            _src: usize,
+            _saida_nome: &str,
+            _dst: usize,
+            _entrada_nome: &str,
+        ) {}
+
+        fn conectar_por_idx(
+            &mut self,
+            _src: usize,
+            _saida_idx: usize,
+            _dst: usize,
+            _entrada_idx: usize,
+        ) {}
+
+        fn remover_aresta(
+            &mut self,
+            _src: usize,
+            _saida_idx: usize,
+            _dst: usize,
+            _entrada_idx: usize,
+        ) {}
+
+        fn empurrar_historico(&mut self) {
+            self.history_count += 1;
+        }
+
+        fn dsl_ids(&self) -> &HashMap<String, usize> {
+            &self.dsl_ids
+        }
+
+        fn dsl_ids_mut(&mut self) -> &mut HashMap<String, usize> {
+            &mut self.dsl_ids
+        }
+
+        fn sync_layer_ports(&mut self) {}
+        fn limpar_grupos(&mut self) {}
+        fn cena_ativa(&self) -> Option<usize> { None }
+        fn definir_cena_ativa(&mut self, _idx: usize) {}
+
+        fn aplicar_project_config(&mut self, _bloco: &ProjectBlock) {}
+
+        fn encontrar_posicao_livre(&self) -> Pos2 { Pos2::ZERO }
+        fn porto_saida_por_nome(&self, tipo: TipoNo, nome: &str) -> Option<usize> {
+            if nome == "out" || nome == "in" { return Some(0); }
+            crate::nodes::portos(tipo).saidas.iter().position(|p| p.nome == nome)
+        }
+        fn porto_entrada_por_nome(&self, tipo: TipoNo, nome: &str) -> Option<usize> {
+            if nome == "out" || nome == "in" { return Some(0); }
+            crate::nodes::portos(tipo).entradas.iter().position(|p| p.nome == nome)
+        }
+        fn tipo_portos(&self, tipo: TipoNo) -> PortSpec {
+            crate::nodes::portos(tipo)
+        }
+    }
+
+    #[test]
+    fn aplicar_script_projeto_simples() {
+        let mut app = MockApp::new();
+        let script = "\
+project \"Teste\" { width 640 height 480 fps 30 duration 10 }
+scene s1 { name \"Cena 1\" }
+shape sh1 { scene s1 type rect pos 100 200 size 300 150 color #ff8800 }
+edge sh1.out -> master.in
+";
+        aplicar_script(&mut app, script).expect("script deve aplicar");
+        // canvas + master + scene + shape = 4 nós
+        assert_eq!(app.nodes.len(), 4);
+        assert!(app.dsl_ids.contains_key("canvas"));
+        assert!(app.dsl_ids.contains_key("master"));
+        assert!(app.dsl_ids.contains_key("s1"));
+        assert!(app.dsl_ids.contains_key("sh1"));
+        assert!(app.history_count > 0);
+    }
+
+    #[test]
+    fn aplicar_script_com_pen() {
+        let mut app = MockApp::new();
+        let script = "\
+project \"PenTest\" { width 1920 height 1080 }
+scene sc1 { name \"Cena\" }
+pen p1 {
+  scene sc1 pos 100 200 stroke 2
+  codigo {
+    repeat 3 { line (i*50) 0 }
+  }
+}
+edge p1.out -> master.in
+";
+        aplicar_script(&mut app, script).expect("script com pen deve aplicar");
+        assert_eq!(app.nodes.len(), 4); // canvas + master + sc1 + p1
+    }
+
+    #[test]
+    fn aplicar_script_erro_tipo_desconhecido() {
+        let mut app = MockApp::new();
+        let script = "foo x { }";
+        let r = aplicar_script(&mut app, script);
+        assert!(r.is_err());
+        match r.unwrap_err() {
+            AppError::DslParse { .. } => {} // ok
+            other => panic!("esperado DslParse, veio {other}"),
+        }
+    }
+}

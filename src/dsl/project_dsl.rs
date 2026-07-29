@@ -103,10 +103,17 @@ impl Expr {
 /// Converte `#rrggbb` ou `#rgb` em `Color32`.
 pub fn hex_para_cor(h: &str) -> Color32 {
     let h = h.trim_start_matches('#');
-    let r = u8::from_str_radix(&h[0..2], 16).unwrap_or(255);
-    let g = u8::from_str_radix(&h[2..4], 16).unwrap_or(255);
-    let b = u8::from_str_radix(&h[4..6], 16).unwrap_or(255);
-    Color32::from_rgb(r, g, b)
+    if h.len() == 3 {
+        let r = u8::from_str_radix(&h[0..1], 16).unwrap_or(15) * 17;
+        let g = u8::from_str_radix(&h[1..2], 16).unwrap_or(15) * 17;
+        let b = u8::from_str_radix(&h[2..3], 16).unwrap_or(15) * 17;
+        Color32::from_rgb(r, g, b)
+    } else {
+        let r = u8::from_str_radix(&h[0..2], 16).unwrap_or(255);
+        let g = u8::from_str_radix(&h[2..4], 16).unwrap_or(255);
+        let b = u8::from_str_radix(&h[4..6], 16).unwrap_or(255);
+        Color32::from_rgb(r, g, b)
+    }
 }
 
 // ----------------------------------------------------------------- Parser
@@ -617,5 +624,48 @@ pen p1 {
     fn hex_cor() {
         let c = hex_para_cor("#eb9678");
         assert_eq!(c, eframe::egui::Color32::from_rgb(0xeb, 0x96, 0x78));
+    }
+
+    #[test]
+    fn script_vazio_parseia() {
+        let r = parse_script("");
+        assert!(r.is_ok());
+        assert_eq!(r.unwrap().len(), 0);
+    }
+
+    #[test]
+    fn script_so_comentarios() {
+        let r = parse_script("# isso é um comentário\n# outro");
+        assert!(r.is_ok());
+    }
+
+    #[test]
+    fn hex_curto_3_chars() {
+        let c = hex_para_cor("#fff");
+        assert_eq!(c, eframe::egui::Color32::from_rgb(0xff, 0xff, 0xff));
+    }
+
+    #[test]
+    fn color_rgb_3_numeros() {
+        let script = "pen p1 { color 1.0 0.5 0.0 }";
+        let prog = parse_script(script).expect("parseia");
+        let campos = match &prog[0] {
+            TopLevel::Node(n) => &n.campos,
+            _ => panic!("esperado nó"),
+        };
+        assert!(campos.iter().any(|(k, _)| k == "color" || k == "colour"));
+    }
+
+    #[test]
+    fn script_com_bloco_vazio() {
+        let r = parse_script("scene s1 { }");
+        assert!(r.is_ok());
+    }
+
+    #[test]
+    fn edge_para_master() {
+        let script = "canvas c1 { width 100 height 100 }\nedge c1.out -> master.in";
+        let r = parse_script(script);
+        assert!(r.is_ok());
     }
 }

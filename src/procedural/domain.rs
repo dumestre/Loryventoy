@@ -699,4 +699,75 @@ mod tests {
         assert_eq!(Easing::Step.aplicar(0.99), 0.0);
         assert_eq!(Easing::Step.aplicar(1.0), 1.0);
     }
+
+    // ── Geração de formas ──
+
+    fn gen_retangulo() -> ShapeGenerator {
+        ShapeGenerator {
+            kind: ShapeKind::Retangulo,
+            pos: Vec2::new(100.0, 100.0),
+            tam: Vec2::new(200.0, 100.0),
+            rot: 0.0,
+            cor: crate::domain::Color::from_rgb(255, 0, 0),
+            seed: 0.0,
+            noise_scale: 0.0,
+            amp: 0.0,
+            veloc: 0.0,
+            ruido: None,
+            anim: None,
+            trim_inicio: 0.0,
+            trim_fim: 1.0,
+            duracao: 5.0,
+        }
+    }
+
+    #[test]
+    fn shape_rect_generates_rect_variant() {
+        let g = gen_retangulo();
+        let s = g.generate(0.5);
+        match s {
+            Shape::Rect { c, tam, .. } => {
+                assert!((c.x - 100.0).abs() < 1.0);
+                assert!((c.y - 100.0).abs() < 1.0);
+                assert!((tam.x - 200.0).abs() < 1.0);
+                assert!((tam.y - 100.0).abs() < 1.0);
+            }
+            other => panic!("esperado Rect, veio {other:?}"),
+        }
+    }
+
+    #[test]
+    fn shape_ellipse_generates_ellipse_variant() {
+        let g = ShapeGenerator {
+            kind: ShapeKind::Elipse,
+            pos: Vec2::new(50.0, 60.0),
+            tam: Vec2::new(80.0, 40.0),
+            ..gen_retangulo()
+        };
+        let s = g.generate(0.0);
+        match s {
+            Shape::Ellipse { c, rx, ry, .. } => {
+                assert!((c.x - 50.0).abs() < 1.0);
+                assert!((rx - 40.0).abs() < 1.0);
+                assert!((ry - 20.0).abs() < 1.0);
+            }
+            other => panic!("esperado Ellipse, veio {other:?}"),
+        }
+    }
+
+    #[test]
+    fn shape_com_trim_cria_path() {
+        let g = ShapeGenerator {
+            trim_fim: 0.25,
+            ..gen_retangulo()
+        };
+        let s = g.generate(0.5);
+        match s {
+            Shape::Path { pts, .. } => {
+                assert!(!pts.is_empty());
+                assert!(pts.len() <= 5);
+            }
+            other => panic!("esperado Path (com trim), veio {other:?}"),
+        }
+    }
 }
