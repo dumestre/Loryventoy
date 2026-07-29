@@ -7,10 +7,7 @@ use std::sync::{OnceLock, RwLock};
 use crate::domain::Color as DomainColor;
 use crate::graph_editor::NodeId;
 use crate::nodes::{NodeParams, TipoNo};
-use eframe::egui::{
-    Color32, ComboBox, DragValue, Grid, Image, Response, Sense, Stroke,
-    Ui, Vec2,
-};
+use eframe::egui::{Color32, ComboBox, DragValue, Grid, Image, Response, Sense, Stroke, Ui, Vec2};
 
 mod animation;
 mod canvas;
@@ -329,7 +326,12 @@ pub(crate) fn grid_texto(ui: &mut Ui, label: &str, v: &mut String) {
     registrar_linha(label, &r.response);
 }
 
-pub(crate) fn grid_combo_cena(ui: &mut Ui, label: &str, cena: &mut String, cenas: &[(String, NodeId)]) {
+pub(crate) fn grid_combo_cena(
+    ui: &mut Ui,
+    label: &str,
+    cena: &mut String,
+    cenas: &[(String, NodeId)],
+) {
     let r = Grid::new(("cena", label))
         .num_columns(2)
         .spacing([8.0, 3.0])

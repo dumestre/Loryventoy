@@ -784,44 +784,6 @@ impl GraphPanel {
         }
         self.dirty_repaint = false;
     }
-
-    // Métodos auxiliares para Application trait (patch DSL)
-    #[allow(dead_code)]
-    fn proxima_pos_livre(&self) -> Pos2 {
-        let mut max_y = 0.0f32;
-        for nid in self.editor_state.graph.iter_nodes() {
-            if let Some(pos) = self.editor_state.node_positions.get(nid) {
-                max_y = max_y.max(pos.y);
-            }
-        }
-        Pos2::new(0.0, max_y + 160.0)
-    }
-
-    #[allow(dead_code)]
-    fn remover_aresta_entre(&mut self, src: NodeId, saida: usize, dst: NodeId, entrada: usize) {
-        let output_id = self.editor_state.graph[src]
-            .outputs
-            .get(saida)
-            .map(|(_, id)| *id);
-
-        let input_id = self.editor_state.graph[dst]
-            .inputs
-            .get(entrada)
-            .map(|(_, id)| *id);
-
-        if let (Some(out), Some(inp)) = (output_id, input_id) {
-            let mut alvo = None;
-            for (input_conn, output_conn) in self.editor_state.graph.iter_connections() {
-                if input_conn == inp && output_conn == out {
-                    alvo = Some(input_conn);
-                    break;
-                }
-            }
-            if let Some(input_to_remove) = alvo {
-                self.editor_state.graph.remove_connection(input_to_remove);
-            }
-        }
-    }
 }
 
 impl Application for GraphPanel {
@@ -843,14 +805,6 @@ impl Application for GraphPanel {
         self.params.get_mut(&idx)
     }
 
-    fn posicao_no(&self, idx: NodeId) -> Option<Pos2> {
-        self.editor_state.node_positions.get(idx).copied()
-    }
-
-    fn iterar_nos(&self) -> Vec<NodeId> {
-        self.editor_state.graph.nodes.keys().collect()
-    }
-
     fn conectar_por_nome(
         &mut self,
         src: NodeId,
@@ -863,10 +817,6 @@ impl Application for GraphPanel {
 
     fn conectar_por_idx(&mut self, src: NodeId, saida_idx: usize, dst: NodeId, entrada_idx: usize) {
         self.conectar_por_idx(src, saida_idx, dst, entrada_idx);
-    }
-
-    fn remover_aresta(&mut self, src: NodeId, saida_idx: usize, dst: NodeId, entrada_idx: usize) {
-        self.remover_aresta_entre(src, saida_idx, dst, entrada_idx);
     }
 
     fn empurrar_historico(&mut self) {
@@ -883,18 +833,6 @@ impl Application for GraphPanel {
 
     fn sync_layer_ports(&mut self) {
         self.sync_layer_ports();
-    }
-
-    fn limpar_grupos(&mut self) {
-        self.limpar_grupos();
-    }
-
-    fn cena_ativa(&self) -> Option<NodeId> {
-        self.cena_ativa
-    }
-
-    fn definir_cena_ativa(&mut self, idx: NodeId) {
-        self.cena_ativa = Some(idx);
     }
 
     fn aplicar_project_config(&mut self, bloco: &ProjectBlock) {
@@ -917,10 +855,6 @@ impl Application for GraphPanel {
                 }
             }
         }
-    }
-
-    fn encontrar_posicao_livre(&self) -> Pos2 {
-        self.proxima_pos_livre()
     }
 
     fn porto_saida_por_nome(&self, tipo: TipoNo, nome: &str) -> Option<usize> {

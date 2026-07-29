@@ -435,8 +435,8 @@ pub fn exportar_frames(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::log::aviso;
     use crate::dsl::Program;
+    use crate::log::aviso;
     use crate::procedural::{CenaPreview, LayerPreview, PenPath, PreviewData};
     use eframe::egui::Color32;
 
@@ -481,7 +481,6 @@ mod tests {
             escala_y: 1.0,
             ruido: None,
             anim: None,
-            erro_eval: None,
             trim_inicio: 0.0,
             trim_fim: 1.0,
             duracao: 6.0,

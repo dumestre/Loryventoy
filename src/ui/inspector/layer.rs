@@ -1,8 +1,8 @@
-use crate::graph_editor::NodeId;
 use crate::domain::LayerEntry;
+use crate::graph_editor::NodeId;
 use crate::nodes::LayerParams;
 
-use super::{AcaoInspector, icon_button, hover_bg, HOVER_VERDE, HOVER_VERMELHO};
+use super::{hover_bg, icon_button, AcaoInspector, HOVER_VERDE, HOVER_VERMELHO};
 
 pub fn show(
     ui: &mut eframe::egui::Ui,
@@ -158,9 +158,11 @@ pub fn render_layer_row(
             let resp = ui
                 .scope(|ui| {
                     ui.visuals_mut().widgets.hovered.bg_fill = eframe::egui::Color32::TRANSPARENT;
-                    ui.visuals_mut().widgets.hovered.weak_bg_fill = eframe::egui::Color32::TRANSPARENT;
+                    ui.visuals_mut().widgets.hovered.weak_bg_fill =
+                        eframe::egui::Color32::TRANSPARENT;
                     ui.visuals_mut().widgets.active.bg_fill = eframe::egui::Color32::TRANSPARENT;
-                    ui.visuals_mut().widgets.active.weak_bg_fill = eframe::egui::Color32::TRANSPARENT;
+                    ui.visuals_mut().widgets.active.weak_bg_fill =
+                        eframe::egui::Color32::TRANSPARENT;
                     ui.add(egui::Label::new(nome_txt).sense(Sense::click()))
                 })
                 .inner;

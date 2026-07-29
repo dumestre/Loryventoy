@@ -1,6 +1,6 @@
 use crate::nodes::AnimParams;
 
-use super::{grid_combo_anim_alvo, grid_combo_loop, draggable_value};
+use super::{draggable_value, grid_combo_anim_alvo, grid_combo_loop};
 
 use eframe::egui::{ComboBox, Grid};
 
@@ -29,14 +29,42 @@ pub fn editor_segmentos(ui: &mut eframe::egui::Ui, segs: &mut Vec<crate::domain:
                 ui.end_row();
                 ui.label("de");
                 ui.horizontal(|ui| {
-                    draggable_value(ui, &mut s.v_ini[0], -f32::INFINITY..=f32::INFINITY, 0.5, "", 2);
-                    draggable_value(ui, &mut s.v_ini[1], -f32::INFINITY..=f32::INFINITY, 0.5, "", 2);
+                    draggable_value(
+                        ui,
+                        &mut s.v_ini[0],
+                        -f32::INFINITY..=f32::INFINITY,
+                        0.5,
+                        "",
+                        2,
+                    );
+                    draggable_value(
+                        ui,
+                        &mut s.v_ini[1],
+                        -f32::INFINITY..=f32::INFINITY,
+                        0.5,
+                        "",
+                        2,
+                    );
                 });
                 ui.end_row();
                 ui.label("para");
                 ui.horizontal(|ui| {
-                    draggable_value(ui, &mut s.v_fim[0], -f32::INFINITY..=f32::INFINITY, 0.5, "", 2);
-                    draggable_value(ui, &mut s.v_fim[1], -f32::INFINITY..=f32::INFINITY, 0.5, "", 2);
+                    draggable_value(
+                        ui,
+                        &mut s.v_fim[0],
+                        -f32::INFINITY..=f32::INFINITY,
+                        0.5,
+                        "",
+                        2,
+                    );
+                    draggable_value(
+                        ui,
+                        &mut s.v_fim[1],
+                        -f32::INFINITY..=f32::INFINITY,
+                        0.5,
+                        "",
+                        2,
+                    );
                 });
                 ui.end_row();
                 ui.label("curva");

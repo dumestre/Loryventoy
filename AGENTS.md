@@ -7,9 +7,9 @@ Rust application with `eframe/egui`, node-based graph editor, procedural timelin
 ## Status by Phase
 
 | Fase | Descrição | Status |
-|---|---|---|
+|---|---|---|---|
 | 0 | Proteção e inventário | ✅ Concluída |
-| 1 | Padronização de qualidade | 🟡 Parcial (`cargo fmt` tem 4 diffs preexistentes) |
+| 1 | Padronização de qualidade | ✅ Concluída |
 | 2 | Criar domínio independente da UI | ✅ Concluída |
 | 3 | Criar `Project` como fonte de verdade | ✅ Concluída |
 | 4 | Dividir `GraphPanel` em módulos menores | ✅ Concluída |
@@ -21,6 +21,7 @@ Rust application with `eframe/egui`, node-based graph editor, procedural timelin
 | 10 | Refatorar `Loryventoy` | ✅ Concluída (`PlaybackState`, rename `MovimentoApp` → `Loryventoy`) |
 | 11 | Padronizar erros, logs e diagnósticos | ✅ Concluída |
 | 12 | Testes de regressão adicionais | ✅ Concluída |
+| 13 | Limpeza de dead code, warnings e formatação | ✅ Concluída |
 
 ## Completed Phases in Detail
 
@@ -99,6 +100,16 @@ Split into specialized submodules:
 - Renamed log prefix `[Movimento]` → `[Loryventoy]` in `src/app.rs`
 - `Loryventoy` now contains only UI composition (panels, menus, DSL windows, layout), delegating playback to `self.playback.update()`
 
+### Fase 13 — Limpeza de dead code, warnings e formatação (CONCLUÍDA ✅)
+- Removido `AppError::Evaluation` (variant) e `is_validation()` de `src/error.rs` (2 warnings eliminados)
+- Removidos métodos mortos `from_rgba_unmultiplied`/`from_rgba_premultiplied` de `src/domain/color.rs`
+- Removido campo `erro_eval` de `PenPath` em `src/procedural/domain.rs` e de construtores em `preview.rs` e `export.rs`
+- Removida função `generate_shape_egui` de `src/procedural/render.rs`
+- Removido pipeline patch DSL completo: `aplicar_patch`, `conectar_patch`, `desconectar_patch`, `resolver_conexao` + métodos mortos da `Application` trait
+- Removidos `proxima_pos_livre` e `remover_aresta_entre` de `src/graph_editor/mod.rs`
+- `cargo fmt` executado (zero diffs restantes)
+- `cargo check` — 0 warnings
+
 ## In Progress Phases
 
 ### Fase 9 — Dividir o inspector (CONCLUÍDA ✅)
@@ -118,10 +129,10 @@ Split into specialized submodules:
 ### Fase 11 — Padronizar erros, logs e diagnósticos (CONCLUÍDA ✅)
 - `thiserror` added to `Cargo.toml`
 - `src/error.rs` — `AppError` enum unificado com `#[derive(Error)]`:
-  - `Io(std::io::Error)`, `Parse(String)`, `InvalidProject(String)`, `Dsl(String)`, `DslParse { msg, linha }`, `Export(String)`, `Evaluation(String)`
+  - `Io(std::io::Error)`, `Parse(String)`, `InvalidProject(String)`, `Dsl(String)`, `DslParse { msg, linha }`, `Export(String)`
 - `src/log.rs` refactored with log levels, file output in `logs/app.log`, level filtering
 - `eprintln!` eliminated from `app.rs` and `export.rs`
-- **Tipos eliminados**: `PersistenceError` (repository.rs) e `ScriptError` (project_dsl.rs) removidos; `AppError` usado em todo lugar
+- **Tipos eliminados**: `PersistenceError` (repository.rs) e `ScriptError` (project_dsl.rs) removidos; `AppError` usado em todo lugar. `AppError::Evaluation` removido na Fase 13 (nunca construído).
 - **`export.rs`**: `Result<(), String>` → `Result<(), AppError>`
 - **`app.rs`**: usa `AppError` diretamente via `load_project`/`save_project`/`aplicar_script`
 - **Testes**: 89/89 passam (2 novos testes de erro)
@@ -134,21 +145,22 @@ Split into specialized submodules:
 - **DSL Application** (3 testes): script projeto simples, script com pen, erro tipo desconhecido
 - **DSL Project** (7 testes adicionais): script vazio, só comentários, hex curto (3 chars), hex com 3 números RGB, bloco vazio, edge para master, color RGB
 - **Procedural Domain** (3 testes): geração retângulo, geração elipse, trim cria Path
-- **Total**: **135 testes passando** (era 89)
+- **Total**: **133 testes passando** (era 89)
 
 ## Current Metrics
-- `cargo test --all` — **135/135 PASS**
-- `cargo check` — compiles with **1 warning** (`AppError::Evaluation` never constructed)
-- `cargo fmt --check` — 4 preexistent diffs: import order (`evaluator.rs`, `export.rs`) + trailing newlines (`save.rs`, `history.rs`)
+- `cargo test --all` — **133/133 PASS**
+- `cargo check` — **0 warnings**
+- `cargo fmt --check` — **0 diffs**
 - `src/app.rs` — 884 lines
 - `src/graph_editor/mod.rs` — 851 lines
 - `src/ui/node_component.rs` — 6 lines (re-export)
 - `src/dsl/pen.rs` — 2,766 lines (largest file)
+- `src/dsl/application.rs` — 561 lines (aplicar_campos restored)
 - **Total**: 84 `.rs` files, ~15,791 lines of Rust
 
 ## Error Type Inventory
 
-Fully unified under `AppError` — `PersistenceError`, `ScriptError` and raw `String` errors have been eliminated. All code paths (persistence, DSL, export) use `AppError` with `?` propagation.
+Fully unified under `AppError` — `PersistenceError`, `ScriptError`, and `AppError::Evaluation` have been eliminated. All code paths (persistence, DSL, export) use `AppError` with `?` propagation.
 
 ## Infraestrutura Pronta (Não Integrada)
 
@@ -158,37 +170,16 @@ The following infrastructure exists but is not yet wired into the application fl
 
 | Item | Location | Notes |
 |---|---|---|
-| `aplicar_patch()` | `src/dsl/application.rs:135` | Entire patch DSL pipeline unreachable |
-| `conectar_patch()` | `src/dsl/application.rs:524` | Called only from `aplicar_patch()` |
-| `desconectar_patch()` | `src/dsl/application.rs:556` | Called only from `aplicar_patch()` |
-| `resolver_conexao()` | `src/dsl/application.rs:580` | Called from `conectar_patch`/`desconectar_patch` |
 | `indice_porto()` | `src/dsl/project_dsl.rs:507` | Only used in tests |
 | `alias_porto()` | `src/dsl/project_dsl.rs:527` | Only called from `indice_porto()` (also test-only) |
-| `generate_shape_egui()` | `src/procedural/render.rs:53` | Callers use `shape_to_egui(gen.generate(t))` directly |
-| `PenPath.erro_eval` | `src/procedural/domain.rs:180` | Always set to `None`, never read |
-| `Color::from_rgba_unmultiplied()` | `src/domain/color.rs:22` | Identical to `from_rgba()`; only egui equivalents used |
-| `Color::from_rgba_premultiplied()` | `src/domain/color.rs:27` | Same as above |
 | `History::stack_json()` | `src/history.rs:67` | Serializes history for debug; unused |
 
 ### Dead code — conditional or test-only
 
 | Item | Location | Notes |
 |---|---|---|
-| `proxima_pos_livre()` | `src/graph_editor/mod.rs:790` | Used only by `Application::encontrar_posicao_livre()` impl, which is never called |
-| `remover_aresta_entre()` | `src/graph_editor/mod.rs:801` | Used only by `Application::remover_aresta()` impl, which is never called |
 | `icon_ico` | `build.rs:37` | Used on Windows (`#[cfg(target_os = "windows")]`); unused on other platforms |
-| `History::len()` | `src/history.rs:55` | Called in tests (7 test functions in `history.rs`) |
+| `History::len()` | `src/history.rs:55` | Called in tests |
 | `History::lim()` | `src/history.rs:60` | Called in tests |
 
 ## Key Type Relationships
-
-- `domain::Color` (r/g/b/a u8) ↔ `egui::Color32` — use `procedural::render::color_to_color32()`
-- `domain::Pos2` = `glam::Vec2` ↔ `egui::Pos2` — different types, same fields
-- `domain::Vec2` = `glam::Vec2` ↔ `eframe::egui::Vec2` — different types, same fields
-- `domain::Shape` (procedural, no egui) ↔ `egui::Shape` — use `procedural::render::shape_to_egui()`
-
-## Architecture Target
-See [`docs/PLANO_REFATORACAO_PROFISSIONAL.md`](docs/PLANO_REFATORACAO_PROFISSIONAL.md) for the full architecture target, phase plan, contracts, and quality criteria.
-
-## Next Recommended Step
-All 13 phases concluded. Next steps could be: integration testing, fixing dead code warnings, reducing `AppError::Evaluation` dead variant, or performance profiling.

@@ -45,16 +45,11 @@ pub use project::{Project, ProjectEdge, ProjectNode};
 #[cfg(test)]
 mod tests {
     use super::{
-        AnimSeg, Color, Easing, LayerEntry, LoopMode, NodeParams, Project,
-        ProjectConfig, ProjectEdge, ProjectNode, TipoNo, TransformParams,
-        anim_params,
-        cena_params,
-        layer_params,
+        anim_params, cena_params, layer_params,
         math::{elipse_rot, estrela, poligono_regular, retangulo_rot},
-        ruido_params,
-        saida_params,
-        shape_params,
-        text_params,
+        ruido_params, saida_params, shape_params, text_params, AnimSeg, Color, Easing, LayerEntry,
+        LoopMode, NodeParams, Project, ProjectConfig, ProjectEdge, ProjectNode, TipoNo,
+        TransformParams,
     };
 
     // ── Config ──
@@ -206,9 +201,16 @@ mod tests {
     #[test]
     fn tipo_no_label_roundtrip() {
         for tipo in &[
-            TipoNo::Saida, TipoNo::Transform, TipoNo::Canvas, TipoNo::Cena,
-            TipoNo::Layer, TipoNo::Shape, TipoNo::Texto, TipoNo::Pen,
-            TipoNo::Ruido, TipoNo::Anim,
+            TipoNo::Saida,
+            TipoNo::Transform,
+            TipoNo::Canvas,
+            TipoNo::Cena,
+            TipoNo::Layer,
+            TipoNo::Shape,
+            TipoNo::Texto,
+            TipoNo::Pen,
+            TipoNo::Ruido,
+            TipoNo::Anim,
         ] {
             let label = tipo.nome();
             let parsed = TipoNo::from_label(label);
@@ -288,9 +290,15 @@ mod tests {
     fn node_params_todas_as_variantes_existem() {
         use super::PenParams;
         let _ = NodeParams::Transform(TransformParams {
-            px: 0.0, py: 0.0, pz: 0.0,
-            rx: 0.0, ry: 0.0, rz: 0.0,
-            sx: 1.0, sy: 1.0, sz: 1.0,
+            px: 0.0,
+            py: 0.0,
+            pz: 0.0,
+            rx: 0.0,
+            ry: 0.0,
+            rz: 0.0,
+            sx: 1.0,
+            sy: 1.0,
+            sz: 1.0,
         });
         let _ = NodeParams::Canvas(ProjectConfig::default());
         let _ = NodeParams::Cena(cena_params::CenaParams {
@@ -308,7 +316,8 @@ mod tests {
         let _ = NodeParams::Shape(shape_params::ShapeParams {
             cena: String::new(),
             tipo: 0,
-            px: 0.0, py: 0.0,
+            px: 0.0,
+            py: 0.0,
             largura: 100.0,
             altura: 100.0,
             rotacao: 0.0,
@@ -326,7 +335,8 @@ mod tests {
             tamanho: 32.0,
             negrito: false,
             italico: false,
-            px: 0.0, py: 0.0,
+            px: 0.0,
+            py: 0.0,
             cor: Color::WHITE,
             trim_inicio: 0.0,
             trim_fim: 1.0,
@@ -334,12 +344,14 @@ mod tests {
         let _ = NodeParams::Pen(PenParams {
             cena: String::new(),
             codigo: String::new(),
-            pos_x: 0.0, pos_y: 0.0,
+            pos_x: 0.0,
+            pos_y: 0.0,
             espessura: 1.0,
             preenchimento: false,
             cantos: 0.0,
             ordem: 0.0,
-            escala_x: 1.0, escala_y: 1.0,
+            escala_x: 1.0,
+            escala_y: 1.0,
             seed: 0.0,
             cor: Color::from_rgb(0, 0, 0),
             cor_fill: Color::from_rgb(0, 0, 0),

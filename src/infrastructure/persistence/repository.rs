@@ -13,8 +13,8 @@ pub fn load_project<P: AsRef<Path>>(caminho: P) -> Result<Project, AppError> {
 
 pub fn save_project<P: AsRef<Path>>(caminho: P, projeto: &Project) -> Result<(), AppError> {
     let arquivo = ProjetoArquivo::from_project(projeto);
-    let json = serde_json::to_string_pretty(&arquivo)
-        .map_err(|e| AppError::Parse(e.to_string()))?;
+    let json =
+        serde_json::to_string_pretty(&arquivo).map_err(|e| AppError::Parse(e.to_string()))?;
     std::fs::write(caminho, json)?;
     Ok(())
 }

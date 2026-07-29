@@ -1,7 +1,7 @@
 use crate::graph_editor::NodeId;
 use crate::nodes::TextParams;
 
-use super::{grid_2, grid_combo_cena, grid_xyz, editar_cor, registrar_linha, draggable_value};
+use super::{draggable_value, editar_cor, grid_2, grid_combo_cena, grid_xyz, registrar_linha};
 
 use eframe::egui::Grid;
 

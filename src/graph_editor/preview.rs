@@ -359,7 +359,6 @@ impl GraphPanel {
                 escala_y: pen.escala_y,
                 ruido,
                 anim,
-                erro_eval: None,
                 trim_inicio: pen.trim_inicio,
                 trim_fim: pen.trim_fim,
                 duracao: self.projeto().duracao_seg,

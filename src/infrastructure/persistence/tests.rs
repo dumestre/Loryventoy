@@ -2,8 +2,8 @@
 mod tests {
     use crate::domain::{Color, NodeParams, Project, ProjectEdge, ProjectNode, TipoNo};
     use crate::error::AppError;
-    use crate::infrastructure::persistence::{load_from_str, save_project};
     use crate::infrastructure::persistence::format::ProjetoArquivo;
+    use crate::infrastructure::persistence::{load_from_str, save_project};
     use crate::nodes::{CenaParams, SaidaParams, ShapeParams};
 
     fn projeto_minimo() -> Project {
@@ -98,7 +98,8 @@ mod tests {
                 params: NodeParams::Shape(ShapeParams {
                     cena: String::new(),
                     tipo: 0,
-                    px: 0.0, py: 0.0,
+                    px: 0.0,
+                    py: 0.0,
                     largura: 100.0,
                     altura: 100.0,
                     rotacao: 0.0,

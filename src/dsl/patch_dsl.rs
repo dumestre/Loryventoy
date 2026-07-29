@@ -24,8 +24,8 @@
 //! `GraphPanel::dsl_ids`). Nós padrão têm ids fixos: `canvas`, `scene` (a
 //! primeira cena) e `master`.
 
-use crate::error::AppError;
 use crate::dsl::project_dsl::Expr;
+use crate::error::AppError;
 
 // ----------------------------------------------------------------- AST
 

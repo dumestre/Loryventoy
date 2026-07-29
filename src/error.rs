@@ -21,15 +21,6 @@ pub enum AppError {
 
     #[error("erro de exportação: {0}")]
     Export(String),
-
-    #[error("erro de avaliação: {0}")]
-    Evaluation(String),
-}
-
-impl AppError {
-    pub fn is_validation(&self) -> bool {
-        matches!(self, AppError::InvalidProject(_))
-    }
 }
 
 #[cfg(test)]
@@ -44,18 +35,6 @@ mod tests {
     }
 
     #[test]
-    fn invalid_project_eh_erro_de_validacao() {
-        let e = AppError::InvalidProject("campo ausente".to_string());
-        assert!(e.is_validation());
-    }
-
-    #[test]
-    fn erro_nao_eh_validacao() {
-        let e = AppError::Dsl("sintaxe inválida".to_string());
-        assert!(!e.is_validation());
-    }
-
-    #[test]
     fn to_string_exibe_mensagem_clara() {
         let e = AppError::Parse("JSON malformado".to_string());
         assert_eq!(e.to_string(), "erro de formato: JSON malformado");
@@ -63,7 +42,10 @@ mod tests {
 
     #[test]
     fn dsl_parse_inclui_linha() {
-        let e = AppError::DslParse { msg: "esperado '{'".to_string(), linha: 5 };
+        let e = AppError::DslParse {
+            msg: "esperado '{'".to_string(),
+            linha: 5,
+        };
         assert_eq!(e.to_string(), "linha 5: esperado '{'");
     }
 

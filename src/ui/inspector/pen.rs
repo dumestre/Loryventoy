@@ -1,10 +1,16 @@
 use crate::nodes::PenParams;
 
-use super::{grid_2, grid_combo_cena, grid_xyz, grid_escala, editar_cor, registrar_linha, draggable_value};
+use super::{
+    draggable_value, editar_cor, grid_2, grid_combo_cena, grid_escala, grid_xyz, registrar_linha,
+};
 
 use eframe::egui::{Color32, Grid};
 
-pub fn show(ui: &mut eframe::egui::Ui, pen: &mut PenParams, cenas: &[(String, crate::graph_editor::NodeId)]) {
+pub fn show(
+    ui: &mut eframe::egui::Ui,
+    pen: &mut PenParams,
+    cenas: &[(String, crate::graph_editor::NodeId)],
+) {
     grid_combo_cena(ui, "Cena", &mut pen.cena, cenas);
     grid_xyz(ui, "Posição", &mut pen.pos_x, &mut pen.pos_y, &mut 0.0);
     grid_2(ui, "Espessura", &mut pen.espessura, 0.0..=100.0, "px", 1);
@@ -56,8 +62,19 @@ pub fn show(ui: &mut eframe::egui::Ui, pen: &mut PenParams, cenas: &[(String, cr
         });
     ui.horizontal_wrapped(|ui| {
         let cmds = [
-            "move", "line", "rect", "circle", "bezier", "close", "fill on",
-            "stroke", "color", "stroke_color", "fill_color", "repeat", "if",
+            "move",
+            "line",
+            "rect",
+            "circle",
+            "bezier",
+            "close",
+            "fill on",
+            "stroke",
+            "color",
+            "stroke_color",
+            "fill_color",
+            "repeat",
+            "if",
         ];
         for c in cmds {
             if ui.small_button(c).clicked() {
