@@ -3,7 +3,8 @@ use std::collections::HashMap;
 use eframe::egui::Pos2;
 
 use crate::dsl::patch_dsl::{Conexao, PatchCmd};
-use crate::dsl::project_dsl::{EdgeDef, Expr, NodeDef, ProjectBlock, ScriptError, TopLevel};
+use crate::dsl::project_dsl::{EdgeDef, Expr, NodeDef, ProjectBlock, TopLevel};
+use crate::error::AppError;
 use crate::nodes::{NodeParams, TipoNo};
 
 /// Interface que a DSL usa para mutar o projeto.
@@ -75,7 +76,7 @@ pub trait Application {
 }
 
 /// Aplica um script DSL completo ao projeto via trait Application.
-pub fn aplicar_script<A: Application>(app: &mut A, codigo: &str) -> Result<(), ScriptError> {
+pub fn aplicar_script<A: Application>(app: &mut A, codigo: &str) -> Result<(), AppError> {
     let blocos = crate::dsl::project_dsl::parse_script(codigo)?;
 
     app.empurrar_historico();
@@ -98,7 +99,7 @@ pub fn aplicar_script<A: Application>(app: &mut A, codigo: &str) -> Result<(), S
     for bloco in &blocos {
         if let TopLevel::Node(n) = bloco {
             let tipo = crate::dsl::project_dsl::tipo_da_dsl(&n.tipo)
-                .ok_or_else(|| ScriptError::Apply(format!("tipo '{}' desconhecido", n.tipo)))?;
+                .ok_or_else(|| AppError::Dsl(format!("tipo '{}' desconhecido", n.tipo)))?;
             if matches!(tipo, TipoNo::Canvas | TipoNo::Saida) {
                 continue;
             }
@@ -132,7 +133,7 @@ pub fn aplicar_script<A: Application>(app: &mut A, codigo: &str) -> Result<(), S
 
 /// Aplica patch DSL incremental.
 #[allow(dead_code)] // aguardando integração UI/IA (ver patch_dsl.rs)
-pub fn aplicar_patch<A: Application>(app: &mut A, codigo: &str) -> Result<(), ScriptError> {
+pub fn aplicar_patch<A: Application>(app: &mut A, codigo: &str) -> Result<(), AppError> {
     let cmds = crate::dsl::patch_dsl::parse_patch(codigo)?;
 
     // Simulate to validate - just track keys in a HashSet
@@ -141,10 +142,10 @@ pub fn aplicar_patch<A: Application>(app: &mut A, codigo: &str) -> Result<(), Sc
         match cmd {
             PatchCmd::Add { tipo, id, .. } => {
                 if crate::dsl::project_dsl::tipo_da_dsl(tipo).is_none() {
-                    return Err(ScriptError::Apply(format!("tipo '{tipo}' desconhecido")));
+                    return Err(AppError::Dsl(format!("tipo '{tipo}' desconhecido")));
                 }
                 if ids_sim.contains(id) {
-                    return Err(ScriptError::Apply(format!(
+                    return Err(AppError::Dsl(format!(
                         "id '{id}' já existe (use 'set' para editar)"
                     )));
                 }
@@ -152,15 +153,15 @@ pub fn aplicar_patch<A: Application>(app: &mut A, codigo: &str) -> Result<(), Sc
             }
             PatchCmd::Set { id, .. } => {
                 if !ids_sim.contains(id) {
-                    return Err(ScriptError::Apply(format!("nó '{id}' não existe")));
+                    return Err(AppError::Dsl(format!("nó '{id}' não existe")));
                 }
             }
             PatchCmd::Remove { id } => {
                 if !ids_sim.contains(id) {
-                    return Err(ScriptError::Apply(format!("nó '{id}' não existe")));
+                    return Err(AppError::Dsl(format!("nó '{id}' não existe")));
                 }
                 if id == "canvas" || id == "master" {
-                    return Err(ScriptError::Apply(format!(
+                    return Err(AppError::Dsl(format!(
                         "nó fixo '{id}' não pode ser removido"
                     )));
                 }
@@ -168,10 +169,10 @@ pub fn aplicar_patch<A: Application>(app: &mut A, codigo: &str) -> Result<(), Sc
             }
             PatchCmd::Connect(c) | PatchCmd::Disconnect(c) => {
                 if !ids_sim.contains(&c.de) {
-                    return Err(ScriptError::Apply(format!("nó '{}' não existe", c.de)));
+                    return Err(AppError::Dsl(format!("nó '{}' não existe", c.de)));
                 }
                 if !ids_sim.contains(&c.para) {
-                    return Err(ScriptError::Apply(format!("nó '{}' não existe", c.para)));
+                    return Err(AppError::Dsl(format!("nó '{}' não existe", c.para)));
                 }
             }
         }
@@ -241,7 +242,7 @@ fn aplicar_campos<A: Application>(
     app: &mut A,
     idx: A::NodeId,
     n: &NodeDef,
-) -> Result<(), ScriptError> {
+) -> Result<(), AppError> {
     let params = match app.obter_params_mut(idx) {
         Some(p) => p,
         None => return Ok(()),
@@ -428,7 +429,7 @@ fn aplicar_campos<A: Application>(
     Ok(())
 }
 
-fn merge_layers<A: Application>(app: &mut A) -> Result<(), ScriptError> {
+fn merge_layers<A: Application>(app: &mut A) -> Result<(), AppError> {
     use std::collections::HashMap;
 
     let mut scene_layers: HashMap<String, Vec<A::NodeId>> = HashMap::new();
@@ -474,15 +475,15 @@ fn merge_layers<A: Application>(app: &mut A) -> Result<(), ScriptError> {
     Ok(())
 }
 
-fn conectar_edge<A: Application>(app: &mut A, e: &EdgeDef) -> Result<(), ScriptError> {
+fn conectar_edge<A: Application>(app: &mut A, e: &EdgeDef) -> Result<(), AppError> {
     let src = *app
         .dsl_ids()
         .get(&e.de)
-        .ok_or_else(|| ScriptError::Apply(format!("nó '{}' não existe", e.de)))?;
+        .ok_or_else(|| AppError::Dsl(format!("nó '{}' não existe", e.de)))?;
     let dst = *app
         .dsl_ids()
         .get(&e.para)
-        .ok_or_else(|| ScriptError::Apply(format!("nó '{}' não existe", e.para)))?;
+        .ok_or_else(|| AppError::Dsl(format!("nó '{}' não existe", e.para)))?;
 
     let src_tipo = app.obter_tipo(src);
     let dst_tipo = app.obter_tipo(dst);
@@ -491,7 +492,7 @@ fn conectar_edge<A: Application>(app: &mut A, e: &EdgeDef) -> Result<(), ScriptE
         let entrada_i = app
             .porto_entrada_por_nome(dst_tipo, &e.entrada)
             .ok_or_else(|| {
-                ScriptError::Apply(format!(
+                AppError::Dsl(format!(
                     "porta de entrada '{}' inválida em '{}'",
                     e.entrada, e.para
                 ))
@@ -502,7 +503,7 @@ fn conectar_edge<A: Application>(app: &mut A, e: &EdgeDef) -> Result<(), ScriptE
         let saida_i = app
             .porto_saida_por_nome(src_tipo, &e.saida)
             .ok_or_else(|| {
-                ScriptError::Apply(format!(
+                AppError::Dsl(format!(
                     "porta de saída '{}' inválida em '{}'",
                     e.saida, e.de
                 ))
@@ -510,7 +511,7 @@ fn conectar_edge<A: Application>(app: &mut A, e: &EdgeDef) -> Result<(), ScriptE
         let entrada_i = app
             .porto_entrada_por_nome(dst_tipo, &e.entrada)
             .ok_or_else(|| {
-                ScriptError::Apply(format!(
+                AppError::Dsl(format!(
                     "porta de entrada '{}' inválida em '{}'",
                     e.entrada, e.para
                 ))
@@ -521,15 +522,15 @@ fn conectar_edge<A: Application>(app: &mut A, e: &EdgeDef) -> Result<(), ScriptE
 }
 
 #[allow(dead_code)]
-fn conectar_patch<A: Application>(app: &mut A, c: &Conexao) -> Result<(), ScriptError> {
+fn conectar_patch<A: Application>(app: &mut A, c: &Conexao) -> Result<(), AppError> {
     let src = *app
         .dsl_ids()
         .get(&c.de)
-        .ok_or_else(|| ScriptError::Apply(format!("nó '{}' não existe", c.de)))?;
+        .ok_or_else(|| AppError::Dsl(format!("nó '{}' não existe", c.de)))?;
     let dst = *app
         .dsl_ids()
         .get(&c.para)
-        .ok_or_else(|| ScriptError::Apply(format!("nó '{}' não existe", c.para)))?;
+        .ok_or_else(|| AppError::Dsl(format!("nó '{}' não existe", c.para)))?;
 
     let src_tipo = app.obter_tipo(src);
     let dst_tipo = app.obter_tipo(dst);
@@ -538,7 +539,7 @@ fn conectar_patch<A: Application>(app: &mut A, c: &Conexao) -> Result<(), Script
         let entrada_i = app
             .porto_entrada_por_nome(dst_tipo, &c.entrada)
             .ok_or_else(|| {
-                ScriptError::Apply(format!(
+                AppError::Dsl(format!(
                     "porta de entrada '{}' inválida em '{}'",
                     c.entrada, c.para
                 ))
@@ -553,15 +554,15 @@ fn conectar_patch<A: Application>(app: &mut A, c: &Conexao) -> Result<(), Script
 }
 
 #[allow(dead_code)]
-fn desconectar_patch<A: Application>(app: &mut A, c: &Conexao) -> Result<(), ScriptError> {
+fn desconectar_patch<A: Application>(app: &mut A, c: &Conexao) -> Result<(), AppError> {
     let src = *app
         .dsl_ids()
         .get(&c.de)
-        .ok_or_else(|| ScriptError::Apply(format!("nó '{}' não existe", c.de)))?;
+        .ok_or_else(|| AppError::Dsl(format!("nó '{}' não existe", c.de)))?;
     let dst = *app
         .dsl_ids()
         .get(&c.para)
-        .ok_or_else(|| ScriptError::Apply(format!("nó '{}' não existe", c.para)))?;
+        .ok_or_else(|| AppError::Dsl(format!("nó '{}' não existe", c.para)))?;
 
     let src_tipo = app.obter_tipo(src);
     let _dst_tipo = app.obter_tipo(dst);
@@ -580,21 +581,21 @@ fn desconectar_patch<A: Application>(app: &mut A, c: &Conexao) -> Result<(), Scr
 fn resolver_conexao<A: Application>(
     app: &A,
     c: &Conexao,
-) -> Result<(A::NodeId, A::NodeId, usize, usize), ScriptError> {
+) -> Result<(A::NodeId, A::NodeId, usize, usize), AppError> {
     let src = *app
         .dsl_ids()
         .get(&c.de)
-        .ok_or_else(|| ScriptError::Apply(format!("nó '{}' não existe", c.de)))?;
+        .ok_or_else(|| AppError::Dsl(format!("nó '{}' não existe", c.de)))?;
     let dst = *app
         .dsl_ids()
         .get(&c.para)
-        .ok_or_else(|| ScriptError::Apply(format!("nó '{}' não existe", c.para)))?;
+        .ok_or_else(|| AppError::Dsl(format!("nó '{}' não existe", c.para)))?;
     let src_tipo = app.obter_tipo(src);
     let dst_tipo = app.obter_tipo(dst);
     let saida_i = app
         .porto_saida_por_nome(src_tipo, &c.saida)
         .ok_or_else(|| {
-            ScriptError::Apply(format!(
+            AppError::Dsl(format!(
                 "porta de saída '{}' inválida em '{}'",
                 c.saida, c.de
             ))
@@ -602,7 +603,7 @@ fn resolver_conexao<A: Application>(
     let entrada_i = app
         .porto_entrada_por_nome(dst_tipo, &c.entrada)
         .ok_or_else(|| {
-            ScriptError::Apply(format!(
+            AppError::Dsl(format!(
                 "porta de entrada '{}' inválida em '{}'",
                 c.entrada, c.para
             ))

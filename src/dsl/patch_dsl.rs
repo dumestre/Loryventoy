@@ -24,7 +24,8 @@
 //! `GraphPanel::dsl_ids`). Nós padrão têm ids fixos: `canvas`, `scene` (a
 //! primeira cena) e `master`.
 
-use crate::dsl::project_dsl::{Expr, ScriptError};
+use crate::error::AppError;
+use crate::dsl::project_dsl::Expr;
 
 // ----------------------------------------------------------------- AST
 
@@ -80,8 +81,8 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn err(&self, msg: impl Into<String>) -> ScriptError {
-        ScriptError::Parse {
+    fn err(&self, msg: impl Into<String>) -> AppError {
+        AppError::DslParse {
             msg: msg.into(),
             linha: self.li + 1,
         }
@@ -166,7 +167,7 @@ impl<'a> Parser<'a> {
     }
 
     /// Lê um valor: número, string, hex, ou par de números (vec2).
-    fn le_valor(&mut self) -> Result<Expr, ScriptError> {
+    fn le_valor(&mut self) -> Result<Expr, AppError> {
         let t = self.proximo().ok_or_else(|| self.err("esperado valor"))?;
         if t.starts_with('"') {
             return Ok(Expr::Str(t[1..t.len().saturating_sub(1)].to_string()));
@@ -192,7 +193,7 @@ impl<'a> Parser<'a> {
     }
 
     /// Lê `color`: aceita `#hex` OU `r g b` OU `r g b a` (0..1).
-    fn le_cor(&mut self) -> Result<Expr, ScriptError> {
+    fn le_cor(&mut self) -> Result<Expr, AppError> {
         let t = self.proximo().ok_or_else(|| self.err("esperado cor"))?;
         if t.starts_with('#') {
             return Ok(Expr::Hex(t.to_string()));
@@ -222,7 +223,7 @@ impl<'a> Parser<'a> {
     }
 
     /// Consome um bloco `{ ... }` retornando o conteúdo como texto puro.
-    fn bloco_texto(&mut self) -> Result<String, ScriptError> {
+    fn bloco_texto(&mut self) -> Result<String, AppError> {
         if self.proximo() != Some("{") {
             return Err(self.err("esperado '{'"));
         }
@@ -263,7 +264,7 @@ impl<'a> Parser<'a> {
     }
 
     /// Lê `id` ou `id.campo`; devolve `(id, Option<campo>)`.
-    fn le_ref(&mut self) -> Result<(String, Option<String>), ScriptError> {
+    fn le_ref(&mut self) -> Result<(String, Option<String>), AppError> {
         let id = self
             .proximo()
             .ok_or_else(|| self.err("esperado id do nó"))?
@@ -285,7 +286,7 @@ impl<'a> Parser<'a> {
     }
 
     /// Lê uma referência de porto `.porto` (o ponto é token à parte).
-    fn le_porto(&mut self) -> Result<String, ScriptError> {
+    fn le_porto(&mut self) -> Result<String, AppError> {
         let t = self
             .proximo()
             .ok_or_else(|| self.err("esperado '.porto'"))?;
@@ -299,7 +300,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_conexao(&mut self) -> Result<Conexao, ScriptError> {
+    fn parse_conexao(&mut self) -> Result<Conexao, AppError> {
         let de = self
             .proximo()
             .ok_or_else(|| self.err("esperado nó de origem"))?
@@ -324,7 +325,7 @@ impl<'a> Parser<'a> {
     /// Consome um bloco `{ campo valor ... }` (campos de um `add`), chamando
     /// `f`. Difere do project_dsl por NÃO terminar por linhas em branco: só
     /// por `}`. Retorna o código PenDSL opcional (bloco `codigo { }`).
-    fn parse_campos(&mut self) -> Result<(Vec<(String, Expr)>, Option<String>), ScriptError> {
+    fn parse_campos(&mut self) -> Result<(Vec<(String, Expr)>, Option<String>), AppError> {
         if self.proximo() != Some("{") {
             return Err(self.err("esperado '{'"));
         }
@@ -352,7 +353,7 @@ impl<'a> Parser<'a> {
         Ok((campos, codigo))
     }
 
-    fn parse_program(&mut self) -> Result<Vec<PatchCmd>, ScriptError> {
+    fn parse_program(&mut self) -> Result<Vec<PatchCmd>, AppError> {
         let mut out = Vec::new();
         while let Some(tok) = self.proximo() {
             match tok {
@@ -419,7 +420,7 @@ impl<'a> Parser<'a> {
 }
 
 /// Parseia um patch DSL em uma lista de comandos.
-pub fn parse_patch(codigo: &str) -> Result<Vec<PatchCmd>, ScriptError> {
+pub fn parse_patch(codigo: &str) -> Result<Vec<PatchCmd>, AppError> {
     let mut p = Parser::new(codigo);
     p.parse_program()
 }
@@ -488,7 +489,7 @@ remove old2
     fn comando_invalido() {
         assert!(matches!(
             parse_patch("foo p1"),
-            Err(ScriptError::Parse { .. })
+            Err(AppError::DslParse { .. })
         ));
     }
 }

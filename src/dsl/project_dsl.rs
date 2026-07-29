@@ -23,6 +23,7 @@
 //! edge p1.out -> master.in
 //! ```
 
+use crate::error::AppError;
 use eframe::egui::Color32;
 
 // ----------------------------------------------------------------- AST
@@ -108,23 +109,6 @@ pub fn hex_para_cor(h: &str) -> Color32 {
     Color32::from_rgb(r, g, b)
 }
 
-// ----------------------------------------------------------------- Erros
-
-#[derive(Debug, Clone)]
-pub enum ScriptError {
-    Parse { msg: String, linha: usize },
-    Apply(String),
-}
-
-impl std::fmt::Display for ScriptError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ScriptError::Parse { msg, linha } => write!(f, "linha {linha}: {msg}"),
-            ScriptError::Apply(m) => write!(f, "{m}"),
-        }
-    }
-}
-
 // ----------------------------------------------------------------- Parser
 
 struct Parser<'a> {
@@ -142,8 +126,8 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn err(&self, msg: impl Into<String>) -> ScriptError {
-        ScriptError::Parse {
+    fn err(&self, msg: impl Into<String>) -> AppError {
+        AppError::DslParse {
             msg: msg.into(),
             linha: self.li + 1,
         }
@@ -234,7 +218,7 @@ impl<'a> Parser<'a> {
         self.ci = linha.len() - linha.trim_start().len();
     }
 
-    fn parse_program(&mut self) -> Result<Vec<TopLevel>, ScriptError> {
+    fn parse_program(&mut self) -> Result<Vec<TopLevel>, AppError> {
         let mut out = Vec::new();
         while let Some(tok) = self.proximo() {
             match tok {
@@ -249,7 +233,7 @@ impl<'a> Parser<'a> {
         Ok(out)
     }
 
-    fn parse_project(&mut self) -> Result<ProjectBlock, ScriptError> {
+    fn parse_project(&mut self) -> Result<ProjectBlock, AppError> {
         let mut p = ProjectBlock::default();
         if let Some(t) = self.proximo() {
             if t.starts_with('"') {
@@ -269,7 +253,7 @@ impl<'a> Parser<'a> {
         Ok(p)
     }
 
-    fn parse_node(&mut self, kw: &str) -> Result<NodeDef, ScriptError> {
+    fn parse_node(&mut self, kw: &str) -> Result<NodeDef, AppError> {
         let id = self
             .proximo()
             .ok_or_else(|| self.err("esperado id do nó após tipo"))?
@@ -291,7 +275,7 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn parse_edge(&mut self) -> Result<EdgeDef, ScriptError> {
+    fn parse_edge(&mut self) -> Result<EdgeDef, AppError> {
         let de = self
             .proximo()
             .ok_or_else(|| self.err("esperado nó de origem"))?
@@ -315,7 +299,7 @@ impl<'a> Parser<'a> {
     }
 
     /// Lê uma referência de porto: um ponto `.` seguido do nome (ex.: `.out`).
-    fn le_porto(&mut self) -> Result<String, ScriptError> {
+    fn le_porto(&mut self) -> Result<String, AppError> {
         let t = self
             .proximo()
             .ok_or_else(|| self.err("esperado '.porto'"))?;
@@ -346,7 +330,7 @@ impl<'a> Parser<'a> {
     /// Consome um bloco `{ ... }`, chamando `f(campo, valor)`. O bloco
     /// termina com `}` OU com duas ou mais linhas em branco consecutivas
     /// (distância entre objetos no script).
-    fn ate_bloco(&mut self, mut f: impl FnMut(&str, Expr)) -> Result<(), ScriptError> {
+    fn ate_bloco(&mut self, mut f: impl FnMut(&str, Expr)) -> Result<(), AppError> {
         if self.proximo() != Some("{") {
             return Err(self.err("esperado '{'"));
         }
@@ -381,7 +365,7 @@ impl<'a> Parser<'a> {
     /// OU `r g b a` (canais 0..1). Números são convertidos para `Expr::Hex`
     /// para reaproveitar `as_hex()`. Isso evita que o 3º/4º número "vaze" e
     /// desalinhe o resto do bloco.
-    fn le_cor(&mut self) -> Result<Expr, ScriptError> {
+    fn le_cor(&mut self) -> Result<Expr, AppError> {
         let t = self.proximo().ok_or_else(|| self.err("esperado cor"))?;
         if t.starts_with('#') {
             return Ok(Expr::Hex(t.to_string()));
@@ -413,7 +397,7 @@ impl<'a> Parser<'a> {
     }
 
     /// Lê um valor: número, string, hex, ou par de números (vec2).
-    fn le_valor(&mut self) -> Result<Expr, ScriptError> {
+    fn le_valor(&mut self) -> Result<Expr, AppError> {
         let t = self.proximo().ok_or_else(|| self.err("esperado valor"))?;
         if t.starts_with('"') {
             return Ok(Expr::Str(t[1..t.len().saturating_sub(1)].to_string()));
@@ -438,7 +422,7 @@ impl<'a> Parser<'a> {
     }
 
     /// Consome um bloco `{ ... }` e retorna o conteúdo como texto puro.
-    fn bloco_texto(&mut self) -> Result<String, ScriptError> {
+    fn bloco_texto(&mut self) -> Result<String, AppError> {
         if self.proximo() != Some("{") {
             return Err(self.err("esperado '{' após codigo"));
         }
@@ -480,7 +464,7 @@ impl<'a> Parser<'a> {
 }
 
 /// Parseia um script DSL de projeto em uma lista de comandos de alto nível.
-pub fn parse_script(codigo: &str) -> Result<Vec<TopLevel>, ScriptError> {
+pub fn parse_script(codigo: &str) -> Result<Vec<TopLevel>, AppError> {
     let mut p = Parser::new(codigo);
     p.parse_program()
 }
@@ -617,7 +601,7 @@ pen p1 {
     #[test]
     fn erro_palavra_chave() {
         let r = parse_script("foo bar { }");
-        assert!(matches!(r, Err(ScriptError::Parse { .. })));
+        assert!(matches!(r, Err(AppError::DslParse { .. })));
     }
 
     #[test]

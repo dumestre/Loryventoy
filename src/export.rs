@@ -16,6 +16,7 @@ use eframe::egui::epaint::{
 };
 use eframe::egui::{Color32, ColorImage, Pos2, Rect, Shape, Vec2};
 
+use crate::error::AppError;
 use crate::procedural::render::{color_to_color32, shape_to_egui};
 use crate::procedural::{CenaPreview, PenPath, PreviewData, TextoItem};
 use crate::ui::preview::PreviewPanel;
@@ -388,7 +389,7 @@ fn color_image_para_rgba(img: &ColorImage) -> Vec<u8> {
 }
 
 /// Exporta o frame atual do preview (em `data`, no instante `t`) para um PNG.
-pub fn exportar_png(data: &PreviewData, t: f32, caminho: &Path) -> Result<(), String> {
+pub fn exportar_png(data: &PreviewData, t: f32, caminho: &Path) -> Result<(), AppError> {
     let w = data.largura.max(1.0) as u32;
     let h = data.altura.max(1.0) as u32;
     let mut img = ColorImage::new(
@@ -403,7 +404,7 @@ pub fn exportar_png(data: &PreviewData, t: f32, caminho: &Path) -> Result<(), St
 
     let rgba = color_image_para_rgba(&img);
     image::save_buffer(caminho, &rgba, w, h, image::ColorType::Rgba8)
-        .map_err(|e| format!("falha ao salvar PNG {}: {e}", caminho.display()))?;
+        .map_err(|e| AppError::Export(format!("falha ao salvar PNG {}: {e}", caminho.display())))?;
     Ok(())
 }
 
@@ -414,11 +415,11 @@ pub fn exportar_frames(
     fps: f32,
     duracao_seg: f32,
     dir: &Path,
-) -> Result<usize, String> {
+) -> Result<usize, AppError> {
     let fps = fps.max(1.0);
     let total = (duracao_seg * fps).ceil().max(1.0) as u32;
     std::fs::create_dir_all(dir)
-        .map_err(|e| format!("falha ao criar pasta {}: {e}", dir.display()))?;
+        .map_err(|e| AppError::Export(format!("falha ao criar pasta {}: {e}", dir.display())))?;
 
     let mut contagem = 0usize;
     for f in 0..total {

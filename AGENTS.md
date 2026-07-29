@@ -19,7 +19,7 @@ Rust application with `eframe/egui`, node-based graph editor, procedural timelin
 | 8 | Separar avaliação procedural e renderização | ✅ Concluída |
 | 9 | Dividir o inspector | ✅ Concluída |
 | 10 | Refatorar `Loryventoy` | ✅ Concluída (`PlaybackState`, rename `MovimentoApp` → `Loryventoy`) |
-| 11 | Padronizar erros, logs e diagnósticos | 🟡 Parcial (`AppError` existe mas não integrada; 4 tipos de erro independentes) |
+| 11 | Padronizar erros, logs e diagnósticos | ✅ Concluída |
 | 12 | Testes de regressão adicionais | ❌ Pendente |
 
 ## Completed Phases in Detail
@@ -115,20 +115,16 @@ Split into specialized submodules:
   - `transform.rs` (15 lines) — transform/output
 - `mod.rs` (527 lines) — `show_content()` dispatch + helpers compartilhados
 
-### Fase 11 — Padronizar erros, logs e diagnósticos (PARCIAL 🟡)
+### Fase 11 — Padronizar erros, logs e diagnósticos (CONCLUÍDA ✅)
 - `thiserror` added to `Cargo.toml`
-- `src/error.rs` created with `AppError` enum using `#[derive(Error)]`:
-  - `Io(std::io::Error)` via `#[from]`
-  - `Parse(String)`, `InvalidProject(String)`, `Dsl(String)`, `Export(String)`, `Evaluation(String)`
-- `src/log.rs` refactored with:
-  - `LogLevel` enum (Error, Warn, Info, Diagnostic) with `PartialOrd`/`Ord`
-  - `definir_nivel()` / `nivel_atual()` for verbosity control
-  - Logs written to `logs/app.log` (not project root)
-  - Functions: `erro()`, `aviso()`, `info()`, `diag()`
-  - Filter by level — messages below minimum are discarded
-- `eprintln!` eliminated from `app.rs` and `export.rs` (replaced by log macros)
-- **NOT integrated**: `AppError` is never imported or used outside `src/error.rs`
-- **4 independent error types exist** (see Error Type Inventory below) with no conversions between them
+- `src/error.rs` — `AppError` enum unificado com `#[derive(Error)]`:
+  - `Io(std::io::Error)`, `Parse(String)`, `InvalidProject(String)`, `Dsl(String)`, `DslParse { msg, linha }`, `Export(String)`, `Evaluation(String)`
+- `src/log.rs` refactored with log levels, file output in `logs/app.log`, level filtering
+- `eprintln!` eliminated from `app.rs` and `export.rs`
+- **Tipos eliminados**: `PersistenceError` (repository.rs) e `ScriptError` (project_dsl.rs) removidos; `AppError` usado em todo lugar
+- **`export.rs`**: `Result<(), String>` → `Result<(), AppError>`
+- **`app.rs`**: usa `AppError` diretamente via `load_project`/`save_project`/`aplicar_script`
+- **Testes**: 89/89 passam (2 novos testes de erro)
 
 ## Pending Phases
 
@@ -140,10 +136,10 @@ Split into specialized submodules:
 - Rendering tests (deterministic preview, time points, loop modes, text, shapes, Pen, PNG export)
 
 ## Current Metrics
-- `cargo test --all` — **87/87 PASS**
-- `cargo check` — compiles with **18 warnings** (1 build script + 15 binary + 2 preexisting)
+- `cargo test --all` — **89/89 PASS**
+- `cargo check` — compiles with **1 warning** (`AppError::Evaluation` never constructed)
 - `cargo fmt --check` — 4 preexistent diffs: import order (`evaluator.rs`, `export.rs`) + trailing newlines (`save.rs`, `history.rs`)
-- `src/app.rs` — 885 lines
+- `src/app.rs` — 884 lines
 - `src/graph_editor/mod.rs` — 851 lines
 - `src/ui/node_component.rs` — 6 lines (re-export)
 - `src/dsl/pen.rs` — 2,766 lines (largest file)
@@ -151,16 +147,7 @@ Split into specialized submodules:
 
 ## Error Type Inventory
 
-The codebase has **4 independent error types** with overlapping variants and no conversions between them:
-
-| Error Type | File | Variants | Used In Production |
-|---|---|---|---|
-| `AppError` | `src/error.rs` | `Io`, `Parse`, `InvalidProject`, `Dsl`, `Export`, `Evaluation` | **NO** — zero callers outside own file |
-| `PersistenceError` | `src/infrastructure/persistence/repository.rs` | `Io`, `Parse`, `InvalidProject` | Yes — `app.rs` (save/load) |
-| `ScriptError` | `src/dsl/project_dsl.rs` | `Parse { msg, linha }`, `Apply(String)` | Yes — `app.rs` (DSL evaluation) |
-| `String` errors | `src/export.rs` | N/A (raw `format!` strings) | Yes — export functions |
-
-None of these types implement `From` for each other. There is no unified `?` error propagation chain from persistence through DSL to the application layer.
+Fully unified under `AppError` — `PersistenceError`, `ScriptError` and raw `String` errors have been eliminated. All code paths (persistence, DSL, export) use `AppError` with `?` propagation.
 
 ## Infraestrutura Pronta (Não Integrada)
 
@@ -170,7 +157,6 @@ The following infrastructure exists but is not yet wired into the application fl
 
 | Item | Location | Notes |
 |---|---|---|
-| `AppError` enum + `is_validation()` | `src/error.rs` | Never imported outside own file; `#![allow(dead_code)]` on entire file |
 | `aplicar_patch()` | `src/dsl/application.rs:135` | Entire patch DSL pipeline unreachable |
 | `conectar_patch()` | `src/dsl/application.rs:524` | Called only from `aplicar_patch()` |
 | `desconectar_patch()` | `src/dsl/application.rs:556` | Called only from `aplicar_patch()` |
@@ -204,4 +190,4 @@ The following infrastructure exists but is not yet wired into the application fl
 See [`docs/PLANO_REFATORACAO_PROFISSIONAL.md`](docs/PLANO_REFATORACAO_PROFISSIONAL.md) for the full architecture target, phase plan, contracts, and quality criteria.
 
 ## Next Recommended Step
-**Finish Fase 11** — wire `AppError` into the app flow to eliminate the 4 independent error types (`AppError`, `PersistenceError`, `ScriptError`, raw strings). After that, Fase 12 (regression tests).
+**Fase 12** — regression tests (domain, application, persistence, DSL, rendering).
